@@ -1,0 +1,555 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum RoleEmpresa {
+  DONO
+  ADMIN
+  ENGENHEIRO
+  MESTRE
+  ENCARREGADO
+}
+
+enum RoleObra {
+  RESPONSAVEL
+  ENGENHEIRO
+  MESTRE
+  ENCARREGADO
+  VISUALIZADOR
+}
+
+enum PlanoEmpresa {
+  BASICO
+  PRO
+  ENTERPRISE
+}
+
+enum StatusObra {
+  PLANEJAMENTO
+  EM_ANDAMENTO
+  PAUSADA
+  CONCLUIDA
+  CANCELADA
+}
+
+enum StatusRDO {
+  RASCUNHO
+  ENVIADO
+  APROVADO
+  REJEITADO
+}
+
+enum StatusFVS {
+  PENDENTE
+  EM_INSPECAO
+  APROVADO
+  REJEITADO
+  RETRABALHO
+}
+
+enum StatusFVM {
+  PENDENTE
+  RECEBIDO
+  APROVADO
+  REJEITADO
+  DEVOLVIDO
+}
+
+enum StatusOcorrencia {
+  ABERTA
+  EM_ANALISE
+  RESOLVIDA
+  FECHADA
+}
+
+enum TipoOcorrencia {
+  SEGURANCA
+  QUALIDADE
+  PRAZO
+  CUSTO
+  AMBIENTAL
+  OUTRO
+}
+
+enum StatusSolicitacao {
+  RASCUNHO
+  PENDENTE
+  APROVADA
+  REJEITADA
+  CANCELADA
+}
+
+enum StatusPedido {
+  RASCUNHO
+  ENVIADO
+  CONFIRMADO
+  ENTREGUE_PARCIAL
+  ENTREGUE
+  CANCELADO
+}
+
+enum TipoMidia {
+  FOTO
+  VIDEO
+}
+
+enum StatusEquipamento {
+  DISPONIVEL
+  EM_USO
+  MANUTENCAO
+  INATIVO
+}
+
+enum TipoLancamento {
+  RECEITA
+  DESPESA
+}
+
+// ─── Multi-tenant ─────────────────────────────────────────────────────────────
+
+model Empresa {
+  id        String       @id @default(cuid())
+  nome      String
+  cnpj      String?      @unique
+  plano     PlanoEmpresa @default(BASICO)
+  logoUrl   String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  usuarios     Usuario[]
+  obras        Obra[]
+  fornecedores Fornecedor[]
+  materiais    MaterialCatalogo[]
+  equipamentos Equipamento[]
+  convites     Convite[]
+}
+
+model Usuario {
+  id        String      @id @default(cuid())
+  authId    String?     @unique
+  email     String      @unique
+  nome      String
+  telefone  String?
+  avatarUrl String?
+  role      RoleEmpresa @default(ENGENHEIRO)
+  ativo     Boolean     @default(true)
+  empresaId String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  empresa      Empresa             @relation(fields: [empresaId], references: [id])
+  obrasVinculo ObraUsuario[]
+  rdos         RDO[]
+  fvsAprovadas FVS[]               @relation("FVSResponsavel")
+  ocorrencias  Ocorrencia[]
+  mensagens    MensagemChat[]
+  solicitacoes SolicitacaoCompra[]
+}
+
+// ─── Obras ────────────────────────────────────────────────────────────────────
+
+model Obra {
+  id          String     @id @default(cuid())
+  nome        String
+  descricao   String?
+  endereco    String?
+  cidade      String?
+  estado      String?
+  status      StatusObra @default(PLANEJAMENTO)
+  progresso   Float      @default(0)
+  orcamento   Float?
+  custoAtual  Float      @default(0)
+  dataInicio  DateTime?
+  dataFim     DateTime?
+  imagemUrl   String?
+  empresaId   String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  empresa      Empresa               @relation(fields: [empresaId], references: [id])
+  usuarios     ObraUsuario[]
+  rdos         RDO[]
+  fvs          FVS[]
+  fvm          FVM[]
+  ocorrencias  Ocorrencia[]
+  plantas      Planta[]
+  equipe       MembroEquipe[]
+  documentos   Documento[]
+  midias       Midia[]
+  mensagens    MensagemChat[]
+  solicitacoes SolicitacaoCompra[]
+  movimentacoes MovimentacaoMaterial[]
+  lancamentos  LancamentoFinanceiro[]
+}
+
+model ObraUsuario {
+  id        String   @id @default(cuid())
+  obraId    String
+  usuarioId String
+  role      RoleObra @default(VISUALIZADOR)
+  createdAt DateTime @default(now())
+
+  obra    Obra    @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([obraId, usuarioId])
+}
+
+// ─── RDO ─────────────────────────────────────────────────────────────────────
+
+model RDO {
+  id             String    @id @default(cuid())
+  obraId         String
+  data           DateTime  @default(now())
+  clima          String?
+  temperaturaMin Float?
+  temperaturaMax Float?
+  ocorreuChuva   Boolean   @default(false)
+  status         StatusRDO @default(RASCUNHO)
+  observacoes    String?
+  responsavelId  String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  obra        Obra           @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  responsavel Usuario        @relation(fields: [responsavelId], references: [id])
+  atividades  RDOAtividade[]
+  equipe      RDOEquipe[]
+  midias      Midia[]
+}
+
+model RDOAtividade {
+  id         String  @id @default(cuid())
+  rdoId      String
+  descricao  String
+  quantidade Float?
+  unidade    String?
+  observacao String?
+
+  rdo RDO @relation(fields: [rdoId], references: [id], onDelete: Cascade)
+}
+
+model RDOEquipe {
+  id         String @id @default(cuid())
+  rdoId      String
+  funcao     String
+  quantidade Int
+  observacao String?
+
+  rdo RDO @relation(fields: [rdoId], references: [id], onDelete: Cascade)
+}
+
+// ─── FVS ─────────────────────────────────────────────────────────────────────
+
+model FVS {
+  id            String    @id @default(cuid())
+  obraId        String
+  codigo        String?
+  servico       String
+  responsavelId String
+  status        StatusFVS @default(PENDENTE)
+  data          DateTime  @default(now())
+  observacoes   String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  obra        Obra      @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  responsavel Usuario   @relation("FVSResponsavel", fields: [responsavelId], references: [id])
+  itens       FVSItem[]
+  midias      Midia[]
+}
+
+model FVSItem {
+  id         String   @id @default(cuid())
+  fvsId      String
+  descricao  String
+  aprovado   Boolean?
+  observacao String?
+
+  fvs FVS @relation(fields: [fvsId], references: [id], onDelete: Cascade)
+}
+
+// ─── FVM ─────────────────────────────────────────────────────────────────────
+
+model FVM {
+  id           String    @id @default(cuid())
+  obraId       String
+  codigo       String?
+  material     String
+  fornecedorNome String?
+  quantidade   Float
+  unidade      String?
+  status       StatusFVM @default(PENDENTE)
+  data         DateTime  @default(now())
+  notaFiscal   String?
+  observacoes  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  obra   Obra    @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  midias Midia[]
+}
+
+// ─── Ocorrências + Mapa Visual ───────────────────────────────────────────────
+
+model Ocorrencia {
+  id            String           @id @default(cuid())
+  obraId        String
+  tipo          TipoOcorrencia   @default(OUTRO)
+  titulo        String
+  descricao     String?
+  status        StatusOcorrencia @default(ABERTA)
+  prioridade    Int              @default(2)
+  data          DateTime         @default(now())
+  plantaId      String?
+  posX          Float?
+  posY          Float?
+  responsavelId String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  obra        Obra     @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  planta      Planta?  @relation(fields: [plantaId], references: [id])
+  responsavel Usuario? @relation(fields: [responsavelId], references: [id])
+  midias      Midia[]
+}
+
+model Planta {
+  id        String   @id @default(cuid())
+  obraId    String
+  nome      String
+  url       String
+  createdAt DateTime @default(now())
+
+  obra        Obra         @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  ocorrencias Ocorrencia[]
+}
+
+// ─── Equipe ───────────────────────────────────────────────────────────────────
+
+model MembroEquipe {
+  id          String    @id @default(cuid())
+  obraId      String
+  nome        String
+  funcao      String
+  cpf         String?
+  telefone    String?
+  empresaNome String?
+  dataEntrada DateTime  @default(now())
+  dataSaida   DateTime?
+  ativo       Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+
+  obra Obra @relation(fields: [obraId], references: [id], onDelete: Cascade)
+}
+
+// ─── Suprimentos ─────────────────────────────────────────────────────────────
+
+model Fornecedor {
+  id        String   @id @default(cuid())
+  empresaId String
+  nome      String
+  cnpj      String?
+  categoria String?
+  cidade    String?
+  estado    String?
+  telefone  String?
+  email     String?
+  site      String?
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  empresa Empresa        @relation(fields: [empresaId], references: [id])
+  pedidos PedidoCompra[]
+}
+
+model MaterialCatalogo {
+  id            String   @id @default(cuid())
+  empresaId     String
+  nome          String
+  descricao     String?
+  unidade       String
+  categoria     String?
+  precoUnitario Float?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  empresa          Empresa                @relation(fields: [empresaId], references: [id])
+  movimentacoes    MovimentacaoMaterial[]
+  itensSolicitacao ItemSolicitacao[]
+  itensPedido      ItemPedido[]
+}
+
+model MovimentacaoMaterial {
+  id         String   @id @default(cuid())
+  obraId     String
+  materialId String
+  tipo       String
+  quantidade Float
+  data       DateTime @default(now())
+  observacao String?
+
+  obra     Obra             @relation(fields: [obraId], references: [id])
+  material MaterialCatalogo @relation(fields: [materialId], references: [id])
+}
+
+model Equipamento {
+  id        String            @id @default(cuid())
+  empresaId String
+  nome      String
+  tipo      String?
+  modelo    String?
+  placa     String?
+  status    StatusEquipamento @default(DISPONIVEL)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  empresa Empresa @relation(fields: [empresaId], references: [id])
+}
+
+model SolicitacaoCompra {
+  id            String            @id @default(cuid())
+  obraId        String
+  solicitanteId String
+  status        StatusSolicitacao @default(RASCUNHO)
+  urgencia      Int               @default(2)
+  observacoes   String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  obra        Obra              @relation(fields: [obraId], references: [id])
+  solicitante Usuario           @relation(fields: [solicitanteId], references: [id])
+  itens       ItemSolicitacao[]
+  pedidos     PedidoCompra[]
+}
+
+model ItemSolicitacao {
+  id            String  @id @default(cuid())
+  solicitacaoId String
+  materialId    String
+  quantidade    Float
+  unidade       String?
+  observacao    String?
+
+  solicitacao SolicitacaoCompra @relation(fields: [solicitacaoId], references: [id], onDelete: Cascade)
+  material    MaterialCatalogo  @relation(fields: [materialId], references: [id])
+}
+
+model PedidoCompra {
+  id              String       @id @default(cuid())
+  solicitacaoId   String?
+  fornecedorId    String
+  status          StatusPedido @default(RASCUNHO)
+  total           Float?
+  previsaoEntrega DateTime?
+  observacoes     String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  solicitacao SolicitacaoCompra? @relation(fields: [solicitacaoId], references: [id])
+  fornecedor  Fornecedor         @relation(fields: [fornecedorId], references: [id])
+  itens       ItemPedido[]
+}
+
+model ItemPedido {
+  id         String  @id @default(cuid())
+  pedidoId   String
+  materialId String
+  quantidade Float
+  precoUnit  Float?
+  total      Float?
+  unidade    String?
+
+  pedido   PedidoCompra     @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  material MaterialCatalogo @relation(fields: [materialId], references: [id])
+}
+
+// ─── Documentos ───────────────────────────────────────────────────────────────
+
+model Documento {
+  id        String   @id @default(cuid())
+  obraId    String
+  nome      String
+  categoria String
+  url       String
+  tipo      String?
+  tamanho   Int?
+  createdAt DateTime @default(now())
+
+  obra Obra @relation(fields: [obraId], references: [id], onDelete: Cascade)
+}
+
+// ─── Financeiro ───────────────────────────────────────────────────────────────
+
+model LancamentoFinanceiro {
+  id        String         @id @default(cuid())
+  obraId    String
+  tipo      TipoLancamento
+  categoria String?
+  descricao String
+  valor     Float
+  data      DateTime       @default(now())
+  createdAt DateTime       @default(now())
+
+  obra Obra @relation(fields: [obraId], references: [id], onDelete: Cascade)
+}
+
+// ─── Mídia ────────────────────────────────────────────────────────────────────
+
+model Midia {
+  id           String    @id @default(cuid())
+  obraId       String
+  tipo         TipoMidia
+  url          String
+  thumbnailUrl String?
+  descricao    String?
+  rdoId        String?
+  fvsId        String?
+  fvmId        String?
+  ocorrenciaId String?
+  createdAt    DateTime  @default(now())
+
+  obra       Obra        @relation(fields: [obraId], references: [id])
+  rdo        RDO?        @relation(fields: [rdoId], references: [id])
+  fvs        FVS?        @relation(fields: [fvsId], references: [id])
+  fvm        FVM?        @relation(fields: [fvmId], references: [id])
+  ocorrencia Ocorrencia? @relation(fields: [ocorrenciaId], references: [id])
+}
+
+// ─── Convites ─────────────────────────────────────────────────────────────────
+
+model Convite {
+  id        String      @id @default(cuid())
+  empresaId String
+  email     String
+  role      RoleEmpresa @default(ENGENHEIRO)
+  token     String      @unique @default(cuid())
+  usado     Boolean     @default(false)
+  expiresAt DateTime
+  createdAt DateTime    @default(now())
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+}
+
+// ─── Chat ─────────────────────────────────────────────────────────────────────
+
+model MensagemChat {
+  id        String   @id @default(cuid())
+  obraId    String
+  usuarioId String
+  conteudo  String
+  lida      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  obra    Obra    @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+}

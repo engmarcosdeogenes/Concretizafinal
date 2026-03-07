@@ -1,0 +1,42 @@
+import { z } from "zod"
+import { createTRPCRouter, protectedProcedure } from "../trpc"
+
+export const chatRouter = createTRPCRouter({
+
+  listarObras: protectedProcedure
+    .query(async ({ ctx }) => {
+      const { empresaId } = ctx.session
+      return ctx.db.obra.findMany({
+        where: { empresaId, status: { not: "CANCELADA" } },
+        select: { id: true, nome: true, status: true,
+          mensagens: { select: { id: true, createdAt: true }, orderBy: { createdAt: "desc" }, take: 1 },
+          _count: { select: { mensagens: true } },
+        },
+        orderBy: { updatedAt: "desc" },
+      })
+    }),
+
+  listar: protectedProcedure
+    .input(z.object({ obraId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      return ctx.db.mensagemChat.findMany({
+        where: { obraId: input.obraId },
+        include: { usuario: { select: { id: true, nome: true, avatarUrl: true, role: true } } },
+        orderBy: { createdAt: "asc" },
+        take: 100,
+      })
+    }),
+
+  enviar: protectedProcedure
+    .input(z.object({
+      obraId:   z.string(),
+      conteudo: z.string().min(1).max(2000),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { userId } = ctx.session
+      return ctx.db.mensagemChat.create({
+        data: { obraId: input.obraId, usuarioId: userId, conteudo: input.conteudo },
+        include: { usuario: { select: { id: true, nome: true, avatarUrl: true, role: true } } },
+      })
+    }),
+})
