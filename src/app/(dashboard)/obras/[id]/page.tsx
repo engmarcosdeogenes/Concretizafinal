@@ -2,11 +2,12 @@
 
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import {
   ClipboardList, CheckSquare, AlertTriangle, Users,
   Package, Sun, CloudRain, Wind, TrendingUp, TrendingDown,
   ArrowRight, Clock, CheckCircle2, XCircle, FileText, Edit2, X,
+  Camera, Loader2,
 } from "lucide-react"
 import { toast } from "sonner"
 import { trpc } from "@/lib/trpc/client"
@@ -92,6 +93,9 @@ export default function ObraOverviewPage() {
     nome: "", descricao: "", endereco: "", cidade: "", estado: "",
     status: "", progresso: "", orcamento: "", dataInicio: "", dataFim: "",
   })
+  const [editImagemUrl, setEditImagemUrl] = useState<string | null>(null)
+  const [uploadandoCapa, setUploadandoCapa] = useState(false)
+  const capaInputRef = useRef<HTMLInputElement>(null)
 
   const { canEditObra } = useRole()
   const utils = trpc.useUtils()
@@ -121,7 +125,26 @@ export default function ObraOverviewPage() {
       dataInicio: obra.dataInicio ? new Date(obra.dataInicio).toISOString().slice(0, 10) : "",
       dataFim:    obra.dataFim    ? new Date(obra.dataFim).toISOString().slice(0, 10) : "",
     })
+    setEditImagemUrl(obra.imagemUrl ?? null)
     setEditOpen(true)
+  }
+
+  async function handleUploadCapa(files: FileList | null) {
+    if (!files || files.length === 0) return
+    const file = files[0]
+    if (!file.type.startsWith("image/")) return
+    setUploadandoCapa(true)
+    try {
+      const ext = file.name.split(".").pop() ?? "jpg"
+      const fd = new FormData()
+      fd.append("file", file)
+      fd.append("path", `obras/capas/${id}-${Date.now()}.${ext}`)
+      const res = await fetch("/api/upload", { method: "POST", body: fd })
+      const json = await res.json() as { url?: string; error?: string }
+      if (res.ok && json.url) setEditImagemUrl(json.url)
+    } finally {
+      setUploadandoCapa(false)
+    }
   }
 
   function handleSalvar(e: React.FormEvent) {
@@ -138,6 +161,7 @@ export default function ObraOverviewPage() {
       orcamento:  form.orcamento ? Number(form.orcamento) : undefined,
       dataInicio: form.dataInicio || undefined,
       dataFim:    form.dataFim    || undefined,
+      imagemUrl:  editImagemUrl,
     })
   }
 
@@ -449,6 +473,52 @@ export default function ObraOverviewPage() {
             </div>
 
             <form onSubmit={handleSalvar} className="p-5 space-y-4">
+
+              {/* Foto de capa */}
+              <div>
+                <label className={labelCls}>Foto de Capa</label>
+                <div
+                  onClick={() => !uploadandoCapa && capaInputRef.current?.click()}
+                  className="relative w-full h-32 rounded-xl border-2 border-dashed border-border overflow-hidden cursor-pointer hover:border-orange-300 transition-colors group"
+                >
+                  {editImagemUrl ? (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={editImagemUrl} alt="Capa" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                        <div className="bg-white/90 rounded-xl px-3 py-1.5 flex items-center gap-2 text-xs font-medium text-slate-700">
+                          <Camera size={13} /> Trocar foto
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setEditImagemUrl(null) }}
+                        className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-lg flex items-center justify-center transition-colors"
+                      >
+                        <X size={12} className="text-white" />
+                      </button>
+                    </>
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-1.5">
+                      {uploadandoCapa
+                        ? <Loader2 size={20} className="text-orange-500 animate-spin" />
+                        : <Camera size={20} className="text-[var(--text-muted)] group-hover:text-orange-500 transition-colors" />
+                      }
+                      <p className="text-xs text-[var(--text-muted)] group-hover:text-orange-600 transition-colors">
+                        {uploadandoCapa ? "Enviando..." : "Adicionar foto de capa"}
+                      </p>
+                    </div>
+                  )}
+                </div>
+                <input
+                  ref={capaInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={e => handleUploadCapa(e.target.files)}
+                />
+              </div>
+
               <div>
                 <label className={labelCls}>Nome da obra <span className="text-red-500">*</span></label>
                 <input required type="text" value={form.nome} onChange={e => set("nome", e.target.value)}

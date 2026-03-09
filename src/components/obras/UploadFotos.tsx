@@ -1,7 +1,7 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { Camera, Trash2, ZoomIn, X, Plus, Loader2 } from "lucide-react"
+import { Camera, Trash2, ZoomIn, X, Plus, Loader2, Play } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 
 type Props = {
@@ -12,11 +12,19 @@ type Props = {
   ocorrenciaId?: string
 }
 
+const TIPOS_IMAGEM = ["image/jpeg", "image/png", "image/webp", "image/gif"]
+const TIPOS_VIDEO  = ["video/mp4", "video/quicktime", "video/webm", "video/avi", "video/mov"]
+
+function isVideo(url: string) {
+  return /\.(mp4|mov|webm|avi|mkv)(\?|$)/i.test(url)
+}
+
 export function UploadFotos({ obraId, rdoId, fvsId, fvmId, ocorrenciaId }: Props) {
   const inputRef  = useRef<HTMLInputElement>(null)
   const [preview, setPreview] = useState<string | null>(null)
+  const [previewVideo, setPreviewVideo] = useState(false)
   const [uploading, setUploading] = useState(false)
-  const [erro, setErro]   = useState<string | null>(null)
+  const [erro, setErro] = useState<string | null>(null)
 
   const utils = trpc.useUtils()
   const filtro = { rdoId, fvsId, fvmId, ocorrenciaId }
@@ -35,14 +43,22 @@ export function UploadFotos({ obraId, rdoId, fvsId, fvmId, ocorrenciaId }: Props
     setErro(null)
 
     for (const file of Array.from(files)) {
-      if (!file.type.startsWith("image/")) {
-        setErro("Apenas imagens são aceitas (JPG, PNG, WebP)")
+      const isImg = TIPOS_IMAGEM.includes(file.type) || file.type.startsWith("image/")
+      const isVid = TIPOS_VIDEO.includes(file.type) || file.type.startsWith("video/")
+
+      if (!isImg && !isVid) {
+        setErro("Apenas imagens (JPG, PNG, WebP) e vídeos (MP4, MOV, WebM) são aceitos")
+        continue
+      }
+
+      if (file.size > 200 * 1024 * 1024) {
+        setErro("Arquivo muito grande (máximo 200MB para vídeos)")
         continue
       }
 
       setUploading(true)
       try {
-        const ext      = file.name.split(".").pop() ?? "jpg"
+        const ext = file.name.split(".").pop() ?? (isImg ? "jpg" : "mp4")
         const timestamp = Date.now()
         const subfolder = rdoId ? `rdo/${rdoId}` : fvsId ? `fvs/${fvsId}` : fvmId ? `fvm/${fvmId}` : ocorrenciaId ? `ocorrencia/${ocorrenciaId}` : "geral"
         const path = `obras/${obraId}/${subfolder}/${timestamp}.${ext}`
@@ -59,13 +75,22 @@ export function UploadFotos({ obraId, rdoId, fvsId, fvmId, ocorrenciaId }: Props
           continue
         }
 
-        await criarMidia.mutateAsync({ obraId, url: json.url, tipo: "FOTO", rdoId, fvsId, fvmId, ocorrenciaId })
+        await criarMidia.mutateAsync({
+          obraId, url: json.url,
+          tipo: isVid ? "VIDEO" : "FOTO",
+          rdoId, fvsId, fvmId, ocorrenciaId,
+        })
       } catch {
         setErro("Erro inesperado no upload")
       } finally {
         setUploading(false)
       }
     }
+  }
+
+  function abrirPreview(url: string) {
+    setPreview(url)
+    setPreviewVideo(isVideo(url) || midias.find(m => m.url === url)?.tipo === "VIDEO")
   }
 
   return (
@@ -78,20 +103,27 @@ export function UploadFotos({ obraId, rdoId, fvsId, fvmId, ocorrenciaId }: Props
         </div>
       )}
 
-      {/* Grid de fotos */}
+      {/* Grid de mídias */}
       {midias.length > 0 && (
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-3">
           {midias.map(m => (
             <div key={m.id} className="relative group aspect-square rounded-xl overflow-hidden border border-border bg-muted">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={m.url}
-                alt={m.descricao ?? "Foto"}
-                className="w-full h-full object-cover"
-              />
+              {m.tipo === "VIDEO" ? (
+                <>
+                  <video src={m.url} className="w-full h-full object-cover" muted playsInline preload="metadata" />
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="w-8 h-8 bg-black/50 rounded-full flex items-center justify-center">
+                      <Play size={14} className="text-white ml-0.5" />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={m.url} alt={m.descricao ?? "Foto"} className="w-full h-full object-cover" />
+              )}
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
                 <button
-                  onClick={() => setPreview(m.url)}
+                  onClick={() => abrirPreview(m.url)}
                   className="w-8 h-8 bg-white/90 hover:bg-white rounded-lg flex items-center justify-center transition-colors"
                   title="Ampliar"
                 >
@@ -136,22 +168,22 @@ export function UploadFotos({ obraId, rdoId, fvsId, fvmId, ocorrenciaId }: Props
             <Camera size={24} className="text-[var(--text-muted)] group-hover:text-orange-500 transition-colors" />
           )}
           <p className="text-sm font-medium text-[var(--text-muted)] group-hover:text-orange-600 transition-colors">
-            {uploading ? "Enviando..." : "Adicionar fotos"}
+            {uploading ? "Enviando..." : "Adicionar fotos ou vídeos"}
           </p>
-          <p className="text-xs text-[var(--text-muted)]">JPG, PNG, WebP · máx. 20MB</p>
+          <p className="text-xs text-[var(--text-muted)]">JPG, PNG, WebP, MP4, MOV · fotos máx. 20MB · vídeos máx. 200MB</p>
         </button>
       )}
 
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,video/mp4,video/quicktime,video/webm,video/avi"
         multiple
         className="hidden"
         onChange={e => handleFiles(e.target.files)}
       />
 
-      {/* Lightbox */}
+      {/* Lightbox / player */}
       {preview && (
         <div
           className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
@@ -163,13 +195,23 @@ export function UploadFotos({ obraId, rdoId, fvsId, fvmId, ocorrenciaId }: Props
           >
             <X size={20} className="text-white" />
           </button>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={preview}
-            alt="Preview"
-            className="max-w-full max-h-[90vh] object-contain rounded-xl"
-            onClick={e => e.stopPropagation()}
-          />
+          {previewVideo ? (
+            <video
+              src={preview}
+              controls
+              autoPlay
+              className="max-w-full max-h-[90vh] rounded-xl"
+              onClick={e => e.stopPropagation()}
+            />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={preview}
+              alt="Preview"
+              className="max-w-full max-h-[90vh] object-contain rounded-xl"
+              onClick={e => e.stopPropagation()}
+            />
+          )}
         </div>
       )}
     </div>

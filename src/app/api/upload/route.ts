@@ -31,8 +31,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Arquivo e path são obrigatórios" }, { status: 400 })
     }
 
-    if (file.size > 20 * 1024 * 1024) {
-      return NextResponse.json({ error: "Arquivo muito grande (máximo 20MB)" }, { status: 400 })
+    const isVideo = file.type.startsWith("video/")
+    const maxSize = isVideo ? 200 * 1024 * 1024 : 20 * 1024 * 1024
+    if (file.size > maxSize) {
+      return NextResponse.json(
+        { error: isVideo ? "Vídeo muito grande (máximo 200MB)" : "Arquivo muito grande (máximo 20MB)" },
+        { status: 400 },
+      )
     }
 
     const supabase = createAdminClient()

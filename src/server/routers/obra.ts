@@ -47,6 +47,7 @@ export const obraRouter = createTRPCRouter({
       orcamento: z.number().optional(),
       dataInicio: z.string().optional(),
       dataFim: z.string().optional(),
+      imagemUrl: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       return ctx.db.obra.create({

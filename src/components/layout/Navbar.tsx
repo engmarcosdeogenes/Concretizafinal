@@ -7,9 +7,10 @@ import {
   Bell, Search, HelpCircle, PanelLeft,
   LogOut, User, Settings, X,
   BookOpen, MessageCircle, Send,
-  CheckCircle2, ChevronRight,
+  CheckCircle2, ChevronRight, Sun, Moon,
 } from "lucide-react"
 import { useSidebar } from "@/contexts/sidebar-context"
+import { useTheme } from "@/contexts/theme-context"
 import { trpc } from "@/lib/trpc/client"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
@@ -304,12 +305,26 @@ function BarraBusca() {
   )
 }
 
+// ─── Botão dark mode ──────────────────────────────────────────────────────────
+function ThemeToggle() {
+  const { theme, toggle } = useTheme()
+  return (
+    <button
+      onClick={toggle}
+      title={theme === "dark" ? "Modo claro" : "Modo escuro"}
+      className="w-9 h-9 flex items-center justify-center rounded-xl text-[var(--text-muted)] hover:bg-muted hover:text-[var(--text-primary)] transition-colors"
+    >
+      {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
+    </button>
+  )
+}
+
 // ─── Navbar principal ─────────────────────────────────────────────────────────
 export function Navbar() {
   const { toggle, collapsed } = useSidebar()
 
   return (
-    <header className="bg-white border-b border-border flex items-center gap-3 px-4 h-[60px] flex-shrink-0 sticky top-0 z-50">
+    <header className="bg-white dark:bg-slate-900 border-b border-border flex items-center gap-3 px-4 h-[60px] flex-shrink-0 sticky top-0 z-50">
       {/* Sidebar toggle */}
       <button
         onClick={toggle}
@@ -328,6 +343,7 @@ export function Navbar() {
 
       {/* Actions */}
       <div className="flex items-center gap-1 ml-auto">
+        <ThemeToggle />
         <NotificacoesDropdown />
         <AjudaDropdown />
         <div className="w-px h-5 bg-border mx-1" />

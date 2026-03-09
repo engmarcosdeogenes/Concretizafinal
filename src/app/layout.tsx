@@ -4,6 +4,7 @@ import "./globals.css"
 import { TRPCProvider } from "@/lib/trpc/provider"
 import { cn } from "@/lib/utils"
 import { ServiceWorkerRegister } from "@/components/shared/ServiceWorkerRegister"
+import { ThemeProvider } from "@/contexts/theme-context"
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -41,7 +42,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="pt-BR" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
       <body className={`${jakarta.variable} font-sans antialiased`}>
-        <TRPCProvider>{children}</TRPCProvider>
+        <TRPCProvider><ThemeProvider>{children}</ThemeProvider></TRPCProvider>
         <ServiceWorkerRegister />
       </body>
     </html>

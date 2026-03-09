@@ -15,6 +15,7 @@ const tabs = [
   { label: "Materiais",    href: "/materiais" },
   { label: "Documentos",   href: "/documentos" },
   { label: "Financeiro",   href: "/financeiro" },
+  { label: "Chat",         href: "/chat" },
 ]
 
 interface ObraTabsProps {
