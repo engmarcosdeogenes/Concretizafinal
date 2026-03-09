@@ -50,6 +50,7 @@ function getObraNavItems(obraId: string) {
     { label: "Materiais", href: `${base}/materiais`, icon: Box },
     { label: "Documentos", href: `${base}/documentos`, icon: FileText },
     { label: "Financeiro", href: `${base}/financeiro`, icon: DollarSign },
+    { label: "Chat", href: `${base}/chat`, icon: MessageSquare },
   ]
 }
 
