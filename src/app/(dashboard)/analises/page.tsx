@@ -260,7 +260,7 @@ export default function AnalisesPage() {
           <p className="text-sm text-[var(--text-muted)] italic">Nenhuma obra com FVS registradas.</p>
         ) : (
           <div className="space-y-4">
-            {data.avancoFisicoObras.map((o: { nome: string; aprovadas: number; total: number; pct: number }) => (
+            {data.avancoFisicoObras.map((o: { nome: string; aprovadas: number; total: number; pct: number; progresso: number | null }) => (
               <div key={o.nome}>
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs font-medium text-[var(--text-primary)]">{o.nome}</span>
