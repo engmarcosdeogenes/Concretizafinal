@@ -1,8 +1,9 @@
-import { createTRPCRouter, protectedProcedure } from "../trpc"
+import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc"
 
 export const painelRouter = createTRPCRouter({
-  me: protectedProcedure.query(({ ctx }) => {
-    return ctx.session
+  // publicProcedure: não joga erro sem autenticação — retorna null quando não logado
+  me: publicProcedure.query(({ ctx }) => {
+    return ctx.session ?? null
   }),
 
   resumo: protectedProcedure.query(async ({ ctx }) => {
@@ -81,7 +82,7 @@ export const painelRouter = createTRPCRouter({
       obras,
       rdosPorMes,
       statusObras,
-      ocorreciasRecentes: ocAbertas.slice(0, 5),
+      ocorrenciasRecentes: ocAbertas.slice(0, 5),
     }
   }),
 })

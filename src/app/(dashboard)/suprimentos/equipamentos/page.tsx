@@ -20,7 +20,7 @@ const STATUS_MAP = {
   INATIVO:    { label: "Inativo",    cls: "bg-slate-50 text-slate-600 border border-slate-200" },
 }
 
-const inputCls = "w-full px-3.5 py-2.5 border border-[var(--border)] rounded-[var(--radius)] text-sm text-[var(--text-primary)] bg-white placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
+const inputCls = "w-full px-3.5 py-2.5 border border-border rounded-xl text-sm text-[var(--text-primary)] bg-white placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
 const labelCls = "block text-sm font-medium text-[var(--text-primary)] mb-1.5"
 
 export default function EquipamentosPage() {
@@ -114,7 +114,7 @@ export default function EquipamentosPage() {
           { label: "Em Uso",      value: stats.em_uso,        color: "text-blue-600" },
           { label: "Manutenção",  value: stats.manutencao,    color: "text-amber-600" },
         ].map(s => (
-          <div key={s.label} className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-4">
+          <div key={s.label} className="bg-white rounded-2xl border border-border shadow-sm p-4">
             <p className={`text-2xl font-extrabold ${s.color}`}>{s.value}</p>
             <p className="text-xs font-medium text-[var(--text-primary)] mt-0.5">{s.label}</p>
           </div>
@@ -130,8 +130,8 @@ export default function EquipamentosPage() {
       />
 
       {/* Lista */}
-      <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm overflow-hidden">
-        <div className="grid grid-cols-[1fr_120px_100px_160px_44px] gap-3 px-5 py-3 bg-[var(--muted)] border-b border-[var(--border)]">
+      <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
+        <div className="grid grid-cols-[1fr_120px_100px_160px_44px] gap-3 px-5 py-3 bg-muted border-b border-border">
           <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Equipamento</span>
           <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Tipo</span>
           <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Placa/Modelo</span>
@@ -154,7 +154,7 @@ export default function EquipamentosPage() {
           const s = STATUS_MAP[eq.status]
           return (
             <div key={eq.id}
-              className="grid grid-cols-[1fr_120px_100px_160px_44px] gap-3 px-5 py-4 border-b border-[var(--border)] last:border-0 items-center hover:bg-[var(--muted)] transition-colors">
+              className="grid grid-cols-[1fr_120px_100px_160px_44px] gap-3 px-5 py-4 border-b border-border last:border-0 items-center hover:bg-muted transition-colors">
               <p className="text-sm font-semibold text-[var(--text-primary)]">{eq.nome}</p>
               <p className="text-xs text-[var(--text-muted)]">{eq.tipo ?? "—"}</p>
               <div>
@@ -172,7 +172,7 @@ export default function EquipamentosPage() {
                 ))}
               </select>
               <button onClick={() => abrirEditar(eq)}
-                className="w-8 h-8 flex items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--muted)] transition-colors cursor-pointer">
+                className="w-8 h-8 flex items-center justify-center rounded-lg border border-border text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-muted transition-colors cursor-pointer">
                 <Pencil size={13} />
               </button>
             </div>
@@ -183,8 +183,8 @@ export default function EquipamentosPage() {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl border border-[var(--border)] shadow-xl w-full max-w-md">
-            <div className="flex items-center justify-between p-5 border-b border-[var(--border)]">
+          <div className="bg-white rounded-2xl border border-border shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-5 border-b border-border">
               <div className="flex items-center gap-2">
                 <Wrench size={18} className="text-orange-500" />
                 <h2 className="font-bold text-[var(--text-primary)]">
@@ -192,7 +192,7 @@ export default function EquipamentosPage() {
                 </h2>
               </div>
               <button onClick={fecharModal}
-                className="w-8 h-8 flex items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-muted)] hover:bg-[var(--muted)] transition-colors cursor-pointer">
+                className="w-8 h-8 flex items-center justify-center rounded-lg border border-border text-[var(--text-muted)] hover:bg-muted transition-colors cursor-pointer">
                 <X size={14} />
               </button>
             </div>

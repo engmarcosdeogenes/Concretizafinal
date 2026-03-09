@@ -1,10 +1,14 @@
 "use client"
 
 import Link from "next/link"
-import { useParams } from "next/navigation"
-import { ClipboardList, Plus, Sun, Cloud, CloudRain, Wind, Camera, CheckCircle2, Clock, AlertCircle, Users } from "lucide-react"
+import { useState } from "react"
+import { useParams, useRouter } from "next/navigation"
+import { ClipboardList, Plus, Sun, Cloud, CloudRain, Wind, Camera, CheckCircle2, Clock, AlertCircle, Users, Copy, Download } from "lucide-react"
+import { toast } from "sonner"
 import { trpc } from "@/lib/trpc/client"
 import { formatDataCurta, diaSemanaAbrev } from "@/lib/format"
+import { exportarExcel } from "@/lib/excel"
+import { useRole } from "@/hooks/useRole"
 
 function formatTemp(min?: number | null, max?: number | null) {
   if (min != null && max != null) return `${min}/${max}°C`
@@ -38,10 +42,24 @@ function StatusChip({ status }: { status: string }) {
 }
 
 export default function RdoPage() {
-  const params = useParams()
-  const id = params.id as string
+  const params  = useParams()
+  const router  = useRouter()
+  const id      = params.id as string
+  const [duplicandoId, setDuplicandoId] = useState<string | null>(null)
 
+  const { canDelete, canFvs } = useRole()
+  const utils = trpc.useUtils()
   const { data: rdos = [], isLoading } = trpc.rdo.listar.useQuery({ obraId: id })
+
+  const duplicar = trpc.rdo.duplicar.useMutation({
+    onSuccess: (rdo) => {
+      utils.rdo.listar.invalidate({ obraId: id })
+      setDuplicandoId(null)
+      toast.success("RDO duplicado")
+      router.push(`/obras/${id}/rdo/${rdo.id}`)
+    },
+    onError: (e) => { setDuplicandoId(null); toast.error(e.message) },
+  })
 
   const total      = rdos.length
   const aprovados  = rdos.filter(r => r.status === "APROVADO").length
@@ -65,16 +83,51 @@ export default function RdoPage() {
             Registro diário das atividades, equipe, condições climáticas e ocorrências
           </p>
         </div>
-        <Link href={`/obras/${id}/rdo/novo`} className="btn-orange min-h-[44px] flex-shrink-0">
-          <Plus size={15} />
-          Novo RDO
-        </Link>
+        <div className="flex gap-2">
+          {rdos.length > 0 && (
+            <>
+              <button
+                onClick={() => exportarExcel(rdos.map(r => ({
+                  Data:        formatDataCurta(r.data),
+                  Responsável: r.responsavel.nome,
+                  Clima:       r.clima ?? "",
+                  Status:      r.status,
+                  Atividades:  r.atividades.map(a => a.descricao).join("; "),
+                  Equipe:      r.equipe.reduce((s, e) => s + e.quantidade, 0),
+                })), `RDOs`)}
+                className="btn-ghost min-h-[44px] flex-shrink-0"
+                title="Exportar para Excel"
+              >
+                <Download size={15} />
+                Excel
+              </button>
+              {canFvs && (
+                <button
+                  onClick={() => {
+                    setDuplicandoId(rdos[0].id)
+                    duplicar.mutate({ rdoId: rdos[0].id })
+                  }}
+                  disabled={duplicar.isPending}
+                  className="btn-ghost min-h-[44px] flex-shrink-0 disabled:opacity-60"
+                  title="Duplica o RDO mais recente"
+                >
+                  <Copy size={15} />
+                  {duplicar.isPending ? "Duplicando..." : "Duplicar último"}
+                </button>
+              )}
+            </>
+          )}
+          <Link href={`/obras/${id}/rdo/novo`} className="btn-orange min-h-[44px] flex-shrink-0">
+            <Plus size={15} />
+            Novo RDO
+          </Link>
+        </div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {STATS.map(({ label, value, sub, color, bg }) => (
-          <div key={label} className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-4">
+          <div key={label} className="bg-white rounded-2xl border border-border shadow-sm p-4">
             <p className={`text-2xl font-extrabold ${color}`}>{value}</p>
             <p className="text-xs font-medium text-[var(--text-primary)] mt-0.5">{label}</p>
             <p className="text-[10px] text-[var(--text-muted)]">{sub}</p>
@@ -83,10 +136,10 @@ export default function RdoPage() {
       </div>
 
       {/* Lista de RDOs */}
-      <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
 
         {/* Table header */}
-        <div className="grid grid-cols-[80px_1fr_120px_80px_100px] gap-3 px-5 py-3 bg-[var(--muted)] border-b border-[var(--border)]">
+        <div className="grid grid-cols-[80px_1fr_120px_80px_100px] gap-3 px-5 py-3 bg-muted border-b border-border">
           <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Data</span>
           <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Atividades</span>
           <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Responsável</span>
@@ -114,7 +167,7 @@ export default function RdoPage() {
             <Link
               key={rdo.id}
               href={`/obras/${id}/rdo/${rdo.id}`}
-              className="grid grid-cols-[80px_1fr_120px_80px_100px] gap-3 px-5 py-4 border-b border-[var(--border)] last:border-0 hover:bg-[var(--muted)] transition-colors items-center no-underline"
+              className="grid grid-cols-[80px_1fr_120px_80px_100px] gap-3 px-5 py-4 border-b border-border last:border-0 hover:bg-muted transition-colors items-center no-underline"
             >
               {/* Data + clima */}
               <div className="flex flex-col gap-1">

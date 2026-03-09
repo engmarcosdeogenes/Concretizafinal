@@ -1,6 +1,8 @@
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
+import { logAudit } from "@/lib/audit"
+import { notificarEmpresa } from "@/lib/push"
 
 export const fvsRouter = createTRPCRouter({
   listar: protectedProcedure
@@ -69,6 +71,7 @@ export const fvsRouter = createTRPCRouter({
           })
         }
 
+        await logAudit(ctx, { entityType: "FVS", entityId: fvs.id, obraId, acao: "criou" })
         return fvs
       })
     }),
@@ -84,10 +87,22 @@ export const fvsRouter = createTRPCRouter({
       })
       if (!fvs) throw new TRPCError({ code: "NOT_FOUND" })
 
-      return ctx.db.fVS.update({
+      const updated = await ctx.db.fVS.update({
         where: { id: input.id },
         data: { status: input.status },
       })
+      await logAudit(ctx, {
+        entityType: "FVS", entityId: input.id, obraId: fvs.obraId,
+        acao: input.status === "APROVADO" ? "aprovou" : input.status === "REJEITADO" ? "rejeitou" : `status→${input.status}`,
+      })
+      if (input.status === "REJEITADO") {
+        notificarEmpresa(ctx.session.empresaId, {
+          title: "FVS Rejeitada",
+          body:  `${ctx.session.nome} rejeitou uma Ficha de Verificação de Serviço`,
+          url:   `/obras/${fvs.obraId}/fvs/${input.id}`,
+        }).catch(() => {})
+      }
+      return updated
     }),
 
   aprovarItem: protectedProcedure
@@ -96,7 +111,6 @@ export const fvsRouter = createTRPCRouter({
       aprovado: z.boolean().nullable(),
     }))
     .mutation(async ({ ctx, input }) => {
-      // Verifica ownership via join FVSItem → FVS → Obra
       const item = await ctx.db.fVSItem.findFirst({
         where: {
           id: input.itemId,
@@ -109,5 +123,49 @@ export const fvsRouter = createTRPCRouter({
         where: { id: input.itemId },
         data: { aprovado: input.aprovado },
       })
+    }),
+
+  atualizar: protectedProcedure
+    .input(z.object({
+      id:          z.string(),
+      servico:     z.string().min(1).optional(),
+      codigo:      z.string().optional().nullable(),
+      data:        z.string().optional(),
+      observacoes: z.string().optional().nullable(),
+      itens: z.array(z.object({
+        descricao: z.string().min(1),
+      })).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.db.fVS.findFirstOrThrow({
+        where: { id: input.id, obra: { empresaId: ctx.session.empresaId } },
+        select: { obraId: true },
+      })
+      const { id, itens, data, ...rest } = input
+      return ctx.db.$transaction(async (tx) => {
+        const fvs = await tx.fVS.update({
+          where: { id },
+          data: { ...rest, ...(data ? { data: new Date(data) } : {}) },
+        })
+        if (itens !== undefined) {
+          await tx.fVSItem.deleteMany({ where: { fvsId: id } })
+          if (itens.length > 0) {
+            await tx.fVSItem.createMany({
+              data: itens.map(it => ({ fvsId: id, descricao: it.descricao })),
+            })
+          }
+        }
+        await logAudit(ctx, { entityType: "FVS", entityId: id, obraId: existing.obraId, acao: "atualizou" })
+        return fvs
+      })
+    }),
+
+  excluir: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.fVS.findFirstOrThrow({
+        where: { id: input.id, obra: { empresaId: ctx.session.empresaId } },
+      })
+      return ctx.db.fVS.delete({ where: { id: input.id } })
     }),
 })

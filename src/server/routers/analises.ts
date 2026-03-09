@@ -23,7 +23,7 @@ export const analisesRouter = createTRPCRouter({
       }),
       ctx.db.fVS.findMany({
         where: { obra: { empresaId } },
-        select: { id: true, status: true },
+        select: { id: true, status: true, obraId: true },
         take: 500,
       }),
       ctx.db.fVM.findMany({
@@ -110,6 +110,20 @@ export const analisesRouter = createTRPCRouter({
         custo:     o.custoAtual,
       }))
 
+    // Avanço físico por obra com base em FVS aprovadas
+    const avancoFisicoObras = obras.map(o => {
+      const obraFvs   = fvs.filter(f => f.obraId === o.id)
+      const aprovadas = obraFvs.filter(f => f.status === "APROVADO").length
+      const total     = obraFvs.length
+      return {
+        nome:      o.nome.length > 22 ? o.nome.slice(0, 20) + "…" : o.nome,
+        aprovadas,
+        total,
+        pct:       total > 0 ? Math.round(aprovadas / total * 100) : 0,
+        progresso: o.progresso,
+      }
+    }).filter(o => o.total > 0)
+
     return {
       kpis: {
         totalObras: obras.length,
@@ -128,6 +142,7 @@ export const analisesRouter = createTRPCRouter({
       statusObras,
       financeiroPorMes,
       orcamentoVsCusto,
+      avancoFisicoObras,
     }
   }),
 })

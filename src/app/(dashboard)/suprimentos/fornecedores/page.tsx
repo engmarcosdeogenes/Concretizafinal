@@ -1,9 +1,14 @@
 "use client"
 
-import { useState } from "react"
-import { Building2, Plus, X, Phone, Mail, MapPin, Pencil, PowerOff, Power, Search, Filter, Users, Calendar, TrendingUp, FileSpreadsheet, BarChart2, FileText, FileJson } from "lucide-react"
+import { useState, useMemo, useEffect } from "react"
+import * as XLSX from "xlsx"
+import { Building2, Plus, X, Phone, Mail, MapPin, Search, Filter, Users, Calendar, TrendingUp, FileSpreadsheet, FileJson } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
-import { cn } from "@/lib/utils"
+
+import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
 
 type Fornecedor = {
   id: string; nome: string; cnpj?: string | null; categoria?: string | null
@@ -21,16 +26,13 @@ const EMPTY_FORM: FormState = {
   nome: "", cnpj: "", categoria: "", cidade: "", estado: "", telefone: "", email: "", site: "",
 }
 
-const inputCls = "w-full px-3.5 h-[40px] border border-[var(--border)] rounded-[var(--radius)] text-sm text-[var(--text-primary)] bg-white placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
-const labelCls = "block text-sm font-medium text-[var(--text-primary)] mb-1.5"
-
-const getCategoriaBadgeClass = (cat?: string | null) => {
-  if (!cat) return "badge badge-gray"
+const getCategoriaBadgeVariant = (cat?: string | null) => {
+  if (!cat) return "secondary"
   const l = cat.toLowerCase()
-  if (l.includes("materiais")) return "badge badge-blue"
-  if (l.includes("equipamentos")) return "badge badge-green"
-  if (l.includes("serviços") || l.includes("servicos")) return "badge badge-purple"
-  return "badge badge-gray"
+  if (l.includes("materiais")) return "default"
+  if (l.includes("equipamentos")) return "outline" // ou algum customizado
+  if (l.includes("serviços") || l.includes("servicos")) return "secondary"
+  return "secondary"
 }
 
 export default function FornecedoresPage() {
@@ -39,9 +41,15 @@ export default function FornecedoresPage() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
   const [erro, setErro] = useState("")
   const [busca, setBusca] = useState("")
+  const [filtroCategoria, setFiltroCategoria] = useState("")
+  const [filtroStatus, setFiltroStatus] = useState("")
+  const [pagina, setPagina] = useState(1)
+  const POR_PAGINA = 20
 
   const utils = trpc.useUtils()
-  const { data: fornecedores = [], isLoading } = trpc.fornecedor.listar.useQuery()
+  const { data: resultado, isLoading } = trpc.fornecedor.listar.useQuery()
+  const fornecedores = resultado?.fornecedores ?? []
+  const novosNoMes   = resultado?.novosNoMes ?? 0
 
   const criar = trpc.fornecedor.criar.useMutation({
     onSuccess: () => { utils.fornecedor.listar.invalidate(); fecharModal() },
@@ -70,6 +78,10 @@ export default function FornecedoresPage() {
     setShowModal(false); setEditing(null); setForm(EMPTY_FORM); setErro("")
   }
 
+  function toggleAtivo(f: Fornecedor) {
+    atualizar.mutate({ id: f.id, ativo: !f.ativo })
+  }
+
   function set(field: keyof FormState, value: string) {
     setForm(prev => ({ ...prev, [field]: value }))
   }
@@ -83,12 +95,53 @@ export default function FornecedoresPage() {
     }
   }
 
-  const filtered = fornecedores.filter(f =>
-    f.nome.toLowerCase().includes(busca.toLowerCase()) ||
-    (f.categoria ?? "").toLowerCase().includes(busca.toLowerCase()) ||
-    (f.cidade ?? "").toLowerCase().includes(busca.toLowerCase()) ||
-    (f.cnpj ?? "").includes(busca)
-  )
+  // Reset para pg 1 ao mudar filtros
+  useEffect(() => { setPagina(1) }, [busca, filtroCategoria, filtroStatus])
+
+  const filtered = useMemo(() => fornecedores.filter(f => {
+    const q = busca.toLowerCase()
+    const matchBusca = !busca ||
+      f.nome.toLowerCase().includes(q) ||
+      (f.categoria ?? "").toLowerCase().includes(q) ||
+      (f.cidade ?? "").toLowerCase().includes(q) ||
+      (f.cnpj ?? "").includes(busca)
+    const matchCategoria = !filtroCategoria ||
+      (f.categoria ?? "").toLowerCase() === filtroCategoria.toLowerCase()
+    const matchStatus = !filtroStatus ||
+      (filtroStatus === "ativo" ? f.ativo : !f.ativo)
+    return matchBusca && matchCategoria && matchStatus
+  }), [fornecedores, busca, filtroCategoria, filtroStatus])
+
+  function exportarCSV() {
+    const headers = ["Nome", "CNPJ", "Categoria", "Cidade", "Estado", "Telefone", "E-mail", "Status", "Pedidos"]
+    const rows = filtered.map(f => [
+      f.nome, f.cnpj ?? "", f.categoria ?? "", f.cidade ?? "", f.estado ?? "",
+      f.telefone ?? "", f.email ?? "", f.ativo ? "Ativo" : "Inativo", String(f._count.pedidos),
+    ])
+    const csv = [headers, ...rows]
+      .map(row => row.map(c => `"${String(c).replace(/"/g, '""')}"`).join(","))
+      .join("\n")
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url; a.download = "fornecedores.csv"; a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  function exportarExcel() {
+    const dados = filtered.map(f => ({
+      Nome: f.nome, CNPJ: f.cnpj ?? "", Categoria: f.categoria ?? "",
+      Cidade: f.cidade ?? "", Estado: f.estado ?? "", Telefone: f.telefone ?? "",
+      "E-mail": f.email ?? "", Status: f.ativo ? "Ativo" : "Inativo", Pedidos: f._count.pedidos,
+    }))
+    const ws = XLSX.utils.json_to_sheet(dados)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "Fornecedores")
+    XLSX.writeFile(wb, "fornecedores.xlsx")
+  }
+
+  const totalPaginas = Math.ceil(filtered.length / POR_PAGINA)
+  const paginado = filtered.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA)
 
   const isPending = criar.isPending || atualizar.isPending
 
@@ -98,218 +151,208 @@ export default function FornecedoresPage() {
   const categoriasUnicas = new Set(fornecedores.map(f => f.categoria?.toLowerCase().trim()).filter(Boolean))
 
   return (
-    <div className="p-6 md:p-8 max-w-[1400px] mx-auto space-y-6">
-
-      {/* Top Tabs Mock */}
-      <div className="flex items-center gap-6 border-b border-[var(--border)] mb-6">
-        <button className="pb-3 border-b-2 border-[var(--blue)] text-[var(--blue)] font-semibold text-sm flex items-center gap-2">
-          <Users size={16} /> Fornecedores
-        </button>
-        <button className="pb-3 border-b-2 border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)] font-semibold text-sm flex items-center gap-2 transition-colors">
-          <Building2 size={16} /> Materiais
-        </button>
-        <button className="pb-3 border-b-2 border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)] font-semibold text-sm flex items-center gap-2 transition-colors">
-          <TrendUp size={16} /> Equipamentos
-        </button>
-      </div>
+    <div className="flex-1 space-y-8 p-8 pt-6 max-w-[1400px] mx-auto">
 
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-            <Users size={20} className="text-blue-600" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-[var(--text-primary)]">Fornecedores</h1>
-            <p className="text-[14px] text-[var(--text-muted)] mt-0.5">
-              Gerencie seus fornecedores e parceiros comerciais
-            </p>
-          </div>
+      <div className="flex items-center justify-between space-y-2 mb-6">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Fornecedores</h2>
+          <p className="text-muted-foreground mt-0.5">Gerencie seus fornecedores e parceiros comerciais.</p>
         </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
-          <button className="px-3 h-9 rounded-[var(--radius)] border border-green-200 text-green-700 bg-green-50/50 hover:bg-green-50 text-xs font-semibold flex items-center gap-1.5 transition-colors">
-            <FileSpreadsheet size={14} /> Excel
-          </button>
-          <button className="px-3 h-9 rounded-[var(--radius)] border border-orange-200 text-orange-700 bg-orange-50/50 hover:bg-orange-50 text-xs font-semibold flex items-center gap-1.5 transition-colors">
-            <BarChart2 size={14} /> Power BI
-          </button>
-          <button className="px-3 h-9 rounded-[var(--radius)] border border-red-200 text-red-700 bg-red-50/50 hover:bg-red-50 text-xs font-semibold flex items-center gap-1.5 transition-colors">
-            <FileText size={14} /> PDF
-          </button>
-          <button className="px-3 h-9 rounded-[var(--radius)] border border-blue-200 text-blue-700 bg-blue-50/50 hover:bg-blue-50 text-xs font-semibold flex items-center gap-1.5 transition-colors">
-            <FileJson size={14} /> CSV
-          </button>
+        <div className="flex items-center gap-2">
+          <Button onClick={exportarExcel} variant="outline" className="h-9 px-3 gap-1.5 bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 hover:text-emerald-700">
+            <FileSpreadsheet size={16} /> Excel
+          </Button>
+          <Button onClick={exportarCSV} variant="outline" className="h-9 px-3 gap-1.5 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 hover:text-blue-700">
+            <FileJson size={16} /> CSV
+          </Button>
+          <Button onClick={abrirCriar} className="h-9 ml-2 font-semibold shadow-sm">
+            <Plus size={16} className="mr-2" />
+            Novo Fornecedor
+          </Button>
         </div>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-5 flex items-center justify-between">
-          <div>
-            <p className="text-[13px] font-medium text-[var(--text-secondary)] mb-1">Fornecedores Ativos</p>
-            <p className="text-2xl font-bold text-[var(--text-primary)]">{ativos}</p>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center">
-            <Users size={24} className="text-green-600" />
-          </div>
-        </div>
+        <Card className="shadow-sm border">
+          <CardContent className="p-6 flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-muted-foreground">Fornecedores Ativos</p>
+              <p className="text-3xl font-bold">{ativos}</p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-emerald-100/50 flex items-center justify-center">
+              <Users size={24} className="text-emerald-600" />
+            </div>
+          </CardContent>
+        </Card>
 
-        <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-5 flex items-center justify-between">
-          <div>
-            <p className="text-[13px] font-medium text-[var(--text-secondary)] mb-1">Novos no Mês</p>
-            <p className="text-2xl font-bold text-[var(--text-primary)]">0</p>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
-            <Calendar size={24} className="text-blue-600" />
-          </div>
-        </div>
+        <Card className="shadow-sm border">
+          <CardContent className="p-6 flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-muted-foreground">Novos no Mês</p>
+              <p className="text-3xl font-bold">{novosNoMes}</p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-blue-100/50 flex items-center justify-center">
+              <Calendar size={24} className="text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
 
-        <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-5 flex items-center justify-between">
-          <div>
-            <p className="text-[13px] font-medium text-[var(--text-secondary)] mb-1">Taxa de Atividade</p>
-            <p className="text-2xl font-bold text-[var(--text-primary)]">{txAtividade}%</p>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center">
-            <TrendingUp size={24} className="text-purple-600" />
-          </div>
-        </div>
+        <Card className="shadow-sm border">
+          <CardContent className="p-6 flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-muted-foreground">Taxa de Atividade</p>
+              <p className="text-3xl font-bold">{txAtividade}%</p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-violet-100/50 flex items-center justify-center">
+              <TrendingUp size={24} className="text-violet-600" />
+            </div>
+          </CardContent>
+        </Card>
 
-        <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-5 flex items-center justify-between">
-          <div>
-            <p className="text-[13px] font-medium text-[var(--text-secondary)] mb-1">Categorias Cadastradas</p>
-            <p className="text-2xl font-bold text-[var(--text-primary)]">{categoriasUnicas.size || 3}</p>
-          </div>
-          <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center">
-            <Building2 size={24} className="text-orange-600" />
-          </div>
-        </div>
+        <Card className="shadow-sm border">
+          <CardContent className="p-6 flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-muted-foreground">Categorias</p>
+              <p className="text-3xl font-bold">{categoriasUnicas.size}</p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-amber-100/50 flex items-center justify-center">
+              <Building2 size={24} className="text-amber-600" />
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 bg-white border border-[var(--border)] p-2 rounded-[var(--radius-lg)] shadow-sm">
-        <label className="flex items-center gap-2 px-3 h-[40px] flex-1 max-w-lg">
-          <Search size={16} className="text-[var(--text-muted)]" />
-          <input
+      <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 bg-card border p-2 py-3 px-4 rounded-xl shadow-sm">
+        <div className="flex-1 relative max-w-lg">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
             type="text"
             placeholder="Buscar por nome, CNPJ ou cidade..."
             value={busca}
             onChange={e => setBusca(e.target.value)}
-            className="flex-1 bg-transparent border-none outline-none text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+            className="pl-9 bg-muted/50 focus-visible:bg-transparent"
           />
-        </label>
+        </div>
 
-        <div className="hidden md:block w-px h-6 bg-[var(--border)]" />
+        <div className="hidden md:block w-px h-6 bg-border mx-2" />
 
         <div className="flex items-center gap-2 ml-auto">
-          <div className="flex items-center border border-[var(--border)] rounded-[var(--radius)] h-[40px] px-3">
-            <Filter size={14} className="text-[var(--text-muted)] mr-2" />
-            <select className="bg-transparent border-none text-sm font-medium text-[var(--text-primary)] outline-none cursor-pointer pr-2">
-              <option>Todas as categorias</option>
-              <option>Materiais</option>
-              <option>Equipamentos</option>
+          <div className="flex items-center border rounded-md h-9 px-3 bg-white text-sm font-medium">
+            <Filter size={14} className="text-muted-foreground mr-2" />
+            <select
+              value={filtroCategoria}
+              onChange={e => setFiltroCategoria(e.target.value)}
+              className="bg-transparent border-none outline-none cursor-pointer"
+            >
+              <option value="">Todas as categorias</option>
+              {Array.from(categoriasUnicas).sort().map(cat => (
+                <option key={cat} value={cat!}>{cat}</option>
+              ))}
             </select>
           </div>
 
-          <div className="flex items-center border border-[var(--border)] rounded-[var(--radius)] h-[40px] px-3">
-            <Filter size={14} className="text-[var(--text-muted)] mr-2" />
-            <select className="bg-transparent border-none text-sm font-medium text-[var(--text-primary)] outline-none cursor-pointer pr-2">
-              <option>Todos os Status</option>
-              <option>Ativos</option>
-              <option>Inativos</option>
+          <div className="flex items-center border rounded-md h-9 px-3 bg-white text-sm font-medium">
+            <Filter size={14} className="text-muted-foreground mr-2" />
+            <select
+              value={filtroStatus}
+              onChange={e => setFiltroStatus(e.target.value)}
+              className="bg-transparent border-none outline-none cursor-pointer"
+            >
+              <option value="">Todos os Status</option>
+              <option value="ativo">Ativos</option>
+              <option value="inativo">Inativos</option>
             </select>
           </div>
-
-          <button onClick={abrirCriar} className="btn-primary h-[40px] ml-2 px-4 whitespace-nowrap">
-            <Plus size={16} />
-            Novo Fornecedor
-          </button>
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-[var(--border)] rounded-[var(--radius-lg)] shadow-sm overflow-x-auto">
-        <table className="w-full min-w-[1000px] text-left border-collapse">
+      <div className="bg-card border rounded-xl shadow-sm overflow-x-auto">
+        <table className="w-full min-w-[1000px] text-left border-collapse text-sm">
           <thead>
-            <tr className="border-b border-[var(--border)]">
-              <th className="px-5 py-4 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Nome do Fornecedor</th>
-              <th className="px-5 py-4 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">CNPJ</th>
-              <th className="px-5 py-4 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Categoria</th>
-              <th className="px-5 py-4 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Cidade</th>
-              <th className="px-5 py-4 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Telefone</th>
-              <th className="px-5 py-4 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">E-mail</th>
-              <th className="px-5 py-4 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Status</th>
-              <th className="px-5 py-4 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide text-right">Ações</th>
+            <tr className="border-b bg-muted/50">
+              <th className="px-5 py-4 font-semibold text-muted-foreground">Nome do Fornecedor</th>
+              <th className="px-5 py-4 font-semibold text-muted-foreground">CNPJ</th>
+              <th className="px-5 py-4 font-semibold text-muted-foreground">Categoria</th>
+              <th className="px-5 py-4 font-semibold text-muted-foreground">Cidade</th>
+              <th className="px-5 py-4 font-semibold text-muted-foreground">Telefone/Email</th>
+              <th className="px-5 py-4 font-semibold text-muted-foreground">Status</th>
+              <th className="px-5 py-4 font-semibold text-muted-foreground text-right">Ações</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[var(--border)]">
+          <tbody className="divide-y">
             {isLoading && (
               <tr>
-                <td colSpan={8} className="px-5 py-12 text-center text-sm text-[var(--text-muted)]">Carregando...</td>
+                <td colSpan={7} className="px-5 py-12 text-center text-muted-foreground">Carregando...</td>
               </tr>
             )}
 
             {!isLoading && filtered.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-5 py-12 text-center">
-                  <Building2 size={32} className="mx-auto mb-3 text-[var(--text-muted)] opacity-40" />
-                  <p className="text-sm font-medium text-[var(--text-primary)]">
+                <td colSpan={7} className="px-5 py-16 text-center">
+                  <div className="bg-primary/5 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Building2 size={32} className="text-primary opacity-80" />
+                  </div>
+                  <p className="text-base font-bold text-foreground">
                     {busca ? "Nenhum fornecedor encontrado" : "Nenhum fornecedor cadastrado"}
                   </p>
+                  <p className="text-sm text-muted-foreground mt-1">Busque ou crie um novo para continuar.</p>
                 </td>
               </tr>
             )}
 
-            {filtered.map(f => (
-              <tr key={f.id} className="hover:bg-slate-50/50 transition-colors">
-                <td className="px-5 py-3.5">
-                  <span className="text-[13px] font-semibold text-[var(--text-primary)]">{f.nome}</span>
+            {paginado.map(f => (
+              <tr key={f.id} className="hover:bg-muted/50 transition-colors group">
+                <td className="px-5 py-4">
+                  <span className="font-bold text-foreground group-hover:text-primary transition-colors">{f.nome}</span>
                 </td>
 
-                <td className="px-5 py-3.5">
-                  <span className="text-[13px] text-[var(--text-secondary)] font-mono">{f.cnpj || "—"}</span>
+                <td className="px-5 py-4 text-muted-foreground font-mono">
+                  {f.cnpj || "—"}
                 </td>
 
-                <td className="px-5 py-3.5">
-                  <span className={getCategoriaBadgeClass(f.categoria)}>
-                    {f.categoria || "—"}
-                  </span>
+                <td className="px-5 py-4">
+                  <Badge variant={getCategoriaBadgeVariant(f.categoria)}>
+                    {f.categoria || "Geral"}
+                  </Badge>
                 </td>
 
-                <td className="px-5 py-3.5">
-                  <div className="flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)]">
-                    <MapPin size={13} className="text-[var(--text-muted)] flex-shrink-0" />
-                    <span className="truncate max-w-[120px]">{f.cidade ? `${f.cidade}${f.estado ? ` - ${f.estado}` : ''}` : "—"}</span>
+                <td className="px-5 py-4">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <MapPin size={14} className="shrink-0" />
+                    <span className="truncate max-w-[150px] font-medium">{f.cidade ? `${f.cidade}${f.estado ? ` - ${f.estado}` : ''}` : "—"}</span>
                   </div>
                 </td>
 
-                <td className="px-5 py-3.5">
-                  <div className="flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)]">
-                    <Phone size={13} className="text-[var(--text-muted)] flex-shrink-0" />
-                    <span className="truncate">{f.telefone || "—"}</span>
+                <td className="px-5 py-4">
+                  <div className="flex flex-col gap-1 text-xs text-muted-foreground font-medium">
+                    <div className="flex items-center gap-2">
+                      <Phone size={12} className="shrink-0" /> <span className="truncate">{f.telefone || "Não info"}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Mail size={12} className="shrink-0" /> <span className="truncate max-w-[150px]">{f.email || "Não info"}</span>
+                    </div>
                   </div>
                 </td>
 
-                <td className="px-5 py-3.5">
-                  <div className="flex items-center gap-1.5 text-[13px] text-[var(--text-secondary)]">
-                    <Mail size={13} className="text-[var(--text-muted)] flex-shrink-0" />
-                    <span className="truncate max-w-[160px]">{f.email || "—"}</span>
-                  </div>
-                </td>
-
-                <td className="px-5 py-3.5">
-                  <span className={f.ativo ? "badge badge-green" : "badge badge-gray bg-slate-100 text-slate-600"}>
+                <td className="px-5 py-4">
+                  <Badge variant={f.ativo ? "default" : "secondary"}>
                     {f.ativo ? "Ativo" : "Inativo"}
-                  </span>
+                  </Badge>
                 </td>
 
-                <td className="px-5 py-3.5 text-right">
-                  <button
+                <td className="px-5 py-4 text-right">
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     onClick={() => abrirEditar(f)}
-                    className="text-[13px] font-semibold text-[var(--blue)] hover:text-blue-800 transition-colors"
+                    className="font-semibold text-primary"
                   >
                     Editar
-                  </button>
+                  </Button>
                 </td>
               </tr>
             ))}
@@ -317,178 +360,141 @@ export default function FornecedoresPage() {
         </table>
       </div>
 
-      {/* Charts Section Placholder */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-4">
-        <div className="bg-white border border-[var(--border)] rounded-[var(--radius-lg)] p-5 shadow-sm">
-          <h3 className="text-[15px] font-bold text-[var(--text-primary)] mb-6">Distribuição por Categoria</h3>
-          <div className="flex flex-col items-center justify-center h-[200px]">
-            {/* Visual CSS-based minimal pie chart approximation */}
-            <div className="w-32 h-32 rounded-full mb-6 relative overflow-hidden flex items-center justify-center" style={{ background: 'conic-gradient(var(--blue) 0% 60%, var(--purple) 60% 85%, var(--green) 85% 100%)' }}>
-              <div className="w-16 h-16 bg-white rounded-full"></div>
-            </div>
-            <div className="flex gap-4">
-              <span className="text-[12px] font-medium flex items-center gap-1 text-[var(--text-secondary)]"><span className="w-2.5 h-2.5 bg-[var(--green)] inline-block"></span> Equipamentos</span>
-              <span className="text-[12px] font-medium flex items-center gap-1 text-[var(--text-secondary)]"><span className="w-2.5 h-2.5 bg-[var(--blue)] inline-block"></span> Materiais</span>
-              <span className="text-[12px] font-medium flex items-center gap-1 text-[var(--text-secondary)]"><span className="w-2.5 h-2.5 bg-[var(--purple)] inline-block"></span> Serviços</span>
-            </div>
+      {/* Paginação */}
+      {totalPaginas > 1 && (
+        <div className="flex items-center justify-between px-1">
+          <p className="text-xs text-muted-foreground">
+            Mostrando {(pagina - 1) * POR_PAGINA + 1}–{Math.min(pagina * POR_PAGINA, filtered.length)} de {filtered.length} fornecedores
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPagina(1)}
+              disabled={pagina === 1}
+              className="px-2 py-1.5 text-xs border border-border rounded-lg hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >«</button>
+            <button
+              onClick={() => setPagina(p => Math.max(1, p - 1))}
+              disabled={pagina === 1}
+              className="px-3 py-1.5 text-xs border border-border rounded-lg hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >Anterior</button>
+            {Array.from({ length: Math.min(5, totalPaginas) }, (_, i) => {
+              const start = Math.max(1, Math.min(pagina - 2, totalPaginas - 4))
+              const pg = start + i
+              return (
+                <button
+                  key={pg}
+                  onClick={() => setPagina(pg)}
+                  className={`w-8 h-7 text-xs rounded-lg border transition-colors ${
+                    pg === pagina
+                      ? "bg-primary text-primary-foreground border-primary font-bold"
+                      : "border-border hover:bg-muted"
+                  }`}
+                >{pg}</button>
+              )
+            })}
+            <button
+              onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))}
+              disabled={pagina === totalPaginas}
+              className="px-3 py-1.5 text-xs border border-border rounded-lg hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >Próxima</button>
+            <button
+              onClick={() => setPagina(totalPaginas)}
+              disabled={pagina === totalPaginas}
+              className="px-2 py-1.5 text-xs border border-border rounded-lg hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >»</button>
           </div>
         </div>
-
-        <div className="bg-white border border-[var(--border)] rounded-[var(--radius-lg)] p-5 shadow-sm">
-          <h3 className="text-[15px] font-bold text-[var(--text-primary)] mb-6">Novos Fornecedores por Mês</h3>
-          <div className="flex items-end gap-2 h-[180px] mt-4 px-2 border-l border-b border-[var(--border)] relative pb-1">
-            <div className="w-3 px-1 text-[10px] text-[var(--text-muted)] absolute -left-6 bottom-0">0</div>
-            <div className="w-3 px-1 text-[10px] text-[var(--text-muted)] absolute -left-6 bottom-1/2">0.5</div>
-            <div className="w-3 px-1 text-[10px] text-[var(--text-muted)] absolute -left-6 top-0">1</div>
-
-            {/* Bars */}
-            <div className="flex-1 bg-[var(--blue)] h-full w-full mx-1"></div>
-            <div className="flex-1 bg-[var(--blue)] h-full w-full mx-1"></div>
-            <div className="flex-1 bg-[var(--blue)] h-full w-full mx-1"></div>
-            <div className="flex-1 bg-[var(--blue)] h-full w-full mx-1"></div>
-            <div className="flex-1 bg-transparent border border-dashed border-[var(--border)] h-full w-full mx-1"></div>
-            <div className="flex-1 bg-transparent border border-dashed border-[var(--border)] h-full w-full mx-1"></div>
-            <div className="flex-1 bg-transparent border border-dashed border-[var(--border)] h-full w-full mx-1"></div>
-            <div className="flex-1 bg-transparent border border-dashed border-[var(--border)] h-full w-full mx-1"></div>
-            <div className="flex-1 bg-transparent border border-dashed border-[var(--border)] h-full w-full mx-1"></div>
-            <div className="flex-1 bg-[var(--blue)] h-full w-full mx-1"></div>
-            <div className="flex-1 bg-transparent border border-dashed border-[var(--border)] h-full w-full mx-1"></div>
-          </div>
-          <div className="flex justify-between text-[11px] text-[var(--text-muted)] mt-2 font-medium px-4">
-            <span>Fev</span><span>Abr</span><span>Jun</span><span>Ago</span><span>Out</span><span>Dez</span>
-          </div>
-        </div>
-
-        <div className="bg-white border border-[var(--border)] rounded-[var(--radius-lg)] p-5 shadow-sm">
-          <h3 className="text-[15px] font-bold text-[var(--text-primary)] mb-6">Evolução de Fornecedores Ativos</h3>
-          <div className="flex items-end gap-0 h-[180px] mt-4 px-2 border-l border-b border-[var(--border)] relative pb-1">
-            <div className="w-3 px-1 text-[10px] text-[var(--text-muted)] absolute -left-6 bottom-0">0</div>
-            <div className="w-3 px-1 text-[10px] text-[var(--text-muted)] absolute -left-6 bottom-1/4">2</div>
-            <div className="w-3 px-1 text-[10px] text-[var(--text-muted)] absolute -left-6 bottom-2/4">4</div>
-            <div className="w-3 px-1 text-[10px] text-[var(--text-muted)] absolute -left-6 bottom-3/4">6</div>
-            <div className="w-3 px-1 text-[10px] text-[var(--text-muted)] absolute -left-6 top-0">8</div>
-
-            {/* Line approximation */}
-            <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" className="overflow-visible">
-              <polyline points="0,90 20,70 40,60 60,40 80,30 100,30" fill="none" stroke="var(--green)" strokeWidth="2" />
-              <circle cx="0" cy="90" r="2" fill="white" stroke="var(--green)" strokeWidth="1.5" />
-              <circle cx="20" cy="70" r="2" fill="white" stroke="var(--green)" strokeWidth="1.5" />
-              <circle cx="40" cy="60" r="2" fill="white" stroke="var(--green)" strokeWidth="1.5" />
-              <circle cx="60" cy="40" r="2" fill="white" stroke="var(--green)" strokeWidth="1.5" />
-              <circle cx="80" cy="30" r="2" fill="white" stroke="var(--green)" strokeWidth="1.5" />
-              <circle cx="100" cy="30" r="2" fill="white" stroke="var(--green)" strokeWidth="1.5" />
-            </svg>
-          </div>
-          <div className="flex justify-between text-[11px] text-[var(--text-muted)] mt-2 font-medium">
-            <span>Jan</span><span>Fev</span><span>Mar</span><span>Abr</span><span>Mai</span><span>Jun</span>
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* Modal criar/editar */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity">
-          <div className="bg-white rounded-[var(--radius-lg)] border border-[var(--border)] shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-5 border-b border-[var(--border)] bg-slate-50/50">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                  <Building2 size={16} className="text-[var(--blue)]" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-all duration-200">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col shadow-2xl animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between p-6 border-b bg-muted/20">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Building2 size={20} className="text-primary" />
                 </div>
-                <h2 className="font-bold text-[var(--text-primary)]">
-                  {editing ? "Editar Fornecedor" : "Novo Fornecedor"}
-                </h2>
+                <div>
+                  <h2 className="text-xl font-bold">{editing ? "Editar Fornecedor" : "Novo Fornecedor"}</h2>
+                  <p className="text-sm text-muted-foreground">Preencha os dados abaixo.</p>
+                </div>
               </div>
-              <button onClick={fecharModal}
-                className="w-8 h-8 flex items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-muted)] hover:bg-[var(--muted)] transition-colors cursor-pointer">
-                <X size={14} />
-              </button>
+              <Button variant="ghost" size="icon" onClick={fecharModal} className="rounded-full">
+                <X size={18} />
+              </Button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-5">
+            <form onSubmit={handleSubmit} className="p-6 space-y-6 flex-1 overflow-y-auto">
               {erro && (
-                <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-[var(--radius)] text-red-600 text-[13px] font-medium">{erro}</div>
+                <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm font-medium">{erro}</div>
               )}
 
-              <div>
-                <label className={labelCls}>Nome da Empresa <span className="text-red-500">*</span></label>
-                <input required type="text" value={form.nome} onChange={e => set("nome", e.target.value)}
-                  placeholder="Razão social ou nome fantasia" className={inputCls} />
-              </div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold">Nome da Empresa <span className="text-destructive">*</span></label>
+                  <Input required type="text" value={form.nome} onChange={e => set("nome", e.target.value)} placeholder="Razão social ou nome fantasia" />
+                </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={labelCls}>CNPJ</label>
-                  <input type="text" value={form.cnpj} onChange={e => set("cnpj", e.target.value)}
-                    placeholder="00.000.000/0001-00" className={inputCls} />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold">CNPJ</label>
+                    <Input type="text" value={form.cnpj} onChange={e => set("cnpj", e.target.value)} placeholder="00.000.000/0001-00" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold">Categoria</label>
+                    <Input type="text" value={form.categoria} onChange={e => set("categoria", e.target.value)} placeholder="Ex: Materiais, Serviços" />
+                  </div>
                 </div>
-                <div>
-                  <label className={labelCls}>Categoria</label>
-                  <input type="text" value={form.categoria} onChange={e => set("categoria", e.target.value)}
-                    placeholder="Ex: Materiais, Serviços" className={inputCls} />
-                </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={labelCls}>Cidade</label>
-                  <input type="text" value={form.cidade} onChange={e => set("cidade", e.target.value)}
-                    placeholder="São Paulo" className={inputCls} />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold">Cidade</label>
+                    <Input type="text" value={form.cidade} onChange={e => set("cidade", e.target.value)} placeholder="São Paulo" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold">Estado</label>
+                    <Input type="text" value={form.estado} onChange={e => set("estado", e.target.value)} placeholder="SP" maxLength={2} />
+                  </div>
                 </div>
-                <div>
-                  <label className={labelCls}>Estado</label>
-                  <input type="text" value={form.estado} onChange={e => set("estado", e.target.value)}
-                    placeholder="SP" maxLength={2} className={inputCls} />
-                </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={labelCls}>Telefone</label>
-                  <input type="text" value={form.telefone} onChange={e => set("telefone", e.target.value)}
-                    placeholder="(11) 99999-9999" className={inputCls} />
-                </div>
-                <div>
-                  <label className={labelCls}>E-mail</label>
-                  <input type="email" value={form.email} onChange={e => set("email", e.target.value)}
-                    placeholder="contato@empresa.com.br" className={inputCls} />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold">Telefone</label>
+                    <Input type="text" value={form.telefone} onChange={e => set("telefone", e.target.value)} placeholder="(11) 99999-9999" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold">E-mail</label>
+                    <Input type="email" value={form.email} onChange={e => set("email", e.target.value)} placeholder="contato@empresa.com.br" />
+                  </div>
                 </div>
               </div>
 
-              <div className="pt-2 flex items-center justify-between">
+              <div className="pt-4 border-t flex items-center justify-between">
                 {editing ? (
-                  <button
+                  <Button
                     type="button"
+                    variant={editing.ativo ? "destructive" : "default"}
                     onClick={() => toggleAtivo(editing)}
-                    className={cn(
-                      "px-3 py-2 rounded-md text-[13px] font-semibold border transition-colors",
-                      editing.ativo
-                        ? "text-red-600 border-red-200 bg-red-50 hover:bg-red-100"
-                        : "text-green-600 border-green-200 bg-green-50 hover:bg-green-100"
-                    )}
+                    className="font-semibold"
                   >
                     {editing.ativo ? "Desativar Fornecedor" : "Reativar Fornecedor"}
-                  </button>
+                  </Button>
                 ) : <div />}
 
                 <div className="flex gap-3">
-                  <button type="button" onClick={fecharModal}
-                    className="btn-ghost h-[40px] px-5 text-sm font-semibold">
+                  <Button type="button" variant="ghost" onClick={fecharModal} className="font-semibold">
                     Cancelar
-                  </button>
-                  <button type="submit" disabled={isPending}
-                    className="btn-primary h-[40px] px-6 text-sm font-semibold disabled:opacity-60 cursor-pointer shadow-sm">
-                    {isPending ? "Salvando..." : editing ? "Salvar alterações" : "Cadastrar"}
-                  </button>
+                  </Button>
+                  <Button type="submit" disabled={isPending} className="font-semibold px-6 shadow-sm">
+                    {isPending ? "Salvando..." : editing ? "Salvar alterações" : "Cadastrar Info"}
+                  </Button>
                 </div>
               </div>
             </form>
-          </div>
+          </Card>
         </div>
       )}
     </div>
   )
-}
-// TrendUp mock component definition because I missed importing it
-function TrendUp({ size, className }: { size?: number, className?: string }) {
-  return <TrendingUp size={size} className={className} />
 }

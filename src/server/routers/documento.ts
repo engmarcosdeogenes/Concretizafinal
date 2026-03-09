@@ -33,6 +33,11 @@ export const documentoRouter = createTRPCRouter({
       tamanho:   z.number().int().positive().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      const obra = await ctx.db.obra.findFirst({
+        where: { id: input.obraId, empresaId: ctx.session.empresaId },
+        select: { id: true },
+      })
+      if (!obra) throw new Error("Obra não encontrada")
       return ctx.db.documento.create({
         data: {
           obraId:    input.obraId,
@@ -48,6 +53,9 @@ export const documentoRouter = createTRPCRouter({
   excluir: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      await ctx.db.documento.findFirstOrThrow({
+        where: { id: input.id, obra: { empresaId: ctx.session.empresaId } },
+      })
       return ctx.db.documento.delete({
         where: { id: input.id },
       })

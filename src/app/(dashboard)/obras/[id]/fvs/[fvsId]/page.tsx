@@ -4,10 +4,11 @@ import Link from "next/link"
 import { useParams } from "next/navigation"
 import {
   ArrowLeft, CheckSquare, CheckCircle2, XCircle, Clock,
-  RefreshCw, Minus, Play, ThumbsUp, ThumbsDown,
+  RefreshCw, Minus, Play, ThumbsUp, ThumbsDown, Download, Camera, Edit2,
 } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { formatDataLonga } from "@/lib/format"
+import { UploadFotos } from "@/components/obras/UploadFotos"
 
 type StatusFVS = "PENDENTE" | "EM_INSPECAO" | "APROVADO" | "REJEITADO" | "RETRABALHO"
 
@@ -97,7 +98,7 @@ export default function FvsDetalhePage() {
       <div className="flex items-center gap-3">
         <Link
           href={`/obras/${obraId}/fvs`}
-          className="w-[44px] h-[44px] flex items-center justify-center rounded-xl border border-[var(--border)] bg-white hover:bg-[var(--muted)] transition-colors cursor-pointer"
+          className="w-[44px] h-[44px] flex items-center justify-center rounded-xl border border-border bg-white hover:bg-muted transition-colors cursor-pointer"
         >
           <ArrowLeft size={16} className="text-[var(--text-secondary)]" />
         </Link>
@@ -111,10 +112,18 @@ export default function FvsDetalhePage() {
             {formatDataLonga(fvs.data)}
           </p>
         </div>
+        <a href={`/api/pdf/fvs/${fvsId}`} target="_blank" rel="noreferrer" className="btn-ghost min-h-[44px] flex-shrink-0">
+          <Download size={15} />
+          Baixar PDF
+        </a>
+        <Link href={`/obras/${obraId}/fvs/${fvsId}/editar`} className="btn-ghost min-h-[44px] flex-shrink-0">
+          <Edit2 size={15} />
+          Editar
+        </Link>
       </div>
 
       {/* Status card */}
-      <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-5">
+      <div className="bg-white rounded-2xl border border-border shadow-sm p-5">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3 flex-wrap">
             <StatusBadge status={fvs.status} />
@@ -133,7 +142,7 @@ export default function FvsDetalhePage() {
         {/* Progress bar */}
         {itensTotal > 0 && (
           <div className="mt-4">
-            <div className="h-2 bg-[var(--muted)] rounded-full overflow-hidden">
+            <div className="h-2 bg-muted rounded-full overflow-hidden">
               <div
                 className="h-2 bg-green-500 rounded-full transition-all duration-300"
                 style={{ width: `${progressPercent}%` }}
@@ -145,7 +154,7 @@ export default function FvsDetalhePage() {
 
         {/* Status actions */}
         {statusActions.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-[var(--border)] flex gap-2 flex-wrap">
+          <div className="mt-4 pt-4 border-t border-border flex gap-2 flex-wrap">
             {statusActions.map((action) => (
               <button
                 key={action.status}
@@ -163,7 +172,7 @@ export default function FvsDetalhePage() {
       </div>
 
       {/* Checklist interativo */}
-      <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-5">
+      <div className="bg-white rounded-2xl border border-border shadow-sm p-5">
         <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
           Checklist de verificação
         </h3>
@@ -183,7 +192,7 @@ export default function FvsDetalhePage() {
                   className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
                     isAprovado  ? "border-green-200 bg-green-50" :
                     isRejeitado ? "border-red-200 bg-red-50" :
-                    "border-[var(--border)] bg-white"
+                    "border-border bg-white"
                   }`}
                 >
                   <span className="text-[11px] font-semibold text-[var(--text-muted)] w-5 text-right flex-shrink-0">
@@ -202,7 +211,7 @@ export default function FvsDetalhePage() {
                       className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer disabled:opacity-50 ${
                         isAprovado
                           ? "bg-green-500 text-white"
-                          : "border border-[var(--border)] text-[var(--text-muted)] hover:border-green-400 hover:text-green-600"
+                          : "border border-border text-[var(--text-muted)] hover:border-green-400 hover:text-green-600"
                       }`}
                     >
                       <CheckCircle2 size={14} />
@@ -215,7 +224,7 @@ export default function FvsDetalhePage() {
                       className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer disabled:opacity-50 ${
                         isRejeitado
                           ? "bg-red-500 text-white"
-                          : "border border-[var(--border)] text-[var(--text-muted)] hover:border-red-400 hover:text-red-600"
+                          : "border border-border text-[var(--text-muted)] hover:border-red-400 hover:text-red-600"
                       }`}
                     >
                       <XCircle size={14} />
@@ -228,7 +237,7 @@ export default function FvsDetalhePage() {
                       className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer disabled:opacity-50 ${
                         item.aprovado === null
                           ? "bg-slate-300 text-white"
-                          : "border border-[var(--border)] text-[var(--text-muted)] hover:border-slate-400"
+                          : "border border-border text-[var(--text-muted)] hover:border-slate-400"
                       }`}
                     >
                       <Minus size={14} />
@@ -243,11 +252,20 @@ export default function FvsDetalhePage() {
 
       {/* Observações */}
       {fvs.observacoes && (
-        <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-5">
+        <div className="bg-white rounded-2xl border border-border shadow-sm p-5">
           <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">Observações</h3>
           <p className="text-sm text-[var(--text-primary)] whitespace-pre-wrap leading-relaxed">{fvs.observacoes}</p>
         </div>
       )}
+
+      {/* Fotos */}
+      <div className="bg-white rounded-2xl border border-border shadow-sm p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Camera size={16} className="text-orange-500" />
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">Fotos da inspeção</h3>
+        </div>
+        <UploadFotos obraId={obraId} fvsId={fvsId} />
+      </div>
 
     </div>
   )

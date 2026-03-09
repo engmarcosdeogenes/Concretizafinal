@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/recorrencia",
+      "schedule": "0 9 * * *"
+    }
+  ]
+}

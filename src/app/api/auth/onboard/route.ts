@@ -1,8 +1,18 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { db } from "@/server/db"
+import { rateLimit, getClientIp } from "@/lib/rate-limit"
 
 export async function POST(request: Request) {
+  // Rate limit: 5 req / 15 min por IP
+  const rl = rateLimit(`onboard:${getClientIp(request)}`, 5, 15 * 60 * 1000)
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "Muitas tentativas. Tente novamente mais tarde." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
+    )
+  }
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 

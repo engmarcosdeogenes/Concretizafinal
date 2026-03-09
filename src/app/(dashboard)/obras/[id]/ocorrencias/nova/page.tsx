@@ -59,7 +59,7 @@ export default function NovaOcorrenciaPage() {
     })
   }
 
-  const inputCls = "w-full px-3.5 py-2.5 border border-[var(--border)] rounded-[var(--radius)] text-sm text-[var(--text-primary)] bg-white placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
+  const inputCls = "w-full px-3.5 py-2.5 border border-border rounded-xl text-sm text-[var(--text-primary)] bg-white placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
   const labelCls = "block text-sm font-medium text-[var(--text-primary)] mb-1.5"
 
   return (
@@ -69,7 +69,7 @@ export default function NovaOcorrenciaPage() {
       <div className="flex items-center gap-3 mb-8">
         <Link
           href={`/obras/${obraId}/ocorrencias`}
-          className="w-[44px] h-[44px] flex items-center justify-center rounded-xl border border-[var(--border)] bg-white hover:bg-[var(--muted)] transition-colors cursor-pointer"
+          className="w-[44px] h-[44px] flex items-center justify-center rounded-xl border border-border bg-white hover:bg-muted transition-colors cursor-pointer"
         >
           <ArrowLeft size={16} className="text-[var(--text-secondary)]" />
         </Link>
@@ -89,7 +89,7 @@ export default function NovaOcorrenciaPage() {
         )}
 
         {/* Identificação */}
-        <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-5 space-y-4">
+        <div className="bg-white rounded-2xl border border-border shadow-sm p-5 space-y-4">
           <h3 className="text-sm font-semibold text-[var(--text-primary)]">Identificação</h3>
 
           <div>
@@ -111,7 +111,7 @@ export default function NovaOcorrenciaPage() {
         </div>
 
         {/* Tipo */}
-        <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-5 space-y-4">
+        <div className="bg-white rounded-2xl border border-border shadow-sm p-5 space-y-4">
           <h3 className="text-sm font-semibold text-[var(--text-primary)]">Tipo</h3>
           <div className="grid grid-cols-3 gap-2">
             {TIPOS.map(t => (
@@ -122,7 +122,7 @@ export default function NovaOcorrenciaPage() {
                 className={`px-3 py-2.5 rounded-xl text-sm font-medium border transition-all cursor-pointer ${
                   tipo === t.value
                     ? "bg-orange-500 text-white border-orange-500"
-                    : "bg-white text-[var(--text-primary)] border-[var(--border)] hover:bg-[var(--muted)]"
+                    : "bg-white text-[var(--text-primary)] border-border hover:bg-muted"
                 }`}
               >
                 {t.emoji} {t.label}
@@ -132,7 +132,7 @@ export default function NovaOcorrenciaPage() {
         </div>
 
         {/* Prioridade */}
-        <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-5 space-y-4">
+        <div className="bg-white rounded-2xl border border-border shadow-sm p-5 space-y-4">
           <h3 className="text-sm font-semibold text-[var(--text-primary)]">Prioridade</h3>
           <div className="flex gap-3">
             {PRIORIDADES.map(p => (
@@ -143,7 +143,7 @@ export default function NovaOcorrenciaPage() {
                 className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all cursor-pointer ${
                   prioridade === p.value
                     ? `${p.cls} bg-opacity-10`
-                    : "border-[var(--border)] text-[var(--text-muted)] bg-white hover:bg-[var(--muted)]"
+                    : "border-border text-[var(--text-muted)] bg-white hover:bg-muted"
                 }`}
                 style={prioridade === p.value ? { borderColor: "currentColor" } : {}}
               >
@@ -154,7 +154,7 @@ export default function NovaOcorrenciaPage() {
         </div>
 
         {/* Descrição */}
-        <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-5 space-y-4">
+        <div className="bg-white rounded-2xl border border-border shadow-sm p-5 space-y-4">
           <h3 className="text-sm font-semibold text-[var(--text-primary)]">Descrição</h3>
           <textarea
             value={descricao}

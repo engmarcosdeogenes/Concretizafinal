@@ -55,7 +55,7 @@ export const fvmRouter = createTRPCRouter({
 
   atualizarStatus: protectedProcedure
     .input(z.object({
-      id: z.string(),
+      id:     z.string(),
       status: z.enum(["PENDENTE", "RECEBIDO", "APROVADO", "REJEITADO", "DEVOLVIDO"]),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -67,6 +67,41 @@ export const fvmRouter = createTRPCRouter({
       return ctx.db.fVM.update({
         where: { id: input.id },
         data: { status: input.status },
+      })
+    }),
+
+  excluir: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.fVM.findFirstOrThrow({
+        where: { id: input.id, obra: { empresaId: ctx.session.empresaId } },
+      })
+      return ctx.db.fVM.delete({ where: { id: input.id } })
+    }),
+
+  // Lança uma despesa financeira associada a esta FVM (com NF)
+  lancarDespesaNf: protectedProcedure
+    .input(z.object({
+      fvmId:    z.string(),
+      descricao: z.string().min(1),
+      valor:    z.number().positive(),
+      data:     z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const fvm = await ctx.db.fVM.findFirst({
+        where: { id: input.fvmId, obra: { empresaId: ctx.session.empresaId } },
+      })
+      if (!fvm) throw new TRPCError({ code: "NOT_FOUND" })
+
+      return ctx.db.lancamentoFinanceiro.create({
+        data: {
+          obraId:    fvm.obraId,
+          tipo:      "DESPESA",
+          categoria: "Materiais",
+          descricao: input.descricao,
+          valor:     input.valor,
+          data:      input.data ? new Date(input.data) : new Date(),
+        },
       })
     }),
 })

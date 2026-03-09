@@ -46,7 +46,7 @@ export default function NovaObraPage() {
         <Link
           href="/obras"
           aria-label="Voltar para obras"
-          className="w-[44px] h-[44px] flex items-center justify-center rounded-xl border border-[var(--border)] bg-white hover:bg-[var(--muted)] transition-colors"
+          className="w-[44px] h-[44px] flex items-center justify-center rounded-xl border border-border bg-white hover:bg-muted transition-colors"
         >
           <ArrowLeft size={16} className="text-[var(--text-secondary)]" />
         </Link>
@@ -57,7 +57,7 @@ export default function NovaObraPage() {
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-6 space-y-5">
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-border shadow-sm p-6 space-y-5">
 
         {erro && (
           <div className="px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
@@ -76,7 +76,7 @@ export default function NovaObraPage() {
             type="text"
             required
             placeholder="Ex: Edifício Residencial Araucária"
-            className="w-full px-3.5 py-2.5 border border-[var(--border)] rounded-[var(--radius)] text-sm text-[var(--text-primary)] bg-white placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
+            className="w-full px-3.5 py-2.5 border border-border rounded-xl text-sm text-[var(--text-primary)] bg-white placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
           />
         </div>
 
@@ -90,7 +90,7 @@ export default function NovaObraPage() {
             name="endereco"
             type="text"
             placeholder="Rua, número, bairro"
-            className="w-full px-3.5 py-2.5 border border-[var(--border)] rounded-[var(--radius)] text-sm text-[var(--text-primary)] bg-white placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
+            className="w-full px-3.5 py-2.5 border border-border rounded-xl text-sm text-[var(--text-primary)] bg-white placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
           />
         </div>
 
@@ -105,7 +105,7 @@ export default function NovaObraPage() {
               name="cidade"
               type="text"
               placeholder="Ex: Goiânia"
-              className="w-full px-3.5 py-2.5 border border-[var(--border)] rounded-[var(--radius)] text-sm text-[var(--text-primary)] bg-white placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
+              className="w-full px-3.5 py-2.5 border border-border rounded-xl text-sm text-[var(--text-primary)] bg-white placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
             />
           </div>
           <div>
@@ -115,7 +115,7 @@ export default function NovaObraPage() {
             <select
               id="estado"
               name="estado"
-              className="w-full px-3.5 py-2.5 border border-[var(--border)] rounded-[var(--radius)] text-sm text-[var(--text-primary)] bg-white outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
+              className="w-full px-3.5 py-2.5 border border-border rounded-xl text-sm text-[var(--text-primary)] bg-white outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
             >
               <option value="">Selecione</option>
               {ESTADOS.map(uf => (
@@ -135,7 +135,7 @@ export default function NovaObraPage() {
               id="dataInicio"
               name="dataInicio"
               type="date"
-              className="w-full px-3.5 py-2.5 border border-[var(--border)] rounded-[var(--radius)] text-sm text-[var(--text-primary)] bg-white outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
+              className="w-full px-3.5 py-2.5 border border-border rounded-xl text-sm text-[var(--text-primary)] bg-white outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
             />
           </div>
           <div>
@@ -146,7 +146,7 @@ export default function NovaObraPage() {
               id="dataFim"
               name="dataFim"
               type="date"
-              className="w-full px-3.5 py-2.5 border border-[var(--border)] rounded-[var(--radius)] text-sm text-[var(--text-primary)] bg-white outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
+              className="w-full px-3.5 py-2.5 border border-border rounded-xl text-sm text-[var(--text-primary)] bg-white outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
             />
           </div>
         </div>
@@ -163,7 +163,7 @@ export default function NovaObraPage() {
             min="0"
             step="0.01"
             placeholder="0,00"
-            className="w-full px-3.5 py-2.5 border border-[var(--border)] rounded-[var(--radius)] text-sm text-[var(--text-primary)] bg-white placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
+            className="w-full px-3.5 py-2.5 border border-border rounded-xl text-sm text-[var(--text-primary)] bg-white placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
           />
         </div>
 

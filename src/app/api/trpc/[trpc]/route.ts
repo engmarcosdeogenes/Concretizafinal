@@ -12,6 +12,8 @@ const handler = (req: NextRequest) =>
     onError:
       process.env.NODE_ENV === "development"
         ? ({ path, error }) => {
+            // UNAUTHORIZED é esperado em dev sem banco — não poluir console
+            if (error.code === "UNAUTHORIZED") return
             console.error(`❌ tRPC error on '${path}':`, error)
           }
         : undefined,

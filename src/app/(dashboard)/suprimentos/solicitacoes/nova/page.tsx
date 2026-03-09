@@ -14,7 +14,7 @@ const URGENCIAS = [
   { value: 3, label: "Alta",   cls: "border-red-400 text-red-700" },
 ]
 
-const inputCls = "w-full px-3.5 py-2.5 border border-[var(--border)] rounded-[var(--radius)] text-sm text-[var(--text-primary)] bg-white placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
+const inputCls = "w-full px-3.5 py-2.5 border border-border rounded-xl text-sm text-[var(--text-primary)] bg-white placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
 const labelCls = "block text-sm font-medium text-[var(--text-primary)] mb-1.5"
 
 export default function NovaSolicitacaoPage() {
@@ -78,7 +78,7 @@ export default function NovaSolicitacaoPage() {
     <div className="p-6 max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-8">
         <Link href="/suprimentos/solicitacoes"
-          className="w-[44px] h-[44px] flex items-center justify-center rounded-xl border border-[var(--border)] bg-white hover:bg-[var(--muted)] transition-colors cursor-pointer">
+          className="w-[44px] h-[44px] flex items-center justify-center rounded-xl border border-border bg-white hover:bg-muted transition-colors cursor-pointer">
           <ArrowLeft size={16} className="text-[var(--text-secondary)]" />
         </Link>
         <div>
@@ -96,7 +96,7 @@ export default function NovaSolicitacaoPage() {
         )}
 
         {/* Obra + urgência */}
-        <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-5 space-y-4">
+        <div className="bg-white rounded-2xl border border-border shadow-sm p-5 space-y-4">
           <h3 className="text-sm font-semibold text-[var(--text-primary)]">Informações gerais</h3>
 
           <div>
@@ -118,7 +118,7 @@ export default function NovaSolicitacaoPage() {
                   className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all cursor-pointer ${
                     urgencia === u.value
                       ? `${u.cls} bg-opacity-10`
-                      : "border-[var(--border)] text-[var(--text-muted)] bg-white hover:bg-[var(--muted)]"
+                      : "border-border text-[var(--text-muted)] bg-white hover:bg-muted"
                   }`}
                   style={urgencia === u.value ? { borderColor: "currentColor" } : {}}
                 >
@@ -130,12 +130,12 @@ export default function NovaSolicitacaoPage() {
         </div>
 
         {/* Itens */}
-        <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-5 space-y-4">
+        <div className="bg-white rounded-2xl border border-border shadow-sm p-5 space-y-4">
           <h3 className="text-sm font-semibold text-[var(--text-primary)]">Itens solicitados</h3>
 
           <div className="space-y-3">
             {itens.map((item, i) => (
-              <div key={i} className="p-4 rounded-xl border border-[var(--border)] space-y-3">
+              <div key={i} className="p-4 rounded-xl border border-border space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-[var(--text-muted)]">Item {i + 1}</span>
                   <button
@@ -204,7 +204,7 @@ export default function NovaSolicitacaoPage() {
         </div>
 
         {/* Observações gerais */}
-        <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-5 space-y-4">
+        <div className="bg-white rounded-2xl border border-border shadow-sm p-5 space-y-4">
           <h3 className="text-sm font-semibold text-[var(--text-primary)]">Observações</h3>
           <textarea
             value={observacoes}

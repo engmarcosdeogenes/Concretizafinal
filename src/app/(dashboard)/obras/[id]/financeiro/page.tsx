@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useParams } from "next/navigation"
-import { DollarSign, Plus, X, Trash2, TrendingUp, TrendingDown, Wallet } from "lucide-react"
+import { DollarSign, Plus, X, Trash2, TrendingUp, TrendingDown, Wallet, RefreshCw } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { formatDataCurta } from "@/lib/format"
 
@@ -17,13 +17,15 @@ const CATEGORIAS_RECEITA = [
   "Medição", "Adiantamento", "Parcela contratual", "Reembolso", "Outros",
 ]
 
-type FormState = { tipo: Tipo; categoria: string; descricao: string; valor: string; data: string }
+type RecorrenciaTipo = "NENHUMA" | "DIARIA" | "SEMANAL" | "MENSAL"
+type FormState = { tipo: Tipo; categoria: string; descricao: string; valor: string; data: string; recorrencia: RecorrenciaTipo; recorrenciaFim: string }
 const EMPTY: FormState = {
   tipo: "DESPESA", categoria: "", descricao: "",
   valor: "", data: new Date().toISOString().split("T")[0],
+  recorrencia: "NENHUMA", recorrenciaFim: "",
 }
 
-const inputCls = "w-full px-3.5 py-2.5 border border-[var(--border)] rounded-[var(--radius)] text-sm text-[var(--text-primary)] bg-white placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
+const inputCls = "w-full px-3.5 py-2.5 border border-border rounded-xl text-sm text-[var(--text-primary)] bg-white placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
 const labelCls = "block text-sm font-medium text-[var(--text-primary)] mb-1.5"
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 type Filtro = "TODOS" | "RECEITA" | "DESPESA"
@@ -65,11 +67,13 @@ export default function FinanceiroObraPage() {
     e.preventDefault(); setErro("")
     criar.mutate({
       obraId,
-      tipo:      form.tipo,
-      categoria: form.categoria || undefined,
-      descricao: form.descricao,
-      valor:     Number(form.valor),
-      data:      form.data || undefined,
+      tipo:           form.tipo,
+      categoria:      form.categoria || undefined,
+      descricao:      form.descricao,
+      valor:          Number(form.valor),
+      data:           form.data || undefined,
+      recorrencia:    form.recorrencia,
+      recorrenciaFim: form.recorrenciaFim || undefined,
     })
   }
 
@@ -100,7 +104,7 @@ export default function FinanceiroObraPage() {
           { label: "Saldo",     val: resumo?.saldo         ?? 0, color: (resumo?.saldo ?? 0) >= 0 ? "text-blue-600" : "text-red-600", bg: "bg-blue-50", Icon: Wallet },
           { label: "Orçamento", val: resumo?.orcamento     ?? 0, color: "text-slate-600", bg: "bg-slate-50",  Icon: DollarSign },
         ].map(({ label, val, color, bg, Icon }) => (
-          <div key={label} className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-4">
+          <div key={label} className="bg-white rounded-2xl border border-border shadow-sm p-4">
             <div className="flex items-start justify-between mb-2">
               <p className="text-[11px] font-medium text-[var(--text-muted)]">{label}</p>
               <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${bg}`}>
@@ -116,14 +120,14 @@ export default function FinanceiroObraPage() {
 
       {/* Barra orçamento */}
       {pctCusto !== null && resumo?.orcamento && (
-        <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-4">
+        <div className="bg-white rounded-2xl border border-border shadow-sm p-4">
           <div className="flex items-center justify-between mb-2">
             <p className="text-sm font-medium text-[var(--text-primary)]">Despesas vs Orçamento</p>
             <p className={`text-sm font-bold ${pctCusto >= 90 ? "text-red-600" : pctCusto >= 70 ? "text-amber-600" : "text-green-600"}`}>
               {pctCusto}%
             </p>
           </div>
-          <div className="h-2.5 bg-[var(--muted)] rounded-full overflow-hidden">
+          <div className="h-2.5 bg-muted rounded-full overflow-hidden">
             <div
               className={`h-2.5 rounded-full transition-all ${pctCusto >= 90 ? "bg-red-500" : pctCusto >= 70 ? "bg-amber-500" : "bg-green-500"}`}
               style={{ width: `${pctCusto}%` }}
@@ -143,7 +147,7 @@ export default function FinanceiroObraPage() {
             className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
               filtro === f
                 ? "bg-orange-500 text-white border-orange-500"
-                : "bg-white text-[var(--text-muted)] border-[var(--border)] hover:bg-[var(--muted)]"
+                : "bg-white text-[var(--text-muted)] border-border hover:bg-muted"
             }`}>
             {f === "TODOS"
               ? `Todos (${lancamentos.length})`
@@ -155,7 +159,7 @@ export default function FinanceiroObraPage() {
       </div>
 
       {/* Lista */}
-      <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
         {isLoading && <div className="py-10 text-center text-sm text-[var(--text-muted)]">Carregando...</div>}
 
         {!isLoading && filtered.length === 0 && (
@@ -168,7 +172,7 @@ export default function FinanceiroObraPage() {
 
         {filtered.map(l => (
           <div key={l.id}
-            className="flex items-center gap-3 px-5 py-4 border-b border-[var(--border)] last:border-0 hover:bg-[var(--muted)] transition-colors">
+            className="flex items-center gap-3 px-5 py-4 border-b border-border last:border-0 hover:bg-muted transition-colors">
             <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${l.tipo === "RECEITA" ? "bg-green-50" : "bg-red-50"}`}>
               {l.tipo === "RECEITA"
                 ? <TrendingUp size={14} className="text-green-600" />
@@ -178,7 +182,7 @@ export default function FinanceiroObraPage() {
               <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{l.descricao}</p>
               <div className="flex items-center gap-2 mt-0.5">
                 {l.categoria && (
-                  <span className="text-[10px] text-[var(--text-muted)] bg-[var(--muted)] px-1.5 py-0.5 rounded">{l.categoria}</span>
+                  <span className="text-[10px] text-[var(--text-muted)] bg-muted px-1.5 py-0.5 rounded">{l.categoria}</span>
                 )}
                 <span className="text-[11px] text-[var(--text-muted)]">{formatDataCurta(l.data)}</span>
               </div>
@@ -199,14 +203,14 @@ export default function FinanceiroObraPage() {
       {/* Modal novo lançamento */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl border border-[var(--border)] shadow-xl w-full max-w-md">
-            <div className="flex items-center justify-between p-5 border-b border-[var(--border)]">
+          <div className="bg-white rounded-2xl border border-border shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-5 border-b border-border">
               <div className="flex items-center gap-2">
                 <DollarSign size={18} className="text-orange-500" />
                 <h2 className="font-bold text-[var(--text-primary)]">Novo Lançamento</h2>
               </div>
               <button onClick={fecharModal}
-                className="w-8 h-8 flex items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-muted)] hover:bg-[var(--muted)] transition-colors cursor-pointer">
+                className="w-8 h-8 flex items-center justify-center rounded-lg border border-border text-[var(--text-muted)] hover:bg-muted transition-colors cursor-pointer">
                 <X size={14} />
               </button>
             </div>
@@ -223,7 +227,7 @@ export default function FinanceiroObraPage() {
                           ? t === "DESPESA"
                             ? "bg-red-500 text-white border-red-500"
                             : "bg-green-500 text-white border-green-500"
-                          : "bg-white text-[var(--text-muted)] border-[var(--border)] hover:bg-[var(--muted)]"
+                          : "bg-white text-[var(--text-muted)] border-border hover:bg-muted"
                       }`}>
                       {t === "DESPESA" ? <TrendingDown size={14} /> : <TrendingUp size={14} />}
                       {t === "DESPESA" ? "Despesa" : "Receita"}
@@ -258,6 +262,33 @@ export default function FinanceiroObraPage() {
                 </select>
               </div>
 
+              {/* Recorrência */}
+              <div className="border border-border rounded-xl p-4 space-y-3 bg-muted/30">
+                <div className="flex items-center gap-2">
+                  <RefreshCw size={13} className="text-[var(--text-muted)]" />
+                  <label className="text-sm font-medium text-[var(--text-primary)]">Repetir lançamento</label>
+                </div>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {([["NENHUMA","Não"], ["DIARIA","Diário"], ["SEMANAL","Semanal"], ["MENSAL","Mensal"]] as [RecorrenciaTipo, string][]).map(([v, l]) => (
+                    <button key={v} type="button" onClick={() => set("recorrencia", v)}
+                      className={`py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                        form.recorrencia === v
+                          ? "bg-orange-500 text-white border-orange-500"
+                          : "bg-white text-[var(--text-muted)] border-border hover:bg-muted"
+                      }`}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
+                {form.recorrencia !== "NENHUMA" && (
+                  <div>
+                    <label className="block text-xs text-[var(--text-muted)] mb-1">Repetir até (data)</label>
+                    <input type="date" value={form.recorrenciaFim} onChange={e => set("recorrenciaFim", e.target.value)}
+                      className={inputCls} />
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-3 pt-2">
                 <button type="submit" disabled={criar.isPending}
                   className="btn-orange min-h-[44px] flex-1 justify-center disabled:opacity-60 cursor-pointer">
@@ -276,7 +307,7 @@ export default function FinanceiroObraPage() {
       {/* Confirm delete */}
       {confirmDel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl border border-[var(--border)] shadow-xl w-full max-w-sm p-6 space-y-4">
+          <div className="bg-white rounded-2xl border border-border shadow-xl w-full max-w-sm p-6 space-y-4">
             <h3 className="font-bold text-[var(--text-primary)]">Remover lançamento?</h3>
             <p className="text-sm text-[var(--text-muted)]">Esta ação não pode ser desfeita.</p>
             <div className="flex gap-3">

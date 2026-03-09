@@ -3,17 +3,22 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { trpc } from "@/lib/trpc/client"
+import { useSidebar } from "@/contexts/sidebar-context"
 import {
   LayoutDashboard, HardHat, ClipboardCheck,
   Package, FileText, MessageSquare, Settings,
-  ChevronDown, BarChart3, DollarSign, ArrowLeft,
+  ChevronDown, DollarSign, ArrowLeft,
   ClipboardList, AlertTriangle, Users, Box, MapPin,
+  TrendingUp,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
+const SIDEBAR_COLLAPSED_W = 56
+const SIDEBAR_FULL_W = "var(--sidebar-width)"
+
 // ── Global nav ──────────────────────────────────────────────
 const globalNavItems = [
-  { label: "Painel", href: "/painel", icon: LayoutDashboard, exact: true },
+  { label: "Visão Geral", href: "/painel", icon: LayoutDashboard, exact: true },
   { label: "Obras", href: "/obras", icon: HardHat },
   {
     label: "Suprimentos", href: "/suprimentos", icon: Package,
@@ -25,6 +30,7 @@ const globalNavItems = [
       { label: "Pedidos", href: "/suprimentos/pedidos" },
     ],
   },
+  { label: "Análises", href: "/analises", icon: TrendingUp },
   { label: "Relatórios", href: "/relatorios", icon: FileText },
   { label: "Chat", href: "/chat", icon: MessageSquare },
   { label: "Configurações", href: "/configuracoes", icon: Settings },
@@ -47,56 +53,129 @@ function getObraNavItems(obraId: string) {
   ]
 }
 
-// ── Shared pieces ─────────────────────────────────────────────
-function Logo() {
+// ── Logo ──────────────────────────────────────────────────────
+function Logo({ collapsed }: { collapsed: boolean }) {
   return (
-    <div
-      className="flex items-center gap-2.5 px-5 border-b border-[var(--sidebar-border)] flex-shrink-0"
-      style={{ height: "var(--navbar-h)" }}
+    <Link
+      href="/obras"
+      className="flex items-center border-b border-[var(--sidebar-border)] flex-shrink-0 overflow-hidden no-underline hover:opacity-90 transition-opacity"
+      style={{
+        height: "var(--navbar-h)",
+        padding: collapsed ? "0" : undefined,
+        justifyContent: collapsed ? "center" : undefined,
+        paddingLeft: collapsed ? 0 : "1.25rem",
+        paddingRight: collapsed ? 0 : "1.25rem",
+      }}
+      title="Ir para Obras"
     >
       <div className="w-8 h-8 bg-[var(--blue)] rounded-lg flex items-center justify-center flex-shrink-0">
         <span className="text-white font-extrabold text-sm">C</span>
       </div>
-      <span className="text-white font-bold tracking-tight" style={{ fontSize: 15 }}>
+      <span
+        className="text-white font-bold tracking-tight ml-2.5 whitespace-nowrap transition-all duration-200"
+        style={{
+          opacity: collapsed ? 0 : 1,
+          width: collapsed ? 0 : "auto",
+          overflow: "hidden",
+          fontSize: 15,
+        }}
+      >
         Concretiza
       </span>
+    </Link>
+  )
+}
+
+// ── UserFooter ────────────────────────────────────────────────
+function UserFooter({ collapsed }: { collapsed: boolean }) {
+  const { data: session, isLoading } = trpc.painel.me.useQuery()
+  const nome = session?.nome ?? ""
+  const inicial = nome?.[0]?.toUpperCase() || "C"
+
+  return (
+    <div
+      className="border-t border-[var(--sidebar-border)] flex-shrink-0 overflow-hidden"
+      style={{ padding: collapsed ? "10px 0" : "10px" }}
+    >
+      <div
+        title={collapsed ? (nome || "Usuário") : undefined}
+        className={cn(
+          "flex items-center rounded-lg cursor-pointer hover:bg-white/5 transition-colors",
+          collapsed ? "justify-center p-2" : "gap-2.5 p-2 min-h-[44px]"
+        )}
+      >
+        <div className="w-8 h-8 bg-[var(--blue)] rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold text-sm uppercase">
+          {inicial}
+        </div>
+        {!collapsed && (
+          <div className="min-w-0 flex-1">
+            <p className="text-[#e2e8f0] text-[12.5px] font-semibold truncate capitalize">
+              {isLoading ? "…" : (nome || "Usuário")}
+            </p>
+            <p className="text-[var(--sidebar-text)] text-[11.5px] truncate capitalize">
+              {isLoading ? "…" : (session?.role ? session.role.toLowerCase() : "—")}
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
 
-function UserFooter() {
-  const { data: session } = trpc.painel.me.useQuery()
-
+function ObraNome({ obraId }: { obraId: string }) {
+  const { data } = trpc.obra.buscarPorId.useQuery({ id: obraId })
   return (
-    <div className="p-2.5 border-t border-[var(--sidebar-border)] flex-shrink-0">
-      <div className="flex items-center gap-2.5 p-2 rounded-lg cursor-pointer hover:bg-white/5 transition-colors min-h-[44px]">
-        <div className="w-8 h-8 bg-[var(--blue)] rounded-full flex items-center justify-center flex-shrink-0 text-white font-bold text-sm uppercase">
-          {session?.nome?.[0] || "C"}
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-[#e2e8f0] text-[12.5px] font-semibold truncate capitalize">
-            {session?.nome || "Carregando..."}
-          </p>
-          <p className="text-[var(--sidebar-text)] text-[11.5px] truncate capitalize">
-            {session?.role ? session.role.toLowerCase() : "Conectando..."}
-          </p>
-        </div>
-      </div>
-    </div>
+    <p className="text-white text-[13px] font-semibold truncate">
+      {data?.nome ?? "—"}
+    </p>
+  )
+}
+
+// ── Shared nav link ───────────────────────────────────────────
+function NavLink({
+  href, label, icon: Icon, active, collapsed,
+}: {
+  href: string; label: string; icon: React.ElementType
+  active: boolean; collapsed: boolean
+}) {
+  return (
+    <Link
+      href={href}
+      title={collapsed ? label : undefined}
+      className={cn(
+        "flex items-center rounded-lg no-underline transition-all",
+        collapsed
+          ? "justify-center w-10 h-10 mx-auto"
+          : "gap-2.5 px-2.5 py-2.5",
+        active
+          ? "bg-[var(--sidebar-active-bg)] text-white font-semibold"
+          : "text-[var(--sidebar-text)] hover:text-[var(--sidebar-text-hover)] hover:bg-white/5",
+        !collapsed && "text-[13.5px] font-medium"
+      )}
+    >
+      <Icon size={collapsed ? 18 : 16} className="flex-shrink-0" />
+      {!collapsed && <span>{label}</span>}
+    </Link>
   )
 }
 
 // ── Main component ────────────────────────────────────────────
 export function Sidebar() {
+  const { collapsed } = useSidebar()
   const pathname = usePathname()
 
-  // Detect /obras/[id] — but NOT /obras or /obras/nova
   const obraMatch = pathname.match(/^\/obras\/([^/]+)/)
   const obraId = obraMatch?.[1]
   const isInsideObra = !!(obraId && obraId !== "nova")
 
   const isActive = (href: string, exact = false) =>
     exact ? pathname === href : pathname === href || pathname.startsWith(href + "/")
+
+  const asideStyle = {
+    width: collapsed ? SIDEBAR_COLLAPSED_W : SIDEBAR_FULL_W,
+    transition: "width 0.22s cubic-bezier(0.4,0,0.2,1)",
+    overflow: "hidden",
+  }
 
   // ── Obra contextual sidebar ──
   if (isInsideObra && obraId) {
@@ -105,57 +184,60 @@ export function Sidebar() {
     return (
       <aside
         className="flex flex-col h-screen sticky top-0 flex-shrink-0 bg-[var(--sidebar-bg)] border-r border-[var(--sidebar-border)]"
-        style={{ width: "var(--sidebar-width)" }}
+        style={asideStyle}
       >
-        <Logo />
+        <Logo collapsed={collapsed} />
 
         {/* Back + context */}
-        <div className="px-3 pt-3 pb-3 border-b border-[var(--sidebar-border)] flex-shrink-0">
-          <Link
-            href="/obras"
-            className={cn(
-              "flex items-center gap-1.5 px-2 py-1.5 rounded-lg mb-3",
-              "text-[12px] font-medium no-underline transition-all",
-              "text-[var(--sidebar-text)] hover:text-[var(--sidebar-text-hover)] hover:bg-white/5"
-            )}
-          >
-            <ArrowLeft size={13} />
-            Todas as obras
-          </Link>
-          <div className="px-2">
-            <p className="text-[10.5px] text-[var(--sidebar-text)] uppercase tracking-wider font-semibold mb-0.5">
-              Obra selecionada
-            </p>
-            <p className="text-white text-[13px] font-semibold truncate">
-              Carregando...
-            </p>
+        {!collapsed && (
+          <div className="px-3 pt-3 pb-3 border-b border-[var(--sidebar-border)] flex-shrink-0">
+            <Link
+              href="/obras"
+              className={cn(
+                "flex items-center gap-1.5 px-2 py-1.5 rounded-lg mb-3",
+                "text-[12px] font-medium no-underline transition-all whitespace-nowrap",
+                "text-[var(--sidebar-text)] hover:text-[var(--sidebar-text-hover)] hover:bg-white/5"
+              )}
+            >
+              <ArrowLeft size={13} />
+              Todas as obras
+            </Link>
+            <div className="px-2">
+              <p className="text-[10.5px] text-[var(--sidebar-text)] uppercase tracking-wider font-semibold mb-0.5">
+                Obra selecionada
+              </p>
+              <ObraNome obraId={obraId} />
+            </div>
           </div>
-        </div>
+        )}
+
+        {collapsed && (
+          <div className="flex justify-center py-2 border-b border-[var(--sidebar-border)]">
+            <Link
+              href="/obras"
+              title="Todas as obras"
+              className="flex items-center justify-center w-10 h-10 rounded-lg text-[var(--sidebar-text)] hover:text-[var(--sidebar-text-hover)] hover:bg-white/5 transition-all"
+            >
+              <ArrowLeft size={16} />
+            </Link>
+          </div>
+        )}
 
         {/* Obra nav */}
-        <nav className="flex-1 overflow-y-auto py-3 px-2.5 space-y-0.5">
-          {obraNavItems.map(({ label, href, icon: Icon, exact }) => {
-            const active = isActive(href, exact)
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={cn(
-                  "flex items-center gap-2.5 px-2.5 py-2.5 rounded-lg",
-                  "text-[13.5px] font-medium no-underline transition-all",
-                  active
-                    ? "bg-[var(--sidebar-active-bg)] text-white font-semibold"
-                    : "text-[var(--sidebar-text)] hover:text-[var(--sidebar-text-hover)] hover:bg-white/5"
-                )}
-              >
-                <Icon size={16} className="flex-shrink-0" />
-                <span>{label}</span>
-              </Link>
-            )
-          })}
+        <nav className={cn("flex-1 overflow-y-auto space-y-0.5", collapsed ? "py-3 px-1.5" : "py-3 px-2.5")}>
+          {obraNavItems.map(({ label, href, icon: Icon, exact }) => (
+            <NavLink
+              key={href}
+              href={href}
+              label={label}
+              icon={Icon}
+              active={isActive(href, exact)}
+              collapsed={collapsed}
+            />
+          ))}
         </nav>
 
-        <UserFooter />
+        <UserFooter collapsed={collapsed} />
       </aside>
     )
   }
@@ -164,23 +246,45 @@ export function Sidebar() {
   return (
     <aside
       className="flex flex-col h-screen sticky top-0 flex-shrink-0 bg-[var(--sidebar-bg)] border-r border-[var(--sidebar-border)]"
-      style={{ width: "var(--sidebar-width)" }}
+      style={asideStyle}
     >
-      <Logo />
+      <Logo collapsed={collapsed} />
 
-      <nav className="flex-1 overflow-y-auto py-3 px-2.5 space-y-0.5">
+      <nav className={cn("flex-1 overflow-y-auto space-y-0.5", collapsed ? "py-3 px-1.5" : "py-3 px-2.5")}>
         {globalNavItems.map((item) => {
           const active = isActive(item.href, item.exact)
           const groupActive = !!(item.children && pathname.startsWith(item.href))
           const Icon = item.icon
 
           if (item.children) {
+            // Collapsed: show only the parent icon linking to first child
+            if (collapsed) {
+              return (
+                <Link
+                  key={item.href}
+                  href={item.children[0].href}
+                  title={item.label}
+                  className={cn(
+                    "flex items-center justify-center w-10 h-10 mx-auto rounded-lg no-underline transition-all",
+                    groupActive
+                      ? "bg-[var(--sidebar-active-bg)] text-white"
+                      : "text-[var(--sidebar-text)] hover:text-[var(--sidebar-text-hover)] hover:bg-white/5"
+                  )}
+                >
+                  <Icon size={18} className="flex-shrink-0" />
+                </Link>
+              )
+            }
+
+            // Expanded: full group with children
             return (
               <div key={item.href}>
                 <Link href={item.children[0].href} className={cn(
                   "flex items-center gap-2.5 px-2.5 py-2.5 rounded-lg no-underline transition-colors",
-                  "text-[13.5px] font-medium",
-                  groupActive ? "text-[var(--sidebar-text-hover)] bg-white/5" : "text-[var(--sidebar-text)] hover:text-[var(--sidebar-text-hover)] hover:bg-white/5"
+                  "text-[13.5px] font-medium whitespace-nowrap",
+                  groupActive
+                    ? "text-[var(--sidebar-text-hover)] bg-white/5"
+                    : "text-[var(--sidebar-text)] hover:text-[var(--sidebar-text-hover)] hover:bg-white/5"
                 )}>
                   <Icon size={16} className="flex-shrink-0" />
                   <span className="flex-1">{item.label}</span>
@@ -200,7 +304,7 @@ export function Sidebar() {
                           key={child.href}
                           href={child.href}
                           className={cn(
-                            "block py-1.5 px-2.5 rounded-md text-[12.5px] transition-all no-underline",
+                            "block py-1.5 px-2.5 rounded-md text-[12.5px] transition-all no-underline whitespace-nowrap",
                             childActive
                               ? "font-semibold text-sky-300 bg-blue-900/20"
                               : "font-normal text-[var(--sidebar-text)] hover:text-[var(--sidebar-text-hover)]"
@@ -217,25 +321,19 @@ export function Sidebar() {
           }
 
           return (
-            <Link
+            <NavLink
               key={item.href}
               href={item.href}
-              className={cn(
-                "flex items-center gap-2.5 px-2.5 py-2.5 rounded-lg",
-                "text-[13.5px] font-medium no-underline transition-all",
-                active
-                  ? "bg-[var(--sidebar-active-bg)] text-white font-semibold"
-                  : "text-[var(--sidebar-text)] hover:text-[var(--sidebar-text-hover)] hover:bg-white/5"
-              )}
-            >
-              <Icon size={16} className="flex-shrink-0" />
-              <span>{item.label}</span>
-            </Link>
+              label={item.label}
+              icon={Icon}
+              active={active}
+              collapsed={collapsed}
+            />
           )
         })}
       </nav>
 
-      <UserFooter />
+      <UserFooter collapsed={collapsed} />
     </aside>
   )
 }

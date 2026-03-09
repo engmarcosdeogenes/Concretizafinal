@@ -2,9 +2,10 @@
 
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { ArrowLeft, Sun, Cloud, CloudRain, Wind, CheckCircle2, Clock, AlertCircle, Users, ClipboardList, Send, ThumbsUp } from "lucide-react"
+import { ArrowLeft, Sun, Cloud, CloudRain, Wind, CheckCircle2, Clock, AlertCircle, Users, ClipboardList, Send, ThumbsUp, Download, Camera } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { formatDataLonga, diaSemanaNome } from "@/lib/format"
+import { UploadFotos } from "@/components/obras/UploadFotos"
 
 function ClimaIcon({ clima }: { clima?: string | null }) {
   if (clima === "chuva")   return <CloudRain size={18} className="text-blue-400" />
@@ -73,7 +74,7 @@ export default function RdoDetalhePage() {
       <div className="flex items-center gap-3">
         <Link
           href={`/obras/${obraId}/rdo`}
-          className="w-[44px] h-[44px] flex items-center justify-center rounded-xl border border-[var(--border)] bg-white hover:bg-[var(--muted)] transition-colors"
+          className="w-[44px] h-[44px] flex items-center justify-center rounded-xl border border-border bg-white hover:bg-muted transition-colors"
         >
           <ArrowLeft size={16} className="text-[var(--text-secondary)]" />
         </Link>
@@ -84,10 +85,20 @@ export default function RdoDetalhePage() {
           </h1>
           <p className="text-[var(--text-muted)] text-sm mt-0.5">{formatDataLonga(rdo.data)}</p>
         </div>
+        <a
+          href={`/api/pdf/rdo/${rdoId}`}
+          target="_blank"
+          rel="noreferrer"
+          className="btn-ghost min-h-[44px] flex-shrink-0"
+          title="Baixar PDF"
+        >
+          <Download size={15} />
+          Baixar PDF
+        </a>
       </div>
 
       {/* Status card */}
-      <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-5">
+      <div className="bg-white rounded-2xl border border-border shadow-sm p-5">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-4 flex-wrap">
             {/* Clima */}
@@ -128,7 +139,7 @@ export default function RdoDetalhePage() {
 
         {/* Status action */}
         {nextStatus && (
-          <div className="mt-4 pt-4 border-t border-[var(--border)]">
+          <div className="mt-4 pt-4 border-t border-border">
             <button
               type="button"
               disabled={atualizarStatus.isPending}
@@ -147,14 +158,14 @@ export default function RdoDetalhePage() {
       </div>
 
       {/* Atividades */}
-      <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-5">
+      <div className="bg-white rounded-2xl border border-border shadow-sm p-5">
         <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Atividades realizadas</h3>
         {rdo.atividades.length === 0 ? (
           <p className="text-sm text-[var(--text-muted)] italic">Nenhuma atividade registrada.</p>
         ) : (
           <div className="space-y-2">
             {rdo.atividades.map((a, i) => (
-              <div key={a.id} className="flex items-start gap-3 py-2 border-b border-[var(--border)] last:border-0">
+              <div key={a.id} className="flex items-start gap-3 py-2 border-b border-border last:border-0">
                 <span className="text-[10px] font-bold text-[var(--text-muted)] mt-0.5 w-5 text-right flex-shrink-0">{i + 1}.</span>
                 <p className="text-sm text-[var(--text-primary)] flex-1">{a.descricao}</p>
                 {(a.quantidade != null || a.unidade) && (
@@ -169,7 +180,7 @@ export default function RdoDetalhePage() {
       </div>
 
       {/* Equipe */}
-      <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-5">
+      <div className="bg-white rounded-2xl border border-border shadow-sm p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-semibold text-[var(--text-primary)]">Equipe</h3>
           <div className="flex items-center gap-1.5 text-sm font-semibold text-[var(--text-primary)]">
@@ -180,17 +191,17 @@ export default function RdoDetalhePage() {
         {rdo.equipe.length === 0 ? (
           <p className="text-sm text-[var(--text-muted)] italic">Nenhum membro registrado.</p>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-[var(--border)]">
+          <div className="overflow-hidden rounded-xl border border-border">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-[var(--muted)]">
+                <tr className="bg-muted">
                   <th className="text-left px-4 py-2 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Função</th>
                   <th className="text-right px-4 py-2 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Qtd.</th>
                 </tr>
               </thead>
               <tbody>
                 {rdo.equipe.map((e) => (
-                  <tr key={e.id} className="border-t border-[var(--border)]">
+                  <tr key={e.id} className="border-t border-border">
                     <td className="px-4 py-2.5 text-[var(--text-primary)]">{e.funcao}</td>
                     <td className="px-4 py-2.5 text-right font-semibold text-[var(--text-primary)]">{e.quantidade}</td>
                   </tr>
@@ -203,11 +214,20 @@ export default function RdoDetalhePage() {
 
       {/* Observações */}
       {rdo.observacoes && (
-        <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-5">
+        <div className="bg-white rounded-2xl border border-border shadow-sm p-5">
           <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">Observações</h3>
           <p className="text-sm text-[var(--text-primary)] whitespace-pre-wrap leading-relaxed">{rdo.observacoes}</p>
         </div>
       )}
+
+      {/* Fotos */}
+      <div className="bg-white rounded-2xl border border-border shadow-sm p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Camera size={16} className="text-orange-500" />
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">Fotos do dia</h3>
+        </div>
+        <UploadFotos obraId={obraId} rdoId={rdoId} />
+      </div>
 
     </div>
   )

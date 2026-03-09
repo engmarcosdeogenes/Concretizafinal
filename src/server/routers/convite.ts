@@ -9,7 +9,7 @@ export const conviteRouter = createTRPCRouter({
   criar: protectedProcedure
     .input(z.object({
       email: z.string().email(),
-      role:  z.enum(["ADMIN", "ENGENHEIRO", "MESTRE", "ENCARREGADO"]),
+      role:  z.enum(["ADMIN", "ENGENHEIRO", "MESTRE", "ENCARREGADO", "AUXILIAR_ENGENHARIA", "ALMOXARIFE", "ESTAGIARIO_ENGENHARIA", "ESTAGIARIO_ALMOXARIFE"]),
     }))
     .mutation(async ({ ctx, input }) => {
       if (!canInviteMembers(ctx.session.role as never)) {

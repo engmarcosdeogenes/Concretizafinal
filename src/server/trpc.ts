@@ -5,11 +5,14 @@ import { createServerClient } from "@supabase/ssr"
 import { db } from "./db"
 
 export const createTRPCContext = async (opts: { headers: Headers }) => {
-  // Lê cookies dos headers para autenticação SSR
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  let session = null
+
+  // Sem variáveis de ambiente (dev sem banco) → session nula, sem crash
+  if (supabaseUrl && supabaseKey) {
+    const supabase = createServerClient(supabaseUrl, supabaseKey, {
       cookies: {
         getAll() {
           const cookieHeader = opts.headers.get("cookie") ?? ""
@@ -20,19 +23,18 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
         },
         setAll() {},
       },
-    }
-  )
-
-  const { data: { user: authUser } } = await supabase.auth.getUser()
-
-  let session = null
-  if (authUser) {
-    const usuario = await db.usuario.findUnique({
-      where: { authId: authUser.id },
-      select: { id: true, empresaId: true, role: true, nome: true },
     })
-    if (usuario) {
-      session = { userId: usuario.id, empresaId: usuario.empresaId, role: usuario.role, nome: usuario.nome }
+
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+
+    if (authUser) {
+      const usuario = await db.usuario.findUnique({
+        where: { authId: authUser.id },
+        select: { id: true, empresaId: true, role: true, nome: true },
+      })
+      if (usuario) {
+        session = { userId: usuario.id, empresaId: usuario.empresaId, role: usuario.role, nome: usuario.nome }
+      }
     }
   }
 

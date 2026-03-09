@@ -82,29 +82,73 @@ export const financeiroRouter = createTRPCRouter({
 
   criar: protectedProcedure
     .input(z.object({
-      obraId:    z.string(),
-      tipo:      TIPO,
-      categoria: z.string().optional(),
-      descricao: z.string().min(1),
-      valor:     z.number().positive(),
-      data:      z.string().optional(),
+      obraId:        z.string(),
+      tipo:          TIPO,
+      categoria:     z.string().optional(),
+      descricao:     z.string().min(1),
+      valor:         z.number().positive(),
+      data:          z.string().optional(),
+      recorrencia:   z.enum(["NENHUMA", "DIARIA", "SEMANAL", "MENSAL"]).optional(),
+      recorrenciaFim: z.string().optional(), // ISO date
     }))
     .mutation(async ({ ctx, input }) => {
-      return ctx.db.lancamentoFinanceiro.create({
+      const dataBase = input.data ? new Date(input.data) : new Date()
+      const recorrencia = input.recorrencia ?? "NENHUMA"
+
+      // Cria o lançamento raiz
+      const raiz = await ctx.db.lancamentoFinanceiro.create({
         data: {
-          obraId:    input.obraId,
-          tipo:      input.tipo,
-          categoria: input.categoria ?? null,
-          descricao: input.descricao,
-          valor:     input.valor,
-          data:      input.data ? new Date(input.data) : new Date(),
+          obraId:        input.obraId,
+          tipo:          input.tipo,
+          categoria:     input.categoria ?? null,
+          descricao:     input.descricao,
+          valor:         input.valor,
+          data:          dataBase,
+          recorrencia,
+          recorrenciaFim: input.recorrenciaFim ? new Date(input.recorrenciaFim) : null,
         },
       })
+
+      // Gera lançamentos futuros se houver recorrência
+      if (recorrencia !== "NENHUMA" && input.recorrenciaFim) {
+        const fim     = new Date(input.recorrenciaFim)
+        const futuros = []
+        let   prox    = new Date(dataBase)
+
+        while (true) {
+          if      (recorrencia === "DIARIA")  prox.setDate(prox.getDate() + 1)
+          else if (recorrencia === "SEMANAL") prox.setDate(prox.getDate() + 7)
+          else if (recorrencia === "MENSAL")  prox.setMonth(prox.getMonth() + 1)
+          if (prox > fim) break
+
+          futuros.push({
+            obraId:              input.obraId,
+            tipo:                input.tipo,
+            categoria:           input.categoria ?? null,
+            descricao:           input.descricao,
+            valor:               input.valor,
+            data:                new Date(prox),
+            recorrencia:         recorrencia as "NENHUMA" | "DIARIA" | "SEMANAL" | "MENSAL",
+            recorrenciaOrigemId: raiz.id,
+          })
+
+          if (futuros.length > 365) break // segurança
+        }
+
+        if (futuros.length > 0) {
+          await ctx.db.lancamentoFinanceiro.createMany({ data: futuros })
+        }
+      }
+
+      return raiz
     }),
 
   excluir: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      await ctx.db.lancamentoFinanceiro.findFirstOrThrow({
+        where: { id: input.id, obra: { empresaId: ctx.session.empresaId } },
+      })
       return ctx.db.lancamentoFinanceiro.delete({ where: { id: input.id } })
     }),
 })

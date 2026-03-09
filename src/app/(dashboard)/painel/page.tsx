@@ -2,280 +2,375 @@
 
 import Link from "next/link"
 import {
-  FolderOpen, ClipboardList, Box, Users, Plus, Upload,
-  CheckCircle2, AlertTriangle, MessageSquare, TrendingUp, PieChart
+  FolderOpen, ClipboardList, Users, Plus, Upload,
+  TrendingUp, PieChart as PieChartIcon,
+  AlertTriangle, AlertCircle, Clock,
 } from "lucide-react"
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart as RechartsPieChart, Pie, Cell, Legend
+  PieChart, Pie, Cell, Legend
 } from "recharts"
 
-const kpis = [
-  {
-    label: "Obras Ativas",
-    value: "24",
-    subtext: "+12% do mês passado",
-    subtextCls: "text-[#23CE6B]",
-    icon: <FolderOpen size={22} className="text-[#3C82D9]" />,
-    iconBg: "bg-blue-50",
-  },
-  {
-    label: "Inspeções",
-    value: "156",
-    subtext: "+8% do mês passado",
-    subtextCls: "text-[#23CE6B]",
-    icon: <ClipboardList size={22} className="text-[#23CE6B]" />,
-    iconBg: "bg-green-50",
-  },
-  {
-    label: "Retrabalho Evitado",
-    value: "89%",
-    subtext: "+3% do mês passado",
-    subtextCls: "text-[#23CE6B]",
-    icon: <Box size={22} className="text-[#FFB703]" />,
-    iconBg: "bg-amber-50",
-  },
-  {
-    label: "Membros da Equipe",
-    value: "42",
-    subtext: "+5% do mês passado",
-    subtextCls: "text-[#23CE6B]",
-    icon: <Users size={22} className="text-slate-500" />,
-    iconBg: "bg-slate-100",
-  },
-]
+import { trpc } from "@/lib/trpc/client"
+import { formatDataCurta } from "@/lib/format"
+import { AlertasObra } from "@/components/obras/AlertasObra"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Progress } from "@/components/ui/progress"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { Button, buttonVariants } from "@/components/ui/button"
 
-const obrasAtivas = [
-  { nome: "Construção de Shopping Center", local: "Distrito Central", progresso: 75, status: "Ativa", statusColor: "bg-[#23CE6B]", inicial: "SC", resp: "Sarah Chen", date: "Dez 2025" },
-  { nome: "Complexo Residencial Fase 2", local: "Zona Norte", progresso: 45, status: "Ativa", statusColor: "bg-[#3C82D9]", inicial: "MJ", resp: "Mike Johnson", date: "Mar 2026" },
-  { nome: "Renovação de Ponte Rodoviária", local: "Corredor Leste", progresso: 90, status: "Ativa", statusColor: "bg-[#23CE6B]", inicial: "LP", resp: "Lisa Park", date: "Nov 2025" },
-  { nome: "Estação de Tratamento de Água", local: "Área Industrial", progresso: 60, status: "Ativa", statusColor: "bg-[#23CE6B]", inicial: "EW", resp: "Emma Wilson", date: "Fev 2026" },
-]
+function initiais(nome: string) {
+  return nome.split(" ").filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase()
+}
 
-const recentActivities = [
-  { title: "Inspeção concluída", sub: "Shopping Mall - 2 horas atrás" },
-  { title: "Material entregue", sub: "Bridge Renovation - 5 horas atrás" },
-  { title: "Documento enviado", sub: "Office Tower - Ontem" },
-]
+function statusLabel(s: string) {
+  const m: Record<string, string> = {
+    EM_ANDAMENTO: "Em Andamento", PLANEJAMENTO: "Planejamento",
+    PAUSADA: "Pausada", CONCLUIDA: "Concluída",
+  }
+  return m[s] ?? s
+}
 
-const tendInspData = [
-  { name: 'Jan', inspecObras: 40 },
-  { name: 'Feb', inspecObras: 30 },
-  { name: 'Mar', inspecObras: 60 },
-  { name: 'Apr', inspecObras: 80 },
-  { name: 'May', inspecObras: 110 },
-  { name: 'Jun', inspecObras: 150 },
-]
+function statusVariant(s: string): "default" | "secondary" | "destructive" | "outline" {
+  if (s === "EM_ANDAMENTO") return "default"
+  if (s === "PAUSADA")      return "outline"
+  return "secondary"
+}
 
-const pieData = [
-  { name: 'Ativo 45%', value: 45, color: '#23CE6B' },
-  { name: 'Em Andamento 30%', value: 30, color: '#3C82D9' },
-  { name: 'Em Espera 15%', value: 15, color: '#FF8800' },
-  { name: 'Concluído 10%', value: 10, color: '#FFB703' },
-]
+function OcIcon({ tipo }: { tipo: string }) {
+  if (tipo === "SEGURANCA") return <AlertTriangle className="h-4 w-4 text-red-500" />
+  if (tipo === "PRAZO")     return <Clock className="h-4 w-4 text-amber-500" />
+  return <AlertCircle className="h-4 w-4 text-blue-500" />
+}
+
+function SkeletonKpi() {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+      </CardHeader>
+      <CardContent>
+        <div className="h-8 w-16 bg-muted rounded animate-pulse mt-1" />
+        <div className="h-3 w-28 bg-muted rounded animate-pulse mt-2" />
+      </CardContent>
+    </Card>
+  )
+}
 
 export default function PainelPage() {
+  const { data: resumo, isLoading } = trpc.painel.resumo.useQuery()
+
+  const kpis = resumo ? [
+    {
+      label: "Obras Ativas",
+      value: String(resumo.kpis.obrasAtivas),
+      subtext: `${resumo.kpis.totalObras} no total`,
+      subtextCls: "text-slate-500",
+      icon: <FolderOpen className="h-5 w-5 text-blue-500" />,
+      iconBg: "bg-blue-100/50",
+      href: "/obras",
+    },
+    {
+      label: "RDOs este mês",
+      value: String(resumo.kpis.rdosMes),
+      subtext: "registros no mês atual",
+      subtextCls: "text-slate-500",
+      icon: <ClipboardList className="h-5 w-5 text-emerald-500" />,
+      iconBg: "bg-emerald-100/50",
+      href: "/obras",
+    },
+    {
+      label: "Ocorrências Abertas",
+      value: String(resumo.kpis.ocAbertas),
+      subtext: "precisam de atenção",
+      subtextCls: resumo.kpis.ocAbertas > 0 ? "text-amber-600 font-semibold" : "text-emerald-500",
+      icon: <AlertTriangle className="h-5 w-5 text-amber-500" />,
+      iconBg: "bg-amber-100/50",
+      href: "/obras",
+    },
+    {
+      label: "Membros Ativos",
+      value: String(resumo.kpis.membrosAtivos),
+      subtext: "na empresa",
+      subtextCls: "text-slate-500",
+      icon: <Users className="h-5 w-5 text-slate-500" />,
+      iconBg: "bg-slate-100",
+      href: "/equipe",
+    },
+  ] : []
+
+  const total = resumo?.kpis.totalObras ?? 1
+
+  const pieData = resumo ? [
+    { name: `Em Andamento ${Math.round(resumo.statusObras.EM_ANDAMENTO / total * 100)}%`, value: resumo.statusObras.EM_ANDAMENTO, color: "#10b981" },
+    { name: `Planejamento ${Math.round(resumo.statusObras.PLANEJAMENTO / total * 100)}%`,  value: resumo.statusObras.PLANEJAMENTO,  color: "#3b82f6" },
+    { name: `Pausadas ${Math.round(resumo.statusObras.PAUSADA / total * 100)}%`,           value: resumo.statusObras.PAUSADA,       color: "#f59e0b" },
+    { name: `Concluídas ${Math.round(resumo.statusObras.CONCLUIDA / total * 100)}%`,       value: resumo.statusObras.CONCLUIDA,     color: "#64748b" },
+  ].filter(d => d.value > 0) : []
+
+  const obraMap = Object.fromEntries((resumo?.obras ?? []).map(o => [o.id, o.nome]))
+
+  const obrasEM  = (resumo?.obras ?? []).filter(o => o.status === "EM_ANDAMENTO" || o.status === "PLANEJAMENTO")
+  const obrasOK  = (resumo?.obras ?? []).filter(o => o.status === "CONCLUIDA")
+  const obrasPau = (resumo?.obras ?? []).filter(o => o.status === "PAUSADA")
+
   return (
-    <div className="p-6 md:p-8 max-w-[1400px] mx-auto space-y-6 bg-slate-50 min-h-screen">
+    <div className="flex-1 space-y-8 p-8 pt-6">
 
       {/* Header */}
-      <div>
-        <h1 className="text-slate-900 font-extrabold text-2xl tracking-tight">Painel</h1>
-        <p className="text-slate-500 text-sm mt-1 font-medium">Visão geral das suas obras</p>
+      <div className="flex items-center justify-between space-y-2">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Visão Geral</h2>
+          <p className="text-muted-foreground">Visão geral das suas obras em andamento.</p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Link href="/relatorios">
+            <Button>Baixar Relatório</Button>
+          </Link>
+        </div>
       </div>
+
+      {/* Alertas inteligentes */}
+      <AlertasObra />
 
       {/* KPIs Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
-        {kpis.map((kpi, idx) => (
-          <div key={idx} className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-6 flex flex-col justify-between hover:shadow-md transition-shadow duration-300 relative overflow-hidden group">
-            <div className="flex items-start justify-between relative z-10">
-              <div>
-                <p className="text-sm font-semibold text-slate-500 mb-1">{kpi.label}</p>
-                <p className="text-3xl font-black text-slate-900 tracking-tight group-hover:scale-105 transition-transform origin-left">{kpi.value}</p>
-              </div>
-              <div className={`w-12 h-12 rounded-[14px] ${kpi.iconBg} flex items-center justify-center shadow-inner`}>
-                {kpi.icon}
-              </div>
-            </div>
-            <p className={`text-xs font-semibold mt-5 ${kpi.subtextCls} relative z-10`}>
-              {kpi.subtext}
-            </p>
-            {/* Subtle background flair */}
-            <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-slate-50 rounded-full blur-2xl opacity-50 pointer-events-none" />
-          </div>
-        ))}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {isLoading
+          ? Array.from({ length: 4 }).map((_, i) => <SkeletonKpi key={i} />)
+          : kpis.map((kpi, idx) => (
+            <Link key={idx} href={kpi.href}>
+              <Card className="transition-all hover:shadow-md cursor-pointer hover:border-primary/50 h-full">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">{kpi.label}</CardTitle>
+                  <div className={`p-2 rounded-md ${kpi.iconBg}`}>{kpi.icon}</div>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{kpi.value}</div>
+                  <p className={`text-xs mt-1 font-medium ${kpi.subtextCls}`}>{kpi.subtext}</p>
+                </CardContent>
+              </Card>
+            </Link>
+          ))
+        }
       </div>
 
-      {/* Main Layout Grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-7 gap-6">
 
-        {/* Left Column: Obras Ativas */}
-        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-6 lg:p-7 flex flex-col">
-          <h2 className="text-lg font-bold text-slate-900 mb-5">Obras Ativas</h2>
+        {/* Obras Ativas */}
+        <Card className="md:col-span-5 shadow-sm">
+          <CardHeader>
+            <CardTitle>Obras</CardTitle>
+            <CardDescription>Acompanhamento de progresso e status de todas as obras.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="ativas" className="w-full">
+              <TabsList className="mb-4">
+                <TabsTrigger value="ativas">Em Andamento ({obrasEM.length})</TabsTrigger>
+                <TabsTrigger value="concluidas">Concluídas ({obrasOK.length})</TabsTrigger>
+                <TabsTrigger value="pausadas">Pausadas ({obrasPau.length})</TabsTrigger>
+              </TabsList>
 
-          {/* Tabs */}
-          <div className="flex flex-wrap gap-2 mb-6">
-            <button className="px-5 py-2 bg-[#3C82D9] text-white text-sm font-bold rounded-full shadow-sm hover:bg-blue-600 transition-colors">
-              Ativas
-            </button>
-            <button className="px-5 py-2 bg-slate-100 text-slate-600 hover:bg-slate-200 text-sm font-bold rounded-full transition-colors relative overflow-hidden">
-              Concluídas
-            </button>
-            <button className="px-5 py-2 bg-slate-100 text-slate-600 hover:bg-slate-200 text-sm font-bold rounded-full transition-colors relative overflow-hidden">
-              Pausadas
-            </button>
-          </div>
+              {([
+                { value: "ativas",    obras: obrasEM },
+                { value: "concluidas", obras: obrasOK },
+                { value: "pausadas",  obras: obrasPau },
+              ] as const).map(({ value, obras }) => (
+                <TabsContent key={value} value={value} className="space-y-3">
+                  {obras.length === 0 && (
+                    <p className="text-sm text-muted-foreground py-6 text-center">
+                      Nenhuma obra nesta categoria.
+                    </p>
+                  )}
+                  {obras.map((obra) => (
+                    <Link key={obra.id} href={`/obras/${obra.id}`} className="block">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 border rounded-xl hover:bg-muted/30 transition-colors gap-4">
 
-          <div className="space-y-4 flex-1">
-            {obrasAtivas.map((obra, idx) => (
-              <div key={idx} className="border border-slate-200/80 rounded-xl p-5 hover:border-[#3C82D9]/50 hover:shadow-sm transition-all duration-300 group cursor-pointer bg-white relative overflow-hidden">
-                <div className="flex justify-between items-start mb-4 relative z-10">
-                  <div>
-                    <h3 className="text-base font-bold text-slate-900 leading-tight group-hover:text-[#3C82D9] transition-colors">{obra.nome}</h3>
-                    <p className="text-sm text-slate-500 mt-1 font-medium">{obra.local}</p>
-                  </div>
-                  <span className={`px-3 py-1 text-xs font-bold text-white rounded-lg shadow-sm ${obra.statusColor}`}>
-                    {obra.status}
-                  </span>
-                </div>
+                        <div className="flex items-start gap-4 flex-1">
+                          <Avatar className="h-10 w-10 border shadow-sm">
+                            <AvatarFallback className="bg-primary/5 text-primary font-semibold text-xs">
+                              {initiais(obra.nome)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold leading-none">{obra.nome}</p>
+                            <p className="text-sm text-muted-foreground">{obra.cidade ?? "—"}</p>
+                          </div>
+                        </div>
 
-                <div className="mb-5 relative z-10">
-                  <div className="flex justify-between items-end mb-2">
-                    <span className="text-xs font-semibold text-slate-500">Progresso</span>
-                    <span className="text-xs font-bold text-slate-900">{obra.progresso}%</span>
-                  </div>
-                  <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-[#3C82D9] rounded-full transition-all duration-1000 ease-out" style={{ width: `${obra.progresso}%` }}></div>
-                  </div>
-                </div>
+                        <div className="flex-1 w-full sm:max-w-[200px]">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-xs font-medium text-muted-foreground">Progresso</span>
+                            <span className="text-xs font-bold">{obra.progresso}%</span>
+                          </div>
+                          <Progress value={obra.progresso} className="h-2 w-full" />
+                        </div>
 
-                <div className="flex justify-between items-center text-sm relative z-10">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-full bg-blue-50 text-[#3C82D9] flex items-center justify-center font-bold text-xs ring-1 ring-blue-100/50">
-                      {obra.inicial}
-                    </div>
-                    <span className="font-semibold text-slate-700">{obra.resp}</span>
-                  </div>
-                  <span className="font-semibold text-slate-500">{obra.date}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+                        <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
+                          <Badge variant={statusVariant(obra.status)}>{statusLabel(obra.status)}</Badge>
+                          <div className="flex items-center text-xs text-muted-foreground font-medium w-20 justify-end">
+                            <Clock className="w-3.5 h-3.5 mr-1" />
+                            {obra.dataFim ? formatDataCurta(obra.dataFim) : "—"}
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </TabsContent>
+              ))}
+            </Tabs>
+          </CardContent>
+        </Card>
 
-        {/* Right Column: Actions & Activities */}
-        <div className="space-y-6 flex flex-col">
+        {/* Coluna lateral */}
+        <div className="md:col-span-2 space-y-6">
 
           {/* Ações Rápidas */}
-          <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-6 relative overflow-hidden">
-            <h2 className="text-lg font-bold text-slate-900 mb-5 relative z-10">Ações Rápidas</h2>
+          <Card className="shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base">Ações Rápidas</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Link href="/obras/nova" className={buttonVariants({ variant: "default", size: "lg", className: "w-full font-semibold" })}>
+                <Plus className="mr-2 h-4 w-4" /> Nova Obra
+              </Link>
+              <Link href="/documentos" className={buttonVariants({ variant: "outline", size: "lg", className: "w-full justify-start text-muted-foreground font-medium" })}>
+                <Upload className="mr-2 h-4 w-4" /> Enviar Documento
+              </Link>
+              <Link href="/obras" className={buttonVariants({ variant: "outline", size: "lg", className: "w-full justify-start text-muted-foreground font-medium" })}>
+                <ClipboardList className="mr-2 h-4 w-4" /> Registrar Inspeção
+              </Link>
+            </CardContent>
+          </Card>
 
-            <div className="space-y-3 relative z-10">
-              <button className="w-full flex items-center justify-center py-3 bg-gradient-to-r from-[#3C82D9] to-blue-500 hover:to-blue-600 text-white rounded-xl font-bold shadow-md shadow-blue-500/20 hover:shadow-lg transition-all duration-300 hover:scale-[1.02] transform">
-                <Plus size={22} />
-              </button>
-
-              <button className="w-full flex items-center gap-3 px-4 py-3 bg-white border border-slate-200/80 hover:bg-slate-50 text-slate-700 text-sm font-bold rounded-xl transition-all duration-300 hover:scale-[1.02] transform shadow-sm">
-                <Upload size={18} className="text-slate-400" />
-                Enviar Documento
-              </button>
-
-              <button className="w-full flex items-center gap-3 px-4 py-3 bg-white border border-slate-200/80 hover:bg-slate-50 text-slate-700 text-sm font-bold rounded-xl transition-all duration-300 hover:scale-[1.02] transform shadow-sm">
-                <ClipboardList size={18} className="text-slate-400" />
-                Registrar Inspeção
-              </button>
-            </div>
-            {/* Subtle bg glow */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/50 rounded-full blur-3xl pointer-events-none" />
-          </div>
-
-          {/* Atividades Recentes */}
-          <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-6 flex-1">
-            <h2 className="text-lg font-bold text-slate-900 mb-5">Atividades Recentes</h2>
-
-            <div className="space-y-3">
-              {recentActivities.map((act, i) => (
-                <div key={i} className="bg-white border border-slate-200/80 rounded-xl p-4 flex flex-col hover:border-[#3C82D9]/50 hover:shadow-md transition-all duration-300 cursor-pointer transform hover:-translate-y-0.5">
-                  <p className="text-sm font-bold text-slate-900">{act.title}</p>
-                  <p className="text-xs font-medium text-slate-500 mt-1.5">{act.sub}</p>
+          {/* Atividades Recentes (ocorrências abertas) */}
+          <Card className="shadow-sm">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base">Ocorrências Recentes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading && (
+                <div className="space-y-4">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="flex items-start gap-3">
+                      <div className="w-7 h-7 bg-muted rounded-full animate-pulse" />
+                      <div className="space-y-1.5 flex-1">
+                        <div className="h-3 bg-muted rounded animate-pulse w-3/4" />
+                        <div className="h-3 bg-muted rounded animate-pulse w-1/2" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
+              )}
+              {!isLoading && (resumo?.ocorrenciasRecentes ?? []).length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-4">
+                  Nenhuma ocorrência aberta.
+                </p>
+              )}
+              <div className="space-y-5">
+                {(resumo?.ocorrenciasRecentes ?? []).map((oc) => (
+                  <div key={oc.id} className="flex items-start gap-4 group">
+                    <div className="mt-0.5 bg-muted/50 p-1.5 rounded-full ring-1 ring-border group-hover:bg-muted transition-colors">
+                      <OcIcon tipo={oc.tipo} />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium leading-none">{oc.titulo}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {obraMap[oc.obraId] ?? "—"} · {formatDataCurta(oc.data)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
 
         </div>
-
       </div>
 
       {/* Gráficos Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 border-t pt-8 mt-8">
 
-        {/* Tendência de Inspeções */}
-        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-6">
-          <div className="flex items-center gap-2 mb-6">
-            <TrendingUp size={22} className="text-[#3C82D9]" />
-            <h2 className="text-lg font-bold text-slate-900">Tendência de Inspeções</h2>
-          </div>
-          <div className="h-[280px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={tendInspData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorInspec" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3C82D9" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#3C82D9" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b', fontWeight: 500 }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b', fontWeight: 500 }} />
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <Tooltip
-                  contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  itemStyle={{ fontWeight: 'bold' }}
-                />
-                <Area type="monotone" dataKey="inspecObras" name="Inspeções Obras" stroke="#3C82D9" strokeWidth={3} fillOpacity={1} fill="url(#colorInspec)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Qualidade dos Materiais (Pie Chart) */}
-        <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm p-6">
-          <div className="flex items-center gap-2 mb-2">
-            <PieChart size={22} className="text-[#23CE6B]" />
-            <h2 className="text-lg font-bold text-slate-900">Qualidade dos Materiais</h2>
-          </div>
-          <div className="h-[280px] w-full flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
-              <RechartsPieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={70}
-                  outerRadius={105}
-                  paddingAngle={3}
-                  dataKey="value"
-                  stroke="none"
+        {/* Tendência de RDOs */}
+        <Card className="lg:col-span-4 shadow-sm">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-primary" />
+              <CardTitle>Tendência de RDOs</CardTitle>
+            </div>
+            <CardDescription>Relatórios diários registrados nos últimos 6 meses</CardDescription>
+          </CardHeader>
+          <CardContent className="pl-2">
+            <div className="h-[280px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={resumo?.rdosPorMes ?? []}
+                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                 >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                  itemStyle={{ fontWeight: 'bold', color: '#333' }}
-                />
-                <Legend
-                  layout="vertical"
-                  verticalAlign="middle"
-                  align="right"
-                  iconType="circle"
-                  wrapperStyle={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}
-                />
-              </RechartsPieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+                  <defs>
+                    <linearGradient id="colorInspec" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="var(--primary)" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                  <Tooltip
+                    contentStyle={{ borderRadius: "8px", border: "1px solid hsl(var(--border))", backgroundColor: "hsl(var(--background))" }}
+                    itemStyle={{ fontWeight: "bold" }}
+                  />
+                  <Area type="monotone" dataKey="count" name="RDOs" stroke="hsl(var(--primary))" strokeWidth={3} fillOpacity={1} fill="url(#colorInspec)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Status das Obras (Pie) */}
+        <Card className="lg:col-span-3 shadow-sm">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <PieChartIcon className="h-5 w-5 text-emerald-500" />
+              <CardTitle>Distribuição de Obras</CardTitle>
+            </div>
+            <CardDescription>Status atual de todas as obras</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[280px] w-full flex items-center justify-center">
+              {pieData.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhuma obra cadastrada.</p>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%" cy="50%"
+                      innerRadius={70} outerRadius={100}
+                      paddingAngle={3}
+                      dataKey="value"
+                      stroke="none"
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ borderRadius: "8px", border: "1px solid hsl(var(--border))", backgroundColor: "hsl(var(--background))" }}
+                      itemStyle={{ fontWeight: "bold" }}
+                    />
+                    <Legend
+                      layout="vertical" verticalAlign="middle" align="right"
+                      iconType="circle"
+                      wrapperStyle={{ fontSize: "12px", fontWeight: 500, color: "hsl(var(--muted-foreground))" }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
       </div>
 

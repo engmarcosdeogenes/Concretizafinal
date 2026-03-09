@@ -5,11 +5,20 @@ export const fornecedorRouter = createTRPCRouter({
 
   listar: protectedProcedure.query(async ({ ctx }) => {
     const { empresaId } = ctx.session
-    return ctx.db.fornecedor.findMany({
-      where: { empresaId },
-      orderBy: [{ ativo: "desc" }, { nome: "asc" }],
-      include: { _count: { select: { pedidos: true } } },
-    })
+    const inicioMes = new Date()
+    inicioMes.setDate(1)
+    inicioMes.setHours(0, 0, 0, 0)
+    const [fornecedores, novosNoMes] = await Promise.all([
+      ctx.db.fornecedor.findMany({
+        where: { empresaId },
+        orderBy: [{ ativo: "desc" }, { nome: "asc" }],
+        include: { _count: { select: { pedidos: true } } },
+      }),
+      ctx.db.fornecedor.count({
+        where: { empresaId, createdAt: { gte: inicioMes } },
+      }),
+    ])
+    return { fornecedores, novosNoMes }
   }),
 
   criar: protectedProcedure
@@ -37,6 +46,14 @@ export const fornecedorRouter = createTRPCRouter({
           email:     input.email || null,
           site:      input.site || null,
         },
+      })
+    }),
+
+  excluir: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.fornecedor.delete({
+        where: { id: input.id, empresaId: ctx.session.empresaId },
       })
     }),
 

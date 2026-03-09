@@ -2,9 +2,10 @@
 
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import { ArrowLeft, AlertTriangle, ShieldAlert, Star, Gauge, DollarSign, Leaf, Circle, Search, CheckCircle2, XCircle } from "lucide-react"
+import { ArrowLeft, AlertTriangle, ShieldAlert, Star, Gauge, DollarSign, Leaf, Circle, Search, CheckCircle2, XCircle, Camera } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { formatDataLonga } from "@/lib/format"
+import { UploadFotos } from "@/components/obras/UploadFotos"
 
 type TipoOcorrencia    = "SEGURANCA" | "QUALIDADE" | "PRAZO" | "CUSTO" | "AMBIENTAL" | "OUTRO"
 type StatusOcorrencia  = "ABERTA" | "EM_ANALISE" | "RESOLVIDA" | "FECHADA"
@@ -84,7 +85,7 @@ export default function OcorrenciaDetalhePage() {
       <div className="flex items-center gap-3">
         <Link
           href={`/obras/${obraId}/ocorrencias`}
-          className="w-[44px] h-[44px] flex items-center justify-center rounded-xl border border-[var(--border)] bg-white hover:bg-[var(--muted)] transition-colors cursor-pointer"
+          className="w-[44px] h-[44px] flex items-center justify-center rounded-xl border border-border bg-white hover:bg-muted transition-colors cursor-pointer"
         >
           <ArrowLeft size={16} className="text-[var(--text-secondary)]" />
         </Link>
@@ -98,7 +99,7 @@ export default function OcorrenciaDetalhePage() {
       </div>
 
       {/* Info card */}
-      <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-5 space-y-4">
+      <div className="bg-white rounded-2xl border border-border shadow-sm p-5 space-y-4">
 
         {/* Badges row */}
         <div className="flex items-center gap-2 flex-wrap">
@@ -128,7 +129,7 @@ export default function OcorrenciaDetalhePage() {
 
         {/* Status actions */}
         {nextActions.length > 0 && (
-          <div className="pt-4 border-t border-[var(--border)] flex gap-2 flex-wrap">
+          <div className="pt-4 border-t border-border flex gap-2 flex-wrap">
             {nextActions.map(action => (
               <button
                 key={action.status}
@@ -147,11 +148,20 @@ export default function OcorrenciaDetalhePage() {
 
       {/* Descrição */}
       {oc.descricao && (
-        <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-5">
+        <div className="bg-white rounded-2xl border border-border shadow-sm p-5">
           <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">Descrição</h3>
           <p className="text-sm text-[var(--text-primary)] whitespace-pre-wrap leading-relaxed">{oc.descricao}</p>
         </div>
       )}
+
+      {/* Fotos */}
+      <div className="bg-white rounded-2xl border border-border shadow-sm p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Camera size={16} className="text-orange-500" />
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">Fotos da ocorrência</h3>
+        </div>
+        <UploadFotos obraId={obraId} ocorrenciaId={ocorrenciaId} />
+      </div>
 
     </div>
   )

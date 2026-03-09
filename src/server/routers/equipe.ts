@@ -6,6 +6,11 @@ export const equipeRouter = createTRPCRouter({
   listar: protectedProcedure
     .input(z.object({ obraId: z.string() }))
     .query(async ({ ctx, input }) => {
+      const obra = await ctx.db.obra.findFirst({
+        where: { id: input.obraId, empresaId: ctx.session.empresaId },
+        select: { id: true },
+      })
+      if (!obra) return []
       return ctx.db.membroEquipe.findMany({
         where: { obraId: input.obraId },
         orderBy: [{ ativo: "desc" }, { funcao: "asc" }, { nome: "asc" }],
@@ -23,6 +28,11 @@ export const equipeRouter = createTRPCRouter({
       dataEntrada: z.string().optional(), // ISO date
     }))
     .mutation(async ({ ctx, input }) => {
+      const obra = await ctx.db.obra.findFirst({
+        where: { id: input.obraId, empresaId: ctx.session.empresaId },
+        select: { id: true },
+      })
+      if (!obra) throw new Error("Obra não encontrada")
       return ctx.db.membroEquipe.create({
         data: {
           obraId:      input.obraId,
@@ -34,6 +44,15 @@ export const equipeRouter = createTRPCRouter({
           dataEntrada: input.dataEntrada ? new Date(input.dataEntrada) : new Date(),
         },
       })
+    }),
+
+  excluir: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.membroEquipe.findFirstOrThrow({
+        where: { id: input.id, obra: { empresaId: ctx.session.empresaId } },
+      })
+      return ctx.db.membroEquipe.delete({ where: { id: input.id } })
     }),
 
   atualizar: protectedProcedure
@@ -48,6 +67,9 @@ export const equipeRouter = createTRPCRouter({
       dataSaida:   z.string().nullable().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      await ctx.db.membroEquipe.findFirstOrThrow({
+        where: { id: input.id, obra: { empresaId: ctx.session.empresaId } },
+      })
       const { id, dataSaida, ...rest } = input
       return ctx.db.membroEquipe.update({
         where: { id },

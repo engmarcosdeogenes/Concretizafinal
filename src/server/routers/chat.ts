@@ -19,6 +19,12 @@ export const chatRouter = createTRPCRouter({
   listar: protectedProcedure
     .input(z.object({ obraId: z.string() }))
     .query(async ({ ctx, input }) => {
+      const { empresaId } = ctx.session
+      const obra = await ctx.db.obra.findFirst({
+        where: { id: input.obraId, empresaId },
+        select: { id: true },
+      })
+      if (!obra) return []
       return ctx.db.mensagemChat.findMany({
         where: { obraId: input.obraId },
         include: { usuario: { select: { id: true, nome: true, avatarUrl: true, role: true } } },
@@ -33,7 +39,12 @@ export const chatRouter = createTRPCRouter({
       conteudo: z.string().min(1).max(2000),
     }))
     .mutation(async ({ ctx, input }) => {
-      const { userId } = ctx.session
+      const { userId, empresaId } = ctx.session
+      const obra = await ctx.db.obra.findFirst({
+        where: { id: input.obraId, empresaId },
+        select: { id: true },
+      })
+      if (!obra) throw new Error("Obra não encontrada")
       return ctx.db.mensagemChat.create({
         data: { obraId: input.obraId, usuarioId: userId, conteudo: input.conteudo },
         include: { usuario: { select: { id: true, nome: true, avatarUrl: true, role: true } } },

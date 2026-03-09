@@ -8,7 +8,7 @@ import { trpc } from "@/lib/trpc/client"
 
 type Item = { materialId: string; quantidade: string; precoUnit: string; unidade: string }
 
-const inputCls = "w-full px-3.5 py-2.5 border border-[var(--border)] rounded-[var(--radius)] text-sm text-[var(--text-primary)] bg-white placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
+const inputCls = "w-full px-3.5 py-2.5 border border-border rounded-xl text-sm text-[var(--text-primary)] bg-white placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
 const labelCls = "block text-sm font-medium text-[var(--text-primary)] mb-1.5"
 
 export default function NovoPedidoPage() {
@@ -20,7 +20,8 @@ export default function NovoPedidoPage() {
   const [itens, setItens]                   = useState<Item[]>([{ materialId: "", quantidade: "", precoUnit: "", unidade: "" }])
   const [erro, setErro]                     = useState("")
 
-  const { data: fornecedores = [] } = trpc.fornecedor.listar.useQuery()
+  const { data: _fData } = trpc.fornecedor.listar.useQuery()
+  const fornecedores = _fData?.fornecedores ?? []
   const { data: materiais = [] }    = trpc.material.listar.useQuery()
 
   const criar = trpc.pedido.criar.useMutation({
@@ -83,7 +84,7 @@ export default function NovoPedidoPage() {
     <div className="p-6 max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-8">
         <Link href="/suprimentos/pedidos"
-          className="w-[44px] h-[44px] flex items-center justify-center rounded-xl border border-[var(--border)] bg-white hover:bg-[var(--muted)] transition-colors cursor-pointer">
+          className="w-[44px] h-[44px] flex items-center justify-center rounded-xl border border-border bg-white hover:bg-muted transition-colors cursor-pointer">
           <ArrowLeft size={16} className="text-[var(--text-secondary)]" />
         </Link>
         <div>
@@ -101,7 +102,7 @@ export default function NovoPedidoPage() {
         )}
 
         {/* Fornecedor + previsão */}
-        <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-5 space-y-4">
+        <div className="bg-white rounded-2xl border border-border shadow-sm p-5 space-y-4">
           <h3 className="text-sm font-semibold text-[var(--text-primary)]">Fornecedor</h3>
 
           <div>
@@ -128,14 +129,14 @@ export default function NovoPedidoPage() {
         </div>
 
         {/* Itens */}
-        <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-5 space-y-4">
+        <div className="bg-white rounded-2xl border border-border shadow-sm p-5 space-y-4">
           <h3 className="text-sm font-semibold text-[var(--text-primary)]">Itens do pedido</h3>
 
           <div className="space-y-3">
             {itens.map((item, i) => {
               const subtotal = (Number(item.quantidade) || 0) * (Number(item.precoUnit) || 0)
               return (
-                <div key={i} className="p-4 rounded-xl border border-[var(--border)] space-y-3">
+                <div key={i} className="p-4 rounded-xl border border-border space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-[var(--text-muted)]">Item {i + 1}</span>
                     <div className="flex items-center gap-2">
@@ -201,7 +202,7 @@ export default function NovoPedidoPage() {
         </div>
 
         {/* Observações */}
-        <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-5 space-y-4">
+        <div className="bg-white rounded-2xl border border-border shadow-sm p-5 space-y-4">
           <h3 className="text-sm font-semibold text-[var(--text-primary)]">Observações</h3>
           <textarea value={observacoes} onChange={e => setObs(e.target.value)}
             placeholder="Condições de pagamento, local de entrega, observações especiais..."

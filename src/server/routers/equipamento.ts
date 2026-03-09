@@ -33,6 +33,14 @@ export const equipamentoRouter = createTRPCRouter({
       })
     }),
 
+  excluir: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.equipamento.delete({
+        where: { id: input.id, empresaId: ctx.session.empresaId },
+      })
+    }),
+
   atualizar: protectedProcedure
     .input(z.object({
       id:     z.string(),

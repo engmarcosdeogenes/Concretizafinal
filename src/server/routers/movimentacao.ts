@@ -9,7 +9,7 @@ export const movimentacaoRouter = createTRPCRouter({
     .input(z.object({ obraId: z.string() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.movimentacaoMaterial.findMany({
-        where: { obraId: input.obraId },
+        where: { obraId: input.obraId, obra: { empresaId: ctx.session.empresaId } },
         orderBy: { data: "desc" },
         include: {
           material: { select: { id: true, nome: true, unidade: true, categoria: true } },
@@ -21,7 +21,7 @@ export const movimentacaoRouter = createTRPCRouter({
     .input(z.object({ obraId: z.string() }))
     .query(async ({ ctx, input }) => {
       const movs = await ctx.db.movimentacaoMaterial.findMany({
-        where: { obraId: input.obraId },
+        where: { obraId: input.obraId, obra: { empresaId: ctx.session.empresaId } },
         include: { material: { select: { id: true, nome: true, unidade: true, categoria: true } } },
       })
 
@@ -48,6 +48,11 @@ export const movimentacaoRouter = createTRPCRouter({
       observacao: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      const obra = await ctx.db.obra.findFirst({
+        where: { id: input.obraId, empresaId: ctx.session.empresaId },
+        select: { id: true },
+      })
+      if (!obra) throw new Error("Obra não encontrada")
       return ctx.db.movimentacaoMaterial.create({
         data: {
           obraId:     input.obraId,

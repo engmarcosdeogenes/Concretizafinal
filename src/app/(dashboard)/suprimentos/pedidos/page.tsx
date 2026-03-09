@@ -1,7 +1,8 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
-import { ShoppingCart, Plus, Truck } from "lucide-react"
+import { ShoppingCart, Plus, Truck, Search } from "lucide-react"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { trpc } from "@/lib/trpc/client"
 import { formatDataCurta } from "@/lib/format"
@@ -16,7 +17,19 @@ const STATUS_MAP = {
 }
 
 export default function PedidosPage() {
+  const [busca, setBusca] = useState("")
+  const [filtroStatus, setFiltroStatus] = useState("")
+
   const { data: pedidos = [], isLoading } = trpc.pedido.listar.useQuery()
+
+  const filtered = pedidos.filter(p => {
+    const q = busca.toLowerCase()
+    const matchBusca = !busca ||
+      p.fornecedor.nome.toLowerCase().includes(q) ||
+      p.itens.some(i => i.material.nome.toLowerCase().includes(q))
+    const matchStatus = !filtroStatus || p.status === filtroStatus
+    return matchBusca && matchStatus
+  })
 
   const stats = {
     total:     pedidos.length,
@@ -46,16 +59,40 @@ export default function PedidosPage() {
           { label: "Entregues",    value: stats.entregue, display: String(stats.entregue), color: "text-green-600" },
           { label: "Valor total",  value: stats.totalR,   display: `R$ ${stats.totalR.toLocaleString("pt-BR", { minimumFractionDigits: 0 })}`, color: "text-orange-600" },
         ].map(s => (
-          <div key={s.label} className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-4">
+          <div key={s.label} className="bg-white rounded-2xl border border-border shadow-sm p-4">
             <p className={`text-xl font-extrabold ${s.color}`}>{s.display}</p>
             <p className="text-xs font-medium text-[var(--text-primary)] mt-0.5">{s.label}</p>
           </div>
         ))}
       </div>
 
+      {/* Busca + Filtro */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+          <input
+            type="text"
+            placeholder="Buscar por fornecedor ou material..."
+            value={busca}
+            onChange={e => setBusca(e.target.value)}
+            className="w-full pl-9 pr-3 py-2.5 text-sm border border-border rounded-xl bg-white outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
+          />
+        </div>
+        <select
+          value={filtroStatus}
+          onChange={e => setFiltroStatus(e.target.value)}
+          className="px-3 py-2.5 text-sm border border-border rounded-xl bg-white outline-none focus:border-[var(--blue)] transition-all cursor-pointer"
+        >
+          <option value="">Todos os status</option>
+          {Object.entries(STATUS_MAP).map(([key, { label }]) => (
+            <option key={key} value={key}>{label}</option>
+          ))}
+        </select>
+      </div>
+
       {/* Lista */}
-      <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm overflow-hidden">
-        <div className="grid grid-cols-[80px_1fr_140px_100px_120px_100px] gap-3 px-5 py-3 bg-[var(--muted)] border-b border-[var(--border)]">
+      <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
+        <div className="grid grid-cols-[80px_1fr_140px_100px_120px_100px] gap-3 px-5 py-3 bg-muted border-b border-border">
           <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Data</span>
           <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Itens</span>
           <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Fornecedor</span>
@@ -66,21 +103,25 @@ export default function PedidosPage() {
 
         {isLoading && <div className="py-12 text-center text-sm text-[var(--text-muted)]">Carregando...</div>}
 
-        {!isLoading && pedidos.length === 0 && (
+        {!isLoading && filtered.length === 0 && (
           <div className="py-12 text-center">
             <ShoppingCart size={32} className="mx-auto mb-3 text-[var(--text-muted)] opacity-40" />
-            <p className="text-sm font-medium text-[var(--text-primary)]">Nenhum pedido de compra</p>
-            <p className="text-xs text-[var(--text-muted)] mt-1">Crie o primeiro pedido para um fornecedor</p>
+            <p className="text-sm font-medium text-[var(--text-primary)]">
+              {busca || filtroStatus ? "Nenhum pedido encontrado" : "Nenhum pedido de compra"}
+            </p>
+            <p className="text-xs text-[var(--text-muted)] mt-1">
+              {busca || filtroStatus ? "Tente outros filtros" : "Crie o primeiro pedido para um fornecedor"}
+            </p>
           </div>
         )}
 
-        {pedidos.map(pedido => {
+        {filtered.map(pedido => {
           const status = STATUS_MAP[pedido.status as keyof typeof STATUS_MAP] ?? STATUS_MAP.RASCUNHO
           return (
             <Link
               key={pedido.id}
               href={`/suprimentos/pedidos/${pedido.id}`}
-              className="grid grid-cols-[80px_1fr_140px_100px_120px_100px] gap-3 px-5 py-4 border-b border-[var(--border)] last:border-0 hover:bg-[var(--muted)] transition-colors items-center no-underline"
+              className="grid grid-cols-[80px_1fr_140px_100px_120px_100px] gap-3 px-5 py-4 border-b border-border last:border-0 hover:bg-muted transition-colors items-center no-underline"
             >
               <span className="text-xs text-[var(--text-muted)]">{formatDataCurta(pedido.createdAt)}</span>
 

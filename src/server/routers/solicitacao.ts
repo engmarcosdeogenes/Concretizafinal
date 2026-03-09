@@ -92,4 +92,55 @@ export const solicitacaoRouter = createTRPCRouter({
         data:  { status: input.status },
       })
     }),
+
+  atualizar: protectedProcedure
+    .input(z.object({
+      id:          z.string(),
+      urgencia:    z.number().int().min(1).max(3).optional(),
+      observacoes: z.string().optional(),
+      itens: z.array(z.object({
+        materialId: z.string(),
+        quantidade: z.number().positive(),
+        unidade:    z.string().optional(),
+        observacao: z.string().optional(),
+      })).min(1).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const sol = await ctx.db.solicitacaoCompra.findFirst({
+        where: { id: input.id, obra: { empresaId: ctx.session.empresaId }, status: "RASCUNHO" },
+      })
+      if (!sol) throw new TRPCError({ code: "NOT_FOUND", message: "Solicitação não encontrada ou não pode ser editada" })
+
+      return ctx.db.$transaction(async (tx) => {
+        if (input.itens) {
+          await tx.itemSolicitacao.deleteMany({ where: { solicitacaoId: input.id } })
+          await tx.itemSolicitacao.createMany({
+            data: input.itens.map((item) => ({
+              solicitacaoId: input.id,
+              materialId:    item.materialId,
+              quantidade:    item.quantidade,
+              unidade:       item.unidade || null,
+              observacao:    item.observacao || null,
+            })),
+          })
+        }
+        return tx.solicitacaoCompra.update({
+          where: { id: input.id },
+          data: {
+            urgencia:    input.urgencia    ?? sol.urgencia,
+            observacoes: input.observacoes !== undefined ? (input.observacoes || null) : undefined,
+          },
+        })
+      })
+    }),
+
+  excluir: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const sol = await ctx.db.solicitacaoCompra.findFirst({
+        where: { id: input.id, obra: { empresaId: ctx.session.empresaId }, status: "RASCUNHO" },
+      })
+      if (!sol) throw new TRPCError({ code: "NOT_FOUND", message: "Solicitação não encontrada ou não pode ser excluída" })
+      return ctx.db.solicitacaoCompra.delete({ where: { id: input.id } })
+    }),
 })

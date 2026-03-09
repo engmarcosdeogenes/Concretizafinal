@@ -6,12 +6,18 @@ import { Plus, HardHat, FileText, Image, MessageSquare, MapPin, Search, LayoutGr
 import { trpc } from "@/lib/trpc/client"
 import { cn } from "@/lib/utils"
 
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
+
 const STATUS_MAP = {
-  EM_ANDAMENTO: { label: "Ativa", badgeClass: "badge badge-blue" },
-  PAUSADA: { label: "Em Espera", badgeClass: "badge badge-yellow" },
-  CONCLUIDA: { label: "Concluída", badgeClass: "badge badge-green" },
-  PLANEJAMENTO: { label: "Planejamento", badgeClass: "badge badge-gray" },
-  CANCELADA: { label: "Cancelada", badgeClass: "badge badge-red" },
+  EM_ANDAMENTO: { label: "Ativa", variant: "default" as const },
+  PAUSADA: { label: "Em Espera", variant: "secondary" as const },
+  CONCLUIDA: { label: "Concluída", variant: "outline" as const },
+  PLANEJAMENTO: { label: "Planejamento", variant: "secondary" as const },
+  CANCELADA: { label: "Cancelada", variant: "destructive" as const },
 }
 
 const TABS = [
@@ -22,8 +28,8 @@ const TABS = [
 ] as const
 
 function getProgressColorClass(p: number) {
-  if (p >= 100) return "bg-green-500"
-  return "bg-orange-500"
+  if (p >= 100) return "bg-emerald-500"
+  return "bg-amber-500"
 }
 
 export default function ObrasPage() {
@@ -41,104 +47,98 @@ export default function ObrasPage() {
   })
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6">
+    <div className="flex-1 space-y-8 p-8 pt-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Obras</h1>
-          <p className="text-[14px] text-[var(--text-muted)] mt-1">
-            Gerencie todas as suas obras em um só lugar
+          <h2 className="text-3xl font-bold tracking-tight">Obras</h2>
+          <p className="text-muted-foreground mt-0.5">
+            Gerencie todas as suas obras em um só lugar.
           </p>
         </div>
-        <Link href="/obras/nova" className="btn-orange min-h-[44px]">
-          <Plus size={16} />
+        <Link href="/obras/nova" className="btn-orange">
+          <Plus className="h-4 w-4" />
           Adicionar Obra
         </Link>
       </div>
 
       {/* Filter Bar */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4">
-        <label className="flex items-center gap-2 px-3.5 h-[44px] bg-white border border-[var(--border)] rounded-[var(--radius)] flex-1 max-w-md focus-within:ring-2 focus-within:ring-[var(--blue)] focus-within:border-transparent transition-all">
-          <Search size={16} className="text-[var(--text-muted)]" />
-          <input
-            type="text"
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
             placeholder="Buscar obras..."
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            className="flex-1 bg-transparent border-none outline-none text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+            className="pl-9"
           />
-        </label>
+        </div>
 
         <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 hide-scrollbar">
           {TABS.map((tab) => {
             const active = filtroStatus === tab.value
             return (
-              <button
+              <Button
                 key={tab.label}
+                variant={active ? "default" : "outline"}
                 onClick={() => setFiltroStatus(tab.value)}
-                className={cn(
-                  "px-4 h-[44px] rounded-[var(--radius)] text-sm font-semibold transition-colors border whitespace-nowrap",
-                  active
-                    ? "bg-[var(--blue)] text-white border-[var(--blue)]"
-                    : "bg-white text-[var(--text-secondary)] border-[var(--border)] hover:bg-[var(--muted)]"
-                )}
+                className="whitespace-nowrap"
               >
                 {tab.label}
-              </button>
+              </Button>
             )
           })}
         </div>
 
-        <div className="hidden sm:flex items-center bg-white border border-[var(--border)] rounded-[var(--radius)] p-1 ml-auto shrink-0 h-[44px]">
-          <button
+        <div className="hidden sm:flex items-center bg-card border rounded-md p-1 ml-auto shrink-0 shadow-sm">
+          <Button
+            variant={viewGrid ? "secondary" : "ghost"}
+            size="icon"
             onClick={() => setViewGrid(true)}
-            className={cn(
-              "p-2 rounded-md transition-colors",
-              viewGrid ? "bg-[var(--blue)] text-white" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-            )}
-            aria-label="Visualização em grade"
+            className="h-8 w-8"
           >
-            <LayoutGrid size={16} />
-          </button>
-          <button
+            <LayoutGrid className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={!viewGrid ? "secondary" : "ghost"}
+            size="icon"
             onClick={() => setViewGrid(false)}
-            className={cn(
-              "p-2 rounded-md transition-colors",
-              !viewGrid ? "bg-[var(--blue)] text-white" : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-            )}
-            aria-label="Visualização em lista"
+            className="h-8 w-8"
           >
-            <List size={16} />
-          </button>
+            <List className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
       {/* Loading State */}
       {isLoading && (
         <div className="flex items-center justify-center py-32">
-          <Loader2 className="w-8 h-8 animate-spin text-[var(--text-muted)]" />
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
         </div>
       )}
 
       {/* Empty State */}
       {!isLoading && obrasFiltradas.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-32 text-center bg-white border border-[var(--border)] rounded-2xl">
-          <HardHat size={48} className="text-[var(--text-muted)] opacity-30 mb-4" />
-          <h3 className="text-lg font-bold text-[var(--text-primary)] mb-1">
+        <Card className="flex flex-col items-center justify-center py-20 text-center shadow-sm">
+          <div className="bg-primary/5 p-4 rounded-full mb-4">
+            <HardHat className="text-primary h-10 w-10 opacity-80" />
+          </div>
+          <CardTitle className="mb-2">
             {busca || filtroStatus ? "Nenhuma obra encontrada" : "Nenhuma obra cadastrada"}
-          </h3>
-          <p className="text-sm text-[var(--text-muted)] mb-6 max-w-sm">
+          </CardTitle>
+          <CardDescription className="max-w-sm mb-6">
             {busca || filtroStatus
               ? "Tente ajustar seus filtros para encontrar a obra desejada."
               : "Crie sua primeira obra para começar a usar a plataforma."}
-          </p>
+          </CardDescription>
           {!busca && !filtroStatus && (
             <Link href="/obras/nova" className="btn-orange">
-              <Plus size={16} />
+              <Plus className="h-4 w-4" />
               Adicionar Obra
             </Link>
           )}
-        </div>
+        </Card>
       )}
 
       {/* Grid View */}
@@ -150,73 +150,70 @@ export default function ObrasPage() {
               <Link
                 key={obra.id}
                 href={`/obras/${obra.id}`}
-                className="group flex flex-col bg-white border border-[var(--border)] rounded-2xl overflow-hidden hover:shadow-md transition-all no-underline"
+                className="group"
               >
-                {/* Imagem Cover */}
-                <div className="relative h-[200px] w-full bg-slate-100 flex-shrink-0">
-                  {obra.imagemUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={obra.imagemUrl} alt={obra.nome} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center flex-col gap-2">
-                      <HardHat size={32} className="text-slate-300" />
-                    </div>
-                  )}
-                  {/* Status Badge */}
-                  <div className="absolute top-4 right-4">
-                    <span className={status.badgeClass}>{status.label}</span>
-                  </div>
-                </div>
-
-                <div className="p-5 flex flex-col flex-1">
-                  <h3 className="text-[17px] font-bold text-[var(--text-primary)] mb-4">
-                    {obra.nome}
-                  </h3>
-
-                  {/* Progress */}
-                  <div className="mt-auto mb-5">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[13px] font-medium text-[var(--text-muted)] text-[var(--text-secondary)]">Progresso</span>
-                      <span className="text-[13px] font-bold text-[var(--text-primary)]">{obra.progresso}%</span>
-                    </div>
-                    <div className="h-2 w-full bg-[#f1f5f9] rounded-full overflow-hidden">
-                      <div
-                        className={cn("h-full rounded-full transition-all", getProgressColorClass(obra.progresso))}
-                        style={{ width: `${obra.progresso}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Divider */}
-                  <hr className="border-[var(--border)] mb-4" />
-
-                  {/* Stats & Locale */}
-                  <div className="flex items-center justify-between mt-auto">
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
-                        <FileText size={15} className="text-[var(--text-muted)]" />
-                        <span className="text-[13px] font-medium">{obra._count.rdos}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
-                        <Image size={15} className="text-[var(--text-muted)]" />
-                        <span className="text-[13px] font-medium">{obra._count.midias}</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
-                        <MessageSquare size={15} className="text-[var(--text-muted)]" />
-                        <span className="text-[13px] font-medium">{obra._count.ocorrencias}</span>
-                      </div>
-                    </div>
-
-                    {(obra.cidade || obra.estado) && (
-                      <div className="flex items-center gap-1.5 text-[var(--text-muted)] shrink-0">
-                        <MapPin size={14} />
-                        <span className="text-[12px] font-medium">
-                          {[obra.cidade, obra.estado].filter(Boolean).join(", ")}
-                        </span>
+                <Card className="h-full flex flex-col overflow-hidden hover:border-primary/50 transition-colors cursor-pointer shadow-sm hover:shadow-md">
+                  {/* Imagem Cover */}
+                  <div className="relative h-[180px] w-full bg-muted flex-shrink-0">
+                    {obra.imagemUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={obra.imagemUrl} alt={obra.nome} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center flex-col gap-2">
+                        <HardHat className="h-10 w-10 text-muted-foreground/30" />
                       </div>
                     )}
+                    {/* Status Badge */}
+                    <div className="absolute top-4 right-4">
+                      <Badge variant={status.variant} className="shadow-sm">{status.label}</Badge>
+                    </div>
                   </div>
-                </div>
+
+                  <CardContent className="p-5 flex flex-col flex-1">
+                    <CardTitle className="text-lg mb-4 group-hover:text-primary transition-colors">
+                      {obra.nome}
+                    </CardTitle>
+
+                    {/* Progress */}
+                    <div className="mt-auto mb-5">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-muted-foreground">Progresso</span>
+                        <span className="text-xs font-bold">{obra.progresso}%</span>
+                      </div>
+                      <Progress value={obra.progresso} className="h-2" />
+                    </div>
+
+                    {/* Divider */}
+                    <div className="h-px bg-border my-4" />
+
+                    {/* Stats & Locale */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1.5 text-muted-foreground group-hover:text-foreground transition-colors">
+                          <FileText className="h-4 w-4" />
+                          <span className="text-xs font-semibold">{obra._count.rdos}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-muted-foreground group-hover:text-foreground transition-colors">
+                          <Image className="h-4 w-4" />
+                          <span className="text-xs font-semibold">{obra._count.midias}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-muted-foreground group-hover:text-foreground transition-colors">
+                          <MessageSquare className="h-4 w-4" />
+                          <span className="text-xs font-semibold">{obra._count.ocorrencias}</span>
+                        </div>
+                      </div>
+
+                      {(obra.cidade || obra.estado) && (
+                        <div className="flex items-center gap-1.5 text-muted-foreground shrink-0">
+                          <MapPin className="h-3.5 w-3.5" />
+                          <span className="text-[11px] font-semibold">
+                            {[obra.cidade, obra.estado].filter(Boolean).join(", ")}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
               </Link>
             )
           })}
@@ -232,63 +229,60 @@ export default function ObrasPage() {
               <Link
                 key={obra.id}
                 href={`/obras/${obra.id}`}
-                className="flex items-center gap-5 p-4 bg-white border border-[var(--border)] rounded-2xl hover:bg-[var(--muted)] transition-colors no-underline"
+                className="group"
               >
-                {/* Imagem Thumbnail */}
-                <div className="w-20 h-20 rounded-xl bg-slate-100 overflow-hidden flex-shrink-0">
-                  {obra.imagemUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={obra.imagemUrl} alt={obra.nome} className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <HardHat size={20} className="text-slate-300" />
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-4 mb-2">
-                    <h3 className="text-base font-bold text-[var(--text-primary)] truncate">
-                      {obra.nome}
-                    </h3>
-                    <span className={status.badgeClass}>{status.label}</span>
-                  </div>
-
-                  <div className="flex items-center gap-6">
-                    {/* Progress */}
-                    <div className="flex items-center gap-3 flex-1 max-w-[200px]">
-                      <span className="text-xs font-semibold w-8">{obra.progresso}%</span>
-                      <div className="h-1.5 w-full bg-[#f1f5f9] rounded-full overflow-hidden">
-                        <div
-                          className={cn("h-full rounded-full", getProgressColorClass(obra.progresso))}
-                          style={{ width: `${obra.progresso}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Stats */}
-                    <div className="hidden sm:flex items-center gap-4 border-l border-[var(--border)] pl-6">
-                      <div className="flex items-center gap-1.5 text-[var(--text-secondary)]">
-                        <FileText size={14} className="text-[var(--text-muted)]" />
-                        <span className="text-[12px] font-medium">{obra._count.rdos} RDOs</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-[var(--text-secondary)]">
-                        <MessageSquare size={14} className="text-[var(--text-muted)]" />
-                        <span className="text-[12px] font-medium">{obra._count.ocorrencias} Ocorrências</span>
-                      </div>
-                    </div>
-
-                    {/* Local */}
-                    {(obra.cidade || obra.estado) && (
-                      <div className="hidden md:flex items-center gap-1.5 text-[var(--text-muted)] border-l border-[var(--border)] pl-6 ml-auto">
-                        <MapPin size={14} />
-                        <span className="text-[12px] font-medium">
-                          {[obra.cidade, obra.estado].filter(Boolean).join(", ")}
-                        </span>
+                <Card className="flex items-center gap-5 p-4 hover:bg-muted/30 hover:border-primary/50 transition-colors shadow-sm">
+                  {/* Imagem Thumbnail */}
+                  <div className="w-16 h-16 rounded-md bg-muted overflow-hidden flex-shrink-0">
+                    {obra.imagemUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={obra.imagemUrl} alt={obra.nome} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <HardHat className="h-6 w-6 text-muted-foreground/30" />
                       </div>
                     )}
                   </div>
-                </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-4 mb-2">
+                      <h3 className="text-base font-bold truncate group-hover:text-primary transition-colors">
+                        {obra.nome}
+                      </h3>
+                      <Badge variant={status.variant} className="shadow-sm">{status.label}</Badge>
+                    </div>
+
+                    <div className="flex items-center gap-6">
+                      {/* Progress */}
+                      <div className="flex items-center gap-3 flex-1 max-w-[200px]">
+                        <span className="text-xs font-bold w-8">{obra.progresso}%</span>
+                        <Progress value={obra.progresso} className="h-1.5 w-full" />
+                      </div>
+
+                      {/* Stats */}
+                      <div className="hidden sm:flex items-center gap-4 border-l pl-6">
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <FileText className="h-3.5 w-3.5" />
+                          <span className="text-[11px] font-semibold">{obra._count.rdos} RDOs</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <MessageSquare className="h-3.5 w-3.5" />
+                          <span className="text-[11px] font-semibold">{obra._count.ocorrencias} Ocorrências</span>
+                        </div>
+                      </div>
+
+                      {/* Local */}
+                      {(obra.cidade || obra.estado) && (
+                        <div className="hidden md:flex items-center gap-1.5 text-muted-foreground border-l pl-6 ml-auto">
+                          <MapPin className="h-3.5 w-3.5" />
+                          <span className="text-[11px] font-semibold">
+                            {[obra.cidade, obra.estado].filter(Boolean).join(", ")}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </Card>
               </Link>
             )
           })}

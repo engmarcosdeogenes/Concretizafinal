@@ -41,3 +41,7 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# skill_manager (pasta interna — não sobe para o GitHub)
+/concretiza/
+/SKILLS/

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sem conexão — Concretiza</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #0a0e27; color: #fff; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .card { text-align: center; padding: 40px; max-width: 360px; }
+    .icon { font-size: 64px; margin-bottom: 16px; }
+    h1 { font-size: 24px; font-weight: 800; margin-bottom: 8px; color: #f97316; }
+    p { font-size: 15px; color: #94a3b8; line-height: 1.6; }
+    button { margin-top: 24px; padding: 12px 28px; background: #f97316; color: #fff; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; }
+    button:hover { background: #ea6c08; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">🏗️</div>
+    <h1>Sem conexão</h1>
+    <p>Você está offline. Verifique sua conexão com a internet e tente novamente.</p>
+    <button onclick="location.reload()">Tentar novamente</button>
+  </div>
+</body>
+</html>

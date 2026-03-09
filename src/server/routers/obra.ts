@@ -20,7 +20,10 @@ export const obraRouter = createTRPCRouter({
         where: { id: input.id, empresaId: ctx.session.empresaId },
         include: {
           usuarios: { include: { usuario: true } },
-          rdos: { take: 5, orderBy: { data: "desc" } },
+          rdos: {
+          take: 5, orderBy: { data: "desc" },
+          include: { responsavel: { select: { nome: true } } },
+        },
           fvs: { take: 5, orderBy: { data: "desc" } },
           ocorrencias: { where: { status: "ABERTA" } },
           equipe: { where: { ativo: true } },
@@ -58,16 +61,36 @@ export const obraRouter = createTRPCRouter({
 
   atualizar: protectedProcedure
     .input(z.object({
-      id: z.string(),
-      nome: z.string().min(1).optional(),
-      status: z.enum(["PLANEJAMENTO","EM_ANDAMENTO","PAUSADA","CONCLUIDA","CANCELADA"]).optional(),
-      progresso: z.number().min(0).max(100).optional(),
+      id:         z.string(),
+      nome:       z.string().min(1).optional(),
+      descricao:  z.string().optional().nullable(),
+      endereco:   z.string().optional().nullable(),
+      cidade:     z.string().optional().nullable(),
+      estado:     z.string().optional().nullable(),
+      orcamento:  z.number().positive().optional().nullable(),
+      dataInicio: z.string().optional().nullable(),
+      dataFim:    z.string().optional().nullable(),
+      imagemUrl:  z.string().optional().nullable(),
+      status:     z.enum(["PLANEJAMENTO","EM_ANDAMENTO","PAUSADA","CONCLUIDA","CANCELADA"]).optional(),
+      progresso:  z.number().min(0).max(100).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const { id, ...data } = input
+      const { id, dataInicio, dataFim, ...rest } = input
       return ctx.db.obra.update({
         where: { id, empresaId: ctx.session.empresaId },
-        data,
+        data: {
+          ...rest,
+          dataInicio: dataInicio !== undefined ? (dataInicio ? new Date(dataInicio) : null) : undefined,
+          dataFim:    dataFim    !== undefined ? (dataFim    ? new Date(dataFim)    : null) : undefined,
+        },
+      })
+    }),
+
+  excluir: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.obra.delete({
+        where: { id: input.id, empresaId: ctx.session.empresaId },
       })
     }),
 })

@@ -16,7 +16,7 @@ type FormState = {
 
 const EMPTY_FORM: FormState = { nome: "", unidade: "", descricao: "", categoria: "", precoUnitario: "" }
 
-const inputCls = "w-full px-3.5 py-2.5 border border-[var(--border)] rounded-[var(--radius)] text-sm text-[var(--text-primary)] bg-white placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
+const inputCls = "w-full px-3.5 py-2.5 border border-border rounded-xl text-sm text-[var(--text-primary)] bg-white placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
 const labelCls = "block text-sm font-medium text-[var(--text-primary)] mb-1.5"
 
 export default function MateriaisCatalogoPage() {
@@ -117,7 +117,7 @@ export default function MateriaisCatalogoPage() {
       )}
 
       {!isLoading && filtered.length === 0 && (
-        <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm py-12 text-center">
+        <div className="bg-white rounded-2xl border border-border shadow-sm py-12 text-center">
           <Package size={32} className="mx-auto mb-3 text-[var(--text-muted)] opacity-40" />
           <p className="text-sm font-medium text-[var(--text-primary)]">
             {busca ? "Nenhum material encontrado" : "Catálogo vazio"}
@@ -129,14 +129,14 @@ export default function MateriaisCatalogoPage() {
       )}
 
       {categorias.map(cat => (
-        <div key={cat} className="bg-white rounded-2xl border border-[var(--border)] shadow-sm overflow-hidden">
-          <div className="px-5 py-3 bg-[var(--muted)] border-b border-[var(--border)] flex items-center justify-between">
+        <div key={cat} className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
+          <div className="px-5 py-3 bg-muted border-b border-border flex items-center justify-between">
             <span className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">{cat}</span>
             <span className="text-xs text-[var(--text-muted)]">{grouped[cat].length} itens</span>
           </div>
-          <div className="divide-y divide-[var(--border)]">
+          <div className="divide-y divide-border">
             {grouped[cat].map(m => (
-              <div key={m.id} className="grid grid-cols-[1fr_80px_120px_88px] gap-3 px-5 py-3.5 items-center hover:bg-[var(--muted)] transition-colors">
+              <div key={m.id} className="grid grid-cols-[1fr_80px_120px_88px] gap-3 px-5 py-3.5 items-center hover:bg-muted transition-colors">
                 <div>
                   <p className="text-sm font-medium text-[var(--text-primary)]">{m.nome}</p>
                   {m.descricao && <p className="text-xs text-[var(--text-muted)] mt-0.5">{m.descricao}</p>}
@@ -149,7 +149,7 @@ export default function MateriaisCatalogoPage() {
                 </p>
                 <div className="flex items-center gap-1">
                   <button onClick={() => abrirEditar(m)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--muted)] transition-colors cursor-pointer">
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-border text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-muted transition-colors cursor-pointer">
                     <Pencil size={13} />
                   </button>
                   <button onClick={() => setConfirmDel(m.id)}
@@ -166,8 +166,8 @@ export default function MateriaisCatalogoPage() {
       {/* Modal criar/editar */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl border border-[var(--border)] shadow-xl w-full max-w-md">
-            <div className="flex items-center justify-between p-5 border-b border-[var(--border)]">
+          <div className="bg-white rounded-2xl border border-border shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-5 border-b border-border">
               <div className="flex items-center gap-2">
                 <Package size={18} className="text-orange-500" />
                 <h2 className="font-bold text-[var(--text-primary)]">
@@ -175,7 +175,7 @@ export default function MateriaisCatalogoPage() {
                 </h2>
               </div>
               <button onClick={fecharModal}
-                className="w-8 h-8 flex items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-muted)] hover:bg-[var(--muted)] transition-colors cursor-pointer">
+                className="w-8 h-8 flex items-center justify-center rounded-lg border border-border text-[var(--text-muted)] hover:bg-muted transition-colors cursor-pointer">
                 <X size={14} />
               </button>
             </div>
@@ -227,7 +227,7 @@ export default function MateriaisCatalogoPage() {
       {/* Modal confirmar exclusão */}
       {confirmDel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl border border-[var(--border)] shadow-xl w-full max-w-sm p-6 space-y-4">
+          <div className="bg-white rounded-2xl border border-border shadow-xl w-full max-w-sm p-6 space-y-4">
             <h3 className="font-bold text-[var(--text-primary)]">Excluir material?</h3>
             <p className="text-sm text-[var(--text-muted)]">Esta ação não pode ser desfeita.</p>
             <div className="flex gap-3">

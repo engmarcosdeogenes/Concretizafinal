@@ -24,7 +24,7 @@ const EMPTY_FORM: FormState = {
   data: new Date().toISOString().split("T")[0], observacao: "",
 }
 
-const inputCls = "w-full px-3.5 py-2.5 border border-[var(--border)] rounded-[var(--radius)] text-sm text-[var(--text-primary)] bg-white placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
+const inputCls = "w-full px-3.5 py-2.5 border border-border rounded-xl text-sm text-[var(--text-primary)] bg-white placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
 const labelCls = "block text-sm font-medium text-[var(--text-primary)] mb-1.5"
 
 type View = "movimentacoes" | "saldo"
@@ -89,15 +89,15 @@ export default function MateriaisPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-4">
+        <div className="bg-white rounded-2xl border border-border shadow-sm p-4">
           <p className="text-2xl font-extrabold text-blue-600">{movs.length}</p>
           <p className="text-xs font-medium text-[var(--text-primary)] mt-0.5">Movimentações</p>
         </div>
-        <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-4">
+        <div className="bg-white rounded-2xl border border-border shadow-sm p-4">
           <p className="text-2xl font-extrabold text-green-600">{movs.filter(m => m.tipo === "ENTRADA").length}</p>
           <p className="text-xs font-medium text-[var(--text-primary)] mt-0.5">Entradas</p>
         </div>
-        <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm p-4">
+        <div className="bg-white rounded-2xl border border-border shadow-sm p-4">
           <p className="text-2xl font-extrabold text-red-600">{movs.filter(m => m.tipo === "SAIDA").length}</p>
           <p className="text-xs font-medium text-[var(--text-primary)] mt-0.5">Saídas</p>
         </div>
@@ -110,7 +110,7 @@ export default function MateriaisPage() {
             className={`px-4 py-2 rounded-xl text-sm font-medium border transition-all cursor-pointer ${
               view === v
                 ? "bg-orange-500 text-white border-orange-500"
-                : "bg-white text-[var(--text-primary)] border-[var(--border)] hover:bg-[var(--muted)]"
+                : "bg-white text-[var(--text-primary)] border-border hover:bg-muted"
             }`}>
             {v === "saldo" ? "Estoque atual" : "Histórico"}
           </button>
@@ -119,8 +119,8 @@ export default function MateriaisPage() {
 
       {/* Estoque atual (saldo) */}
       {view === "saldo" && (
-        <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm overflow-hidden">
-          <div className="grid grid-cols-[1fr_100px_100px_80px] gap-3 px-5 py-3 bg-[var(--muted)] border-b border-[var(--border)]">
+        <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
+          <div className="grid grid-cols-[1fr_100px_100px_80px] gap-3 px-5 py-3 bg-muted border-b border-border">
             <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Material</span>
             <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Saldo</span>
             <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Categoria</span>
@@ -139,7 +139,7 @@ export default function MateriaisPage() {
 
           {saldo.map(item => (
             <div key={item.material.id}
-              className="grid grid-cols-[1fr_100px_100px_80px] gap-3 px-5 py-3.5 border-b border-[var(--border)] last:border-0 items-center hover:bg-[var(--muted)] transition-colors">
+              className="grid grid-cols-[1fr_100px_100px_80px] gap-3 px-5 py-3.5 border-b border-border last:border-0 items-center hover:bg-muted transition-colors">
               <p className="text-sm font-medium text-[var(--text-primary)]">{item.material.nome}</p>
               <p className={`text-sm font-bold ${item.saldo > 0 ? "text-green-600" : item.saldo < 0 ? "text-red-600" : "text-slate-500"}`}>
                 {item.saldo > 0 ? "+" : ""}{item.saldo}
@@ -153,8 +153,8 @@ export default function MateriaisPage() {
 
       {/* Histórico de movimentações */}
       {view === "movimentacoes" && (
-        <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm overflow-hidden">
-          <div className="grid grid-cols-[80px_1fr_120px_80px_80px] gap-3 px-5 py-3 bg-[var(--muted)] border-b border-[var(--border)]">
+        <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
+          <div className="grid grid-cols-[80px_1fr_120px_80px_80px] gap-3 px-5 py-3 bg-muted border-b border-border">
             <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Data</span>
             <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Material</span>
             <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Tipo</span>
@@ -175,7 +175,7 @@ export default function MateriaisPage() {
             const t = TIPO_MAP[m.tipo as TipoMov] ?? TIPO_MAP.ENTRADA
             return (
               <div key={m.id}
-                className="grid grid-cols-[80px_1fr_120px_80px_80px] gap-3 px-5 py-3.5 border-b border-[var(--border)] last:border-0 items-center hover:bg-[var(--muted)] transition-colors">
+                className="grid grid-cols-[80px_1fr_120px_80px_80px] gap-3 px-5 py-3.5 border-b border-border last:border-0 items-center hover:bg-muted transition-colors">
                 <p className="text-xs text-[var(--text-muted)]">{formatDataCurta(m.data)}</p>
                 <div>
                   <p className="text-sm font-medium text-[var(--text-primary)]">{m.material.nome}</p>
@@ -197,14 +197,14 @@ export default function MateriaisPage() {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl border border-[var(--border)] shadow-xl w-full max-w-md">
-            <div className="flex items-center justify-between p-5 border-b border-[var(--border)]">
+          <div className="bg-white rounded-2xl border border-border shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-5 border-b border-border">
               <div className="flex items-center gap-2">
                 <Package size={18} className="text-orange-500" />
                 <h2 className="font-bold text-[var(--text-primary)]">Registrar Movimentação</h2>
               </div>
               <button onClick={fecharModal}
-                className="w-8 h-8 flex items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-muted)] hover:bg-[var(--muted)] transition-colors cursor-pointer">
+                className="w-8 h-8 flex items-center justify-center rounded-lg border border-border text-[var(--text-muted)] hover:bg-muted transition-colors cursor-pointer">
                 <X size={14} />
               </button>
             </div>
@@ -220,7 +220,7 @@ export default function MateriaisPage() {
                       className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border-2 transition-all cursor-pointer ${
                         form.tipo === tipo
                           ? "bg-orange-500 text-white border-orange-500"
-                          : "bg-white text-[var(--text-primary)] border-[var(--border)] hover:bg-[var(--muted)]"
+                          : "bg-white text-[var(--text-primary)] border-border hover:bg-muted"
                       }`}>
                       <t.Icon size={14} />
                       {t.label}

@@ -5,7 +5,7 @@ import { Building2, Save, ChevronLeft } from "lucide-react"
 import Link from "next/link"
 import { trpc } from "@/lib/trpc/client"
 
-const inputCls = "w-full px-3.5 py-2.5 border border-[var(--border)] rounded-[var(--radius)] text-sm text-[var(--text-primary)] bg-white placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
+const inputCls = "w-full px-3.5 py-2.5 border border-border rounded-xl text-sm text-[var(--text-primary)] bg-white placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--blue)] focus:ring-2 focus:ring-blue-100 transition-all"
 const labelCls = "block text-sm font-medium text-[var(--text-primary)] mb-1.5"
 
 const PLANO_LABEL: Record<string, string> = {
@@ -40,10 +40,10 @@ export default function ConfigEmpresaPage() {
   }
 
   return (
-    <div className="p-6 max-w-lg">
+    <div className="p-6 max-w-lg mx-auto">
       <div className="flex items-center gap-3 mb-6">
         <Link href="/configuracoes"
-          className="w-8 h-8 flex items-center justify-center rounded-lg border border-[var(--border)] text-[var(--text-muted)] hover:bg-[var(--muted)] transition-colors cursor-pointer">
+          className="w-8 h-8 flex items-center justify-center rounded-lg border border-border text-[var(--text-muted)] hover:bg-muted transition-colors cursor-pointer">
           <ChevronLeft size={16} />
         </Link>
         <div>
@@ -52,8 +52,8 @@ export default function ConfigEmpresaPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-[var(--border)] shadow-sm">
-        <div className="flex items-center gap-3 p-5 border-b border-[var(--border)]">
+      <div className="bg-white rounded-2xl border border-border shadow-sm">
+        <div className="flex items-center gap-3 p-5 border-b border-border">
           <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
             <Building2 size={18} className="text-orange-600" />
           </div>
