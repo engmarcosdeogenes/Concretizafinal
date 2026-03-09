@@ -45,3 +45,5 @@ next-env.d.ts
 # skill_manager (pasta interna — não sobe para o GitHub)
 /concretiza/
 /SKILLS/
+
+.vercel
