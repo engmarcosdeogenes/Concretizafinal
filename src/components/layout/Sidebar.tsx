@@ -57,33 +57,30 @@ function getObraNavItems(obraId: string) {
 // ── Logo ──────────────────────────────────────────────────────
 function Logo({ collapsed }: { collapsed: boolean }) {
   return (
-    <Link
-      href="/obras"
-      className="flex items-center border-b border-[var(--sidebar-border)] flex-shrink-0 overflow-hidden no-underline hover:opacity-90 transition-opacity"
-      style={{
-        height: "var(--navbar-h)",
-        padding: collapsed ? "0" : undefined,
-        justifyContent: collapsed ? "center" : undefined,
-        paddingLeft: collapsed ? 0 : "1.25rem",
-        paddingRight: collapsed ? 0 : "1.25rem",
-      }}
-      title="Ir para Obras"
+    <div
+      className="flex items-center border-b border-[var(--sidebar-border)] flex-shrink-0"
+      style={{ height: "var(--navbar-h)" }}
     >
-      <div className="w-8 h-8 bg-[var(--blue)] rounded-lg flex items-center justify-center flex-shrink-0">
-        <span className="text-white font-extrabold text-sm">C</span>
-      </div>
-      <span
-        className="text-white font-bold tracking-tight ml-2.5 whitespace-nowrap transition-all duration-200"
-        style={{
-          opacity: collapsed ? 0 : 1,
-          width: collapsed ? 0 : "auto",
-          overflow: "hidden",
-          fontSize: 15,
-        }}
+      <Link
+        href="/obras"
+        title="Ir para Obras"
+        className={cn(
+          "flex items-center no-underline hover:opacity-90 transition-opacity",
+          collapsed
+            ? "justify-center w-10 h-10 mx-auto rounded-lg"
+            : "gap-0 px-5 h-full w-full"
+        )}
       >
-        Concretiza
-      </span>
-    </Link>
+        <div className="w-8 h-8 bg-[var(--blue)] rounded-lg flex items-center justify-center flex-shrink-0">
+          <span className="text-white font-extrabold text-sm">C</span>
+        </div>
+        {!collapsed && (
+          <span className="text-white font-bold tracking-tight ml-2.5 whitespace-nowrap" style={{ fontSize: 15 }}>
+            Concretiza
+          </span>
+        )}
+      </Link>
+    </div>
   )
 }
 
