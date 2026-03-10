@@ -222,7 +222,7 @@ export function Sidebar() {
         )}
 
         {/* Obra nav */}
-        <nav className={cn("flex-1 overflow-y-auto space-y-0.5", collapsed ? "py-3 px-1.5" : "py-3 px-2.5")}>
+        <nav className={cn("flex-1 overflow-y-auto sidebar-scroll space-y-0.5", collapsed ? "py-3 px-1.5" : "py-3 px-2.5")}>
           {obraNavItems.map(({ label, href, icon: Icon, exact }) => (
             <NavLink
               key={href}
@@ -248,7 +248,7 @@ export function Sidebar() {
     >
       <Logo collapsed={collapsed} />
 
-      <nav className={cn("flex-1 overflow-y-auto space-y-0.5", collapsed ? "py-3 px-1.5" : "py-3 px-2.5")}>
+      <nav className={cn("flex-1 overflow-y-auto sidebar-scroll space-y-0.5", collapsed ? "py-3 px-1.5" : "py-3 px-2.5")}>
         {globalNavItems.map((item) => {
           const active = isActive(item.href, item.exact)
           const groupActive = !!(item.children && pathname.startsWith(item.href))

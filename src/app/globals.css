@@ -131,6 +131,15 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Scrollbar invisível na sidebar — rola mas não aparece */
+  .sidebar-scroll {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+  }
+  .sidebar-scroll::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+  }
 }
 
 @layer components {
