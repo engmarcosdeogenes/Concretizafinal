@@ -99,7 +99,7 @@ export default function ObraOverviewPage() {
 
   const { canEditObra } = useRole()
   const utils = trpc.useUtils()
-  const { data: obra, isLoading } = trpc.obra.buscarPorId.useQuery({ id })
+  const { data: obra, isLoading, isError, refetch } = trpc.obra.buscarPorId.useQuery({ id })
 
   const atualizar = trpc.obra.atualizar.useMutation({
     onSuccess: () => {
@@ -180,6 +180,20 @@ export default function ObraOverviewPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[0,1,2,3].map(i => <div key={i} className="bg-white rounded-2xl border border-border shadow-sm p-4 h-24 animate-pulse"><div className="h-4 bg-muted rounded" /></div>)}
         </div>
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center gap-4 text-center">
+        <p className="text-sm text-red-500">Erro ao carregar a obra. Verifique sua conexão.</p>
+        <button
+          onClick={() => refetch()}
+          className="px-4 py-2 bg-orange-500 text-white text-sm rounded-xl hover:bg-orange-600 transition-colors"
+        >
+          Tentar novamente
+        </button>
       </div>
     )
   }

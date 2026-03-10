@@ -2,9 +2,10 @@ import { initTRPC, TRPCError } from "@trpc/server"
 import superjson from "superjson"
 import { ZodError } from "zod"
 import { createServerClient } from "@supabase/ssr"
+import { cookies } from "next/headers"
 import { db } from "./db"
 
-export const createTRPCContext = async (opts: { headers: Headers }) => {
+export const createTRPCContext = async (_opts: { headers: Headers }) => {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
@@ -12,16 +13,21 @@ export const createTRPCContext = async (opts: { headers: Headers }) => {
 
   // Sem variáveis de ambiente (dev sem banco) → session nula, sem crash
   if (supabaseUrl && supabaseKey) {
+    const cookieStore = await cookies()
     const supabase = createServerClient(supabaseUrl, supabaseKey, {
       cookies: {
         getAll() {
-          const cookieHeader = opts.headers.get("cookie") ?? ""
-          return cookieHeader.split(";").map((c) => {
-            const [name, ...rest] = c.trim().split("=")
-            return { name: name.trim(), value: rest.join("=") }
-          })
+          return cookieStore.getAll()
         },
-        setAll() {},
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          } catch {
+            // Route Handlers podem não conseguir setar cookies — ignorar
+          }
+        },
       },
     })
 
