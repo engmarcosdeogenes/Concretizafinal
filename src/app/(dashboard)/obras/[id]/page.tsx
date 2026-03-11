@@ -102,6 +102,13 @@ export default function ObraOverviewPage() {
   const utils = trpc.useUtils()
   const { data: obra, isLoading, isError, refetch } = trpc.obra.buscarPorId.useQuery({ id })
 
+  // Sienge queries — sempre chamados (Rules of Hooks), enabled só quando siengeId existe
+  const hasSienge = !!obra?.siengeId
+  const { data: pedidosSienge = [] }   = trpc.sienge.listarPedidosPorObra.useQuery({ obraId: id }, { enabled: hasSienge })
+  const { data: cotacoesSienge = [] }  = trpc.sienge.listarCotacoes.useQuery({ obraId: id }, { enabled: hasSienge })
+  const { data: contratosSienge = [] } = trpc.sienge.listarContratos.useQuery({ obraId: id }, { enabled: hasSienge })
+  const { data: estoqueSienge = [] }   = trpc.sienge.listarEstoque.useQuery({ obraId: id }, { enabled: hasSienge })
+
   const atualizar = trpc.obra.atualizar.useMutation({
     onSuccess: () => {
       utils.obra.buscarPorId.invalidate({ id })
@@ -214,12 +221,6 @@ export default function ObraOverviewPage() {
   const fvsTotal = obra._count.fvs
   const ocAbertas = obra.ocorrencias.length
   const fvsConformes = obra.fvs.filter(f => f.status === "APROVADO").length
-  const hasSienge = !!obra.siengeId
-
-  const { data: pedidosSienge = [] }  = trpc.sienge.listarPedidosPorObra.useQuery({ obraId: id }, { enabled: hasSienge })
-  const { data: cotacoesSienge = [] } = trpc.sienge.listarCotacoes.useQuery({ obraId: id }, { enabled: hasSienge })
-  const { data: contratosSienge = [] } = trpc.sienge.listarContratos.useQuery({ obraId: id }, { enabled: hasSienge })
-  const { data: estoqueSienge = [] }  = trpc.sienge.listarEstoque.useQuery({ obraId: id }, { enabled: hasSienge })
 
   return (
     <div className="p-6 space-y-5">
