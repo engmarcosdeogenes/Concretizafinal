@@ -27,6 +27,7 @@ import { siengeRouter } from "./sienge"
 import { medicaoRouter } from "./medicao"
 import { checklistRouter } from "./checklist"
 import { modeloRelatorioRouter } from "./modeloRelatorio"
+import { tarefaObraRouter } from "./tarefaObra"
 
 export const appRouter = createTRPCRouter({
   auditLog:       auditLogRouter,
@@ -57,6 +58,7 @@ export const appRouter = createTRPCRouter({
   medicao:        medicaoRouter,
   checklist:      checklistRouter,
   modeloRelatorio: modeloRelatorioRouter,
+  tarefaObra:     tarefaObraRouter,
 })
 
 export type AppRouter = typeof appRouter

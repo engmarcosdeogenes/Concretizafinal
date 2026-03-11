@@ -44,8 +44,9 @@ enum StatusObra {
 
 enum StatusRDO {
   RASCUNHO
-  ENVIADO
-  APROVADO
+  ENVIADO       // aguardando engenheiro
+  EM_REVISAO    // engenheiro aprovou, aguardando coordenador
+  APROVADO      // coordenador aprovou → atualiza tarefas
   REJEITADO
 }
 
@@ -195,6 +196,7 @@ model Usuario {
   mensagens         MensagemChat[]
   solicitacoes      SolicitacaoCompra[]
   pushSubscriptions PushSubscription[]
+  verificacoesRDO   VerificacaoRDO[]
 }
 
 // ─── Obras ────────────────────────────────────────────────────────────────────
@@ -239,6 +241,7 @@ model Obra {
   lancamentos          LancamentoFinanceiro[]
   medicoes             MedicaoObra[]
   respostasChecklist   RespostaChecklist[]
+  tarefas              TarefaObra[]
 }
 
 model ObraUsuario {
@@ -274,25 +277,28 @@ model RDO {
   visualizacoes            Int       @default(0)
   valoresCamposPersonalizados Json?  // { [campoId]: valor }
 
-  obra               Obra                  @relation(fields: [obraId], references: [id], onDelete: Cascade)
-  responsavel        Usuario               @relation(fields: [responsavelId], references: [id])
-  atividades         RDOAtividade[]
-  equipe             RDOEquipe[]
-  midias             Midia[]
-  assinaturas        AssinaturaRDO[]
-  materiaisRecebidos RDOMaterialRecebido[]
+  obra                Obra                  @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  responsavel         Usuario               @relation(fields: [responsavelId], references: [id])
+  atividades          RDOAtividade[]
+  equipe              RDOEquipe[]
+  midias              Midia[]
+  assinaturas         AssinaturaRDO[]
+  materiaisRecebidos  RDOMaterialRecebido[]
   materiaisUtilizados RDOMaterialUtilizado[]
+  verificacoes        VerificacaoRDO[]
 }
 
 model RDOAtividade {
-  id         String  @id @default(cuid())
-  rdoId      String
-  descricao  String
-  quantidade Float?
-  unidade    String?
-  observacao String?
+  id            String      @id @default(cuid())
+  rdoId         String
+  descricao     String
+  quantidade    Float?
+  unidade       String?
+  observacao    String?
+  tarefaObraId  String?
 
-  rdo RDO @relation(fields: [rdoId], references: [id], onDelete: Cascade)
+  rdo        RDO         @relation(fields: [rdoId], references: [id], onDelete: Cascade)
+  tarefaObra TarefaObra? @relation(fields: [tarefaObraId], references: [id])
 }
 
 model RDOEquipe {
@@ -823,4 +829,61 @@ model ItemRespostaChecklist {
 
   resposta RespostaChecklist     @relation(fields: [respostaId], references: [id], onDelete: Cascade)
   item     ItemTemplateChecklist @relation(fields: [itemId], references: [id])
+}
+
+// ─── Lista de Tarefas da Obra (WBS nativa) ────────────────────────────────────
+
+model TarefaObra {
+  id                  String           @id @default(cuid())
+  obraId              String
+  parentId            String?
+  codigo              String?
+  nome                String
+  setor               String?
+  unidade             String           @default("un")
+  quantidadeTotal     Float            @default(0)
+  quantidadeExecutada Float            @default(0)
+  percentual          Float            @default(0)
+  status              StatusTarefaObra @default(NAO_INICIADO)
+  ordem               Int              @default(0)
+  criadoEm            DateTime         @default(now())
+  atualizadoEm        DateTime         @updatedAt
+
+  obra       Obra           @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  parent     TarefaObra?    @relation("SubTarefas", fields: [parentId], references: [id])
+  filhos     TarefaObra[]   @relation("SubTarefas")
+  atividades RDOAtividade[]
+}
+
+enum StatusTarefaObra {
+  NAO_INICIADO
+  EM_ANDAMENTO
+  CONCLUIDO
+  SUSPENSO
+}
+
+
+// ─── Verificação de RDO (fluxo 3 processos) ───────────────────────────────────
+
+model VerificacaoRDO {
+  id         String               @id @default(cuid())
+  rdoId      String
+  usuarioId  String
+  etapa      EtapaVerificacaoRDO
+  status     StatusVerificacaoRDO
+  comentario String?
+  criadoEm   DateTime             @default(now())
+
+  rdo     RDO     @relation(fields: [rdoId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+}
+
+enum EtapaVerificacaoRDO {
+  ENGENHEIRO
+  COORDENADOR
+}
+
+enum StatusVerificacaoRDO {
+  APROVADO
+  REJEITADO
 }

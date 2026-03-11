@@ -60,30 +60,70 @@ const globalNavItems = [
   { label: "Configurações", href: "/configuracoes", icon: Settings },
 ]
 
+type NavRole = "DONO" | "ADMIN" | "ENGENHEIRO" | "MESTRE" | "ENCARREGADO" | null | undefined
+
 // ── Obra nav ─────────────────────────────────────────────────
-function getObraNavItems(obraId: string, hasSienge = false) {
+function getObraNavItems(obraId: string, hasSienge = false, role: NavRole = "DONO") {
   const base = `/obras/${obraId}`
+  const isField = role === "MESTRE" || role === "ENCARREGADO"
+  const isEngPlus = role === "DONO" || role === "ADMIN" || role === "ENGENHEIRO"
+
+  const base_items = [
+    { label: "Visão Geral",  href: base,                  icon: LayoutDashboard, exact: true },
+    { label: "RDO",          href: `${base}/rdo`,         icon: ClipboardList },
+    { label: "FVS",          href: `${base}/fvs`,         icon: ClipboardCheck },
+    { label: "FVM",          href: `${base}/fvm`,         icon: Package },
+    { label: "Checklist",    href: `${base}/checklist`,   icon: CheckSquare },
+    { label: "Ocorrências",  href: `${base}/ocorrencias`, icon: AlertTriangle },
+    { label: "Equipe",       href: `${base}/equipe`,      icon: Users },
+    { label: "Chat",         href: `${base}/chat`,        icon: MessageSquare },
+    { label: "Configurações",href: `${base}/configuracoes`,icon: Settings },
+  ]
+
+  if (isField) return base_items
+
+  // Engenheiro+ vê mais
+  const eng_items = [
+    { label: "Visão Geral",  href: base,                  icon: LayoutDashboard, exact: true },
+    { label: "RDO",          href: `${base}/rdo`,         icon: ClipboardList },
+    { label: "FVS",          href: `${base}/fvs`,         icon: ClipboardCheck },
+    { label: "FVM",          href: `${base}/fvm`,         icon: Package },
+    { label: "Checklist",    href: `${base}/checklist`,   icon: CheckSquare },
+    { label: "Ocorrências",  href: `${base}/ocorrencias`, icon: AlertTriangle },
+    { label: "Mapa",         href: `${base}/mapa`,        icon: MapPin },
+    { label: "Equipe",       href: `${base}/equipe`,      icon: Users },
+    { label: "Materiais",    href: `${base}/materiais`,   icon: Box },
+    { label: "Documentos",   href: `${base}/documentos`,  icon: FileText },
+    { label: "Medição",      href: `${base}/medicao`,     icon: BarChart2 },
+    { label: "Tarefas",      href: `${base}/tarefas`,     icon: ListTodo },
+    { label: "Chat",         href: `${base}/chat`,        icon: MessageSquare },
+    { label: "Configurações",href: `${base}/configuracoes`,icon: Settings },
+  ]
+
+  if (!isEngPlus) return eng_items
+
+  // Admin / Dono vê tudo
   return [
-    { label: "Visão Geral", href: base, icon: LayoutDashboard, exact: true },
-    { label: "RDO", href: `${base}/rdo`, icon: ClipboardList },
-    { label: "FVS", href: `${base}/fvs`, icon: ClipboardCheck },
-    { label: "FVM", href: `${base}/fvm`, icon: Package },
-    { label: "Checklist", href: `${base}/checklist`, icon: CheckSquare },
-    { label: "Ocorrências", href: `${base}/ocorrencias`, icon: AlertTriangle },
-    { label: "Mapa", href: `${base}/mapa`, icon: MapPin },
-    { label: "Equipe", href: `${base}/equipe`, icon: Users },
-    { label: "Materiais", href: `${base}/materiais`, icon: Box },
-    { label: "Documentos", href: `${base}/documentos`, icon: FileText },
-    { label: "Financeiro", href: `${base}/financeiro`, icon: DollarSign },
-    { label: "Medição",   href: `${base}/medicao`,   icon: BarChart2 },
+    { label: "Visão Geral",  href: base,                  icon: LayoutDashboard, exact: true },
+    { label: "RDO",          href: `${base}/rdo`,         icon: ClipboardList },
+    { label: "FVS",          href: `${base}/fvs`,         icon: ClipboardCheck },
+    { label: "FVM",          href: `${base}/fvm`,         icon: Package },
+    { label: "Checklist",    href: `${base}/checklist`,   icon: CheckSquare },
+    { label: "Ocorrências",  href: `${base}/ocorrencias`, icon: AlertTriangle },
+    { label: "Mapa",         href: `${base}/mapa`,        icon: MapPin },
+    { label: "Equipe",       href: `${base}/equipe`,      icon: Users },
+    { label: "Materiais",    href: `${base}/materiais`,   icon: Box },
+    { label: "Documentos",   href: `${base}/documentos`,  icon: FileText },
+    { label: "Financeiro",   href: `${base}/financeiro`,  icon: DollarSign },
+    { label: "Medição",      href: `${base}/medicao`,     icon: BarChart2 },
+    { label: "Tarefas",      href: `${base}/tarefas`,     icon: ListTodo },
     ...(hasSienge ? [
-      { label: "Tarefas",      href: `${base}/tarefas`,      icon: ListTodo,  exact: false },
-      { label: "Orçamento",    href: `${base}/orcamento`,    icon: BarChart3, exact: false },
-      { label: "Almoxarifado", href: `${base}/almoxarifado`, icon: Package,   exact: false },
-      { label: "Contratos",    href: `${base}/contratos`,    icon: FileText,  exact: false },
+      { label: "Orçamento",    href: `${base}/orcamento`,    icon: BarChart3 },
+      { label: "Almoxarifado", href: `${base}/almoxarifado`, icon: Package   },
+      { label: "Contratos",    href: `${base}/contratos`,    icon: FileText  },
     ] : []),
-    { label: "Chat", href: `${base}/chat`, icon: MessageSquare },
-    { label: "Configurações", href: `${base}/configuracoes`, icon: Settings },
+    { label: "Chat",         href: `${base}/chat`,        icon: MessageSquare },
+    { label: "Configurações",href: `${base}/configuracoes`,icon: Settings },
   ]
 }
 
@@ -213,10 +253,12 @@ export function Sidebar() {
     { enabled: isInsideObra && !!obraId }
   )
   const hasSienge = !!(obraData?.siengeId)
+  const { data: me } = trpc.painel.me.useQuery()
+  const userRole = me?.role as NavRole
 
   // ── Obra contextual sidebar ──
   if (isInsideObra && obraId) {
-    const obraNavItems = getObraNavItems(obraId, hasSienge)
+    const obraNavItems = getObraNavItems(obraId, hasSienge, userRole)
 
     return (
       <aside

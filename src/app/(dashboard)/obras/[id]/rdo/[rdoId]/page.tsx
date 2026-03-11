@@ -3,12 +3,13 @@
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
-import { ArrowLeft, Sun, Cloud, CloudRain, Wind, CheckCircle2, Clock, AlertCircle, Users, ClipboardList, Send, ThumbsUp, Download, Camera, Link2, Pen, Package, Plus, Trash2, Save, Eye } from "lucide-react"
+import { ArrowLeft, Sun, Cloud, CloudRain, Wind, CheckCircle2, Clock, AlertCircle, Users, ClipboardList, Send, ThumbsUp, Download, Camera, Link2, Pen, Package, Plus, Trash2, Save, Eye, ShieldCheck, XCircle, RotateCcw } from "lucide-react"
 import { toast } from "sonner"
 import { trpc } from "@/lib/trpc/client"
 import { formatDataLonga, diaSemanaNome } from "@/lib/format"
 import { UploadFotos } from "@/components/obras/UploadFotos"
 import { AssinaturaCanvas } from "@/components/obras/AssinaturaCanvas"
+import { useRole } from "@/hooks/useRole"
 
 function ClimaIcon({ clima }: { clima?: string | null }) {
   if (clima === "chuva")   return <CloudRain size={18} className="text-blue-400" />
@@ -19,10 +20,11 @@ function ClimaIcon({ clima }: { clima?: string | null }) {
 
 function StatusBadge({ status }: { status: string }) {
   const map = {
-    APROVADO:  { label: "Aprovado",  cls: "bg-green-50 text-green-700 border border-green-200", Icon: CheckCircle2 },
-    ENVIADO:   { label: "Enviado",   cls: "bg-blue-50 text-blue-700 border border-blue-200",   Icon: Clock },
-    RASCUNHO:  { label: "Rascunho",  cls: "bg-slate-50 text-slate-600 border border-slate-200", Icon: AlertCircle },
-    REJEITADO: { label: "Rejeitado", cls: "bg-red-50 text-red-700 border border-red-200",      Icon: AlertCircle },
+    APROVADO:   { label: "Aprovado",   cls: "bg-green-50 text-green-700 border border-green-200",  Icon: CheckCircle2 },
+    ENVIADO:    { label: "Enviado",    cls: "bg-blue-50 text-blue-700 border border-blue-200",     Icon: Clock },
+    EM_REVISAO: { label: "Em Revisão", cls: "bg-sky-50 text-sky-700 border border-sky-200",        Icon: ShieldCheck },
+    RASCUNHO:   { label: "Rascunho",   cls: "bg-slate-50 text-slate-600 border border-slate-200", Icon: AlertCircle },
+    REJEITADO:  { label: "Rejeitado",  cls: "bg-red-50 text-red-700 border border-red-200",        Icon: AlertCircle },
   }
   const s = map[status as keyof typeof map] ?? map.RASCUNHO
   return (
@@ -71,6 +73,7 @@ export default function RdoDetalhePage() {
   const obraId = params.id as string
   const rdoId  = params.rdoId as string
   const router = useRouter()
+  const { canVerifyEng, canVerifyCord } = useRole()
 
   // Assinaturas state
   const [assinaturas, setAssinaturas] = useState<AssinaturaLocal[]>([])
@@ -80,6 +83,10 @@ export default function RdoDetalhePage() {
   const [recebidos, setRecebidos] = useState<MaterialLocal[]>([])
   const [utilizados, setUtilizados] = useState<MaterialLocal[]>([])
   const [materiaisIniciados, setMateriaisIniciados] = useState(false)
+
+  // Verificação state
+  const [showReprovarModal, setShowReprovarModal] = useState(false)
+  const [comentarioReprovar, setComentarioReprovar] = useState("")
 
   const utils = trpc.useUtils()
 
@@ -122,6 +129,17 @@ export default function RdoDetalhePage() {
       utils.rdo.buscarPorId.invalidate({ id: rdoId })
       utils.rdo.listar.invalidate({ obraId })
     },
+  })
+
+  const verificar = trpc.rdo.verificar.useMutation({
+    onSuccess: () => {
+      utils.rdo.buscarPorId.invalidate({ id: rdoId })
+      utils.rdo.listar.invalidate({ obraId })
+      setShowReprovarModal(false)
+      setComentarioReprovar("")
+      toast.success("Verificação registrada")
+    },
+    onError: (e) => toast.error(e.message),
   })
 
   const salvarAssinaturas = trpc.rdo.salvarAssinaturas.useMutation({
@@ -173,7 +191,11 @@ export default function RdoDetalhePage() {
   }
 
   const totalEquipe = rdo.equipe.reduce((sum, e) => sum + e.quantidade, 0)
-  const nextStatus = rdo.status === "RASCUNHO" ? "ENVIADO" : rdo.status === "ENVIADO" ? "APROVADO" : null
+  const nextStatus = rdo.status === "RASCUNHO" ? "ENVIADO" : null
+
+  // Verificação flags
+  const podeVerificarEng  = canVerifyEng  && rdo.status === "ENVIADO"
+  const podeVerificarCord = canVerifyCord && rdo.status === "EM_REVISAO"
 
   // Prazo contratual
   const diasDecorridos = rdo.obra.dataInicio
@@ -264,21 +286,102 @@ export default function RdoDetalhePage() {
         </div>
 
         {/* Status action */}
-        {nextStatus && (
-          <div className="mt-4 pt-4 border-t border-border">
-            <button
-              type="button"
-              disabled={atualizarStatus.isPending}
-              onClick={() => atualizarStatus.mutate({ id: rdoId, status: nextStatus })}
-              className="btn-orange min-h-[40px] disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {nextStatus === "ENVIADO" ? <Send size={14} /> : <ThumbsUp size={14} />}
-              {atualizarStatus.isPending
-                ? "Salvando..."
-                : nextStatus === "ENVIADO"
-                ? "Enviar RDO"
-                : "Aprovar RDO"}
-            </button>
+        {(nextStatus || podeVerificarEng || podeVerificarCord || rdo.status === "REJEITADO") && (
+          <div className="mt-4 pt-4 border-t border-border space-y-3">
+            {/* Banner rejeitado */}
+            {rdo.status === "REJEITADO" && (
+              <div className="flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-medium">
+                <XCircle size={16} className="flex-shrink-0" />
+                <span>RDO reprovado — corrija o necessário e reenvie.</span>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              {/* Enviar (RASCUNHO → ENVIADO) */}
+              {nextStatus === "ENVIADO" && (
+                <button type="button" disabled={atualizarStatus.isPending}
+                  onClick={() => atualizarStatus.mutate({ id: rdoId, status: "ENVIADO" })}
+                  className="btn-orange min-h-[40px] disabled:opacity-60 disabled:cursor-not-allowed">
+                  <Send size={14} />
+                  {atualizarStatus.isPending ? "Enviando…" : "Enviar RDO"}
+                </button>
+              )}
+
+              {/* Reenviar (REJEITADO → ENVIADO) */}
+              {rdo.status === "REJEITADO" && (
+                <button type="button" disabled={atualizarStatus.isPending}
+                  onClick={() => atualizarStatus.mutate({ id: rdoId, status: "ENVIADO" })}
+                  className="btn-orange min-h-[40px] disabled:opacity-60 disabled:cursor-not-allowed">
+                  <RotateCcw size={14} />
+                  {atualizarStatus.isPending ? "Reenviando…" : "Reenviar para revisão"}
+                </button>
+              )}
+
+              {/* Engenheiro: Aprovar → EM_REVISAO */}
+              {podeVerificarEng && (
+                <>
+                  <button type="button" disabled={verificar.isPending}
+                    onClick={() => verificar.mutate({ rdoId, acao: "APROVAR" })}
+                    className="btn-orange min-h-[40px] disabled:opacity-60 disabled:cursor-not-allowed">
+                    <ShieldCheck size={14} />
+                    {verificar.isPending ? "Verificando…" : "Verificar (Engenheiro)"}
+                  </button>
+                  <button type="button" disabled={verificar.isPending}
+                    onClick={() => setShowReprovarModal(true)}
+                    className="btn-ghost min-h-[40px] text-red-600 border-red-200 hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed">
+                    <XCircle size={14} />
+                    Reprovar
+                  </button>
+                </>
+              )}
+
+              {/* Coordenador: Aprovar Final */}
+              {podeVerificarCord && (
+                <>
+                  <button type="button" disabled={verificar.isPending}
+                    onClick={() => verificar.mutate({ rdoId, acao: "APROVAR" })}
+                    className="btn-orange min-h-[40px] disabled:opacity-60 disabled:cursor-not-allowed">
+                    <ThumbsUp size={14} />
+                    {verificar.isPending ? "Aprovando…" : "Aprovar Final"}
+                  </button>
+                  <button type="button" disabled={verificar.isPending}
+                    onClick={() => setShowReprovarModal(true)}
+                    className="btn-ghost min-h-[40px] text-red-600 border-red-200 hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed">
+                    <XCircle size={14} />
+                    Reprovar
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Modal reprovar */}
+        {showReprovarModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-5 space-y-4">
+              <h3 className="font-bold text-[var(--text-primary)]">Motivo da reprovação</h3>
+              <textarea
+                value={comentarioReprovar}
+                onChange={e => setComentarioReprovar(e.target.value)}
+                rows={4}
+                placeholder="Descreva o que precisa ser corrigido…"
+                className="w-full px-3.5 py-2.5 border border-border rounded-xl text-sm bg-white placeholder:text-[var(--text-muted)] outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 resize-none"
+              />
+              <div className="flex gap-3">
+                <button type="button"
+                  disabled={!comentarioReprovar.trim() || verificar.isPending}
+                  onClick={() => verificar.mutate({ rdoId, acao: "REJEITAR", comentario: comentarioReprovar.trim() })}
+                  className="flex-1 flex items-center justify-center gap-2 min-h-[40px] bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-colors cursor-pointer disabled:cursor-not-allowed">
+                  <XCircle size={14} />
+                  {verificar.isPending ? "Reprovando…" : "Confirmar reprovação"}
+                </button>
+                <button type="button" onClick={() => { setShowReprovarModal(false); setComentarioReprovar("") }}
+                  className="btn-ghost min-h-[40px] cursor-pointer">
+                  Cancelar
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -533,6 +636,52 @@ export default function RdoDetalhePage() {
           ))}
         </div>
       </div>
+
+      {/* Histórico de Verificações */}
+      {rdo.verificacoes && rdo.verificacoes.length > 0 && (
+        <div className="bg-white rounded-2xl border border-border shadow-sm p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <ShieldCheck size={16} className="text-orange-500" />
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Histórico de Verificações</h3>
+          </div>
+          <div className="space-y-2">
+            {rdo.verificacoes.map((v) => (
+              <div key={v.id} className={`flex items-start gap-3 px-4 py-3 rounded-xl border ${
+                v.status === "APROVADO"
+                  ? "bg-green-50 border-green-200"
+                  : "bg-red-50 border-red-200"
+              }`}>
+                <div className="flex-shrink-0 mt-0.5">
+                  {v.status === "APROVADO"
+                    ? <CheckCircle2 size={15} className="text-green-600" />
+                    : <XCircle size={15} className="text-red-500" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-semibold text-[var(--text-primary)]">{v.usuario.nome}</span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                      v.etapa === "ENGENHEIRO"
+                        ? "bg-blue-50 text-blue-700 border-blue-200"
+                        : "bg-purple-50 text-purple-700 border-purple-200"
+                    }`}>
+                      {v.etapa === "ENGENHEIRO" ? "Engenheiro" : "Coordenador"}
+                    </span>
+                    <span className={`text-[10px] font-bold ${v.status === "APROVADO" ? "text-green-700" : "text-red-600"}`}>
+                      {v.status === "APROVADO" ? "Aprovado" : "Reprovado"}
+                    </span>
+                    <span className="text-[10px] text-[var(--text-muted)] ml-auto">
+                      {new Date(v.criadoEm).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </div>
+                  {v.comentario && (
+                    <p className="text-xs text-[var(--text-primary)] mt-1">{v.comentario}</p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Footer de visualizações */}
       <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)] px-1 pb-4">

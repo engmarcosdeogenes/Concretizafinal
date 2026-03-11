@@ -8,10 +8,16 @@ export function useRole() {
   return {
     role,
     /** Pode excluir registros (FVS, FVM, Ocorrências, RDO) */
-    canDelete:   ["DONO", "ADMIN", "ENGENHEIRO"].includes(role),
+    canDelete:       ["DONO", "ADMIN", "ENGENHEIRO"].includes(role),
     /** Pode editar dados da obra (nome, status, datas) */
-    canEditObra: ["DONO", "ADMIN"].includes(role),
+    canEditObra:     ["DONO", "ADMIN"].includes(role),
     /** Pode criar/editar FVS e FVM (controle de qualidade) */
-    canFvs:      ["DONO", "ADMIN", "ENGENHEIRO", "MESTRE"].includes(role),
+    canFvs:          ["DONO", "ADMIN", "ENGENHEIRO", "MESTRE"].includes(role),
+    /** Pode verificar RDO como Engenheiro (1ª etapa) */
+    canVerifyEng:    ["DONO", "ADMIN", "ENGENHEIRO"].includes(role),
+    /** Pode aprovar RDO como Coordenador (2ª etapa) */
+    canVerifyCord:   ["DONO", "ADMIN"].includes(role),
+    /** Vê Financeiro, Almoxarifado, Contratos, Orçamento */
+    canViewFinancial: ["DONO", "ADMIN", "ENGENHEIRO"].includes(role),
   }
 }

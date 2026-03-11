@@ -28,8 +28,9 @@ const STATUS_PRESENCA_OPTIONS = [
 ]
 
 type StatusPresenca = "PRESENTE" | "AFASTADO" | "ATESTADO" | "DESLOCANDO" | "FALTA_JUSTIFICADA" | "FERIAS" | "FOLGA" | "LICENCA" | "TREINAMENTO" | "VIAGEM"
-type Atividade    = { descricao: string; quantidade: string; unidade: string }
+type Atividade    = { descricao: string; quantidade: string; unidade: string; tarefaObraId?: string }
 type MembroEquipe = { funcao: string; quantidade: string; statusPresenca: StatusPresenca }
+type ModoAtividade = "avulso" | "lista"
 
 export default function NovoRdoPage() {
   const params  = useParams()
@@ -46,6 +47,9 @@ export default function NovoRdoPage() {
   const [ocorreuChuva, setOcorreuChuva]       = useState(false)
   const [observacoes, setObservacoes]         = useState("")
   const [atividades, setAtividades]           = useState<Atividade[]>([{ descricao: "", quantidade: "", unidade: "" }])
+  const [modoAtividade, setModoAtividade]     = useState<ModoAtividade>("avulso")
+  const [buscaTarefa, setBuscaTarefa]         = useState("")
+  const [tarefasSelecionadas, setTarefasSelecionadas] = useState<Record<string, { selecionado: boolean; quantidade: string }>>({})
   const [equipe, setEquipe]                   = useState<MembroEquipe[]>([{ funcao: "", quantidade: "1", statusPresenca: "PRESENTE" }])
   const [erro, setErro]                       = useState("")
   const [buscandoClima, setBuscandoClima]     = useState(false)
@@ -59,6 +63,7 @@ export default function NovoRdoPage() {
   const { data: obra }                    = trpc.obra.buscarPorId.useQuery({ id: obraId })
   const { data: rdosAnteriores = [] }     = trpc.rdo.listar.useQuery({ obraId })
   const { data: camposPersonalizados = [] } = trpc.configuracoes.buscarCamposPersonalizados.useQuery()
+  const { data: tarefasObra = [] }        = trpc.tarefaObra.listar.useQuery({ obraId })
 
   const criar = trpc.rdo.criar.useMutation({
     onSuccess: (rdo) => router.push(`/obras/${obraId}/rdo/${rdo.id}`),
@@ -148,9 +153,25 @@ export default function NovoRdoPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setErro("")
-    const atividadesFiltradas = atividades
-      .filter(a => a.descricao.trim())
-      .map(a => ({ descricao: a.descricao.trim(), quantidade: a.quantidade ? Number(a.quantidade) : undefined, unidade: a.unidade.trim() || undefined }))
+    let atividadesFiltradas: { descricao: string; quantidade?: number; unidade?: string; tarefaObraId?: string }[]
+    if (modoAtividade === "lista") {
+      atividadesFiltradas = Object.entries(tarefasSelecionadas)
+        .filter(([, v]) => v.selecionado)
+        .map(([tarefaId, v]) => {
+          const flat = tarefasObra.flatMap(t => [t, ...t.filhos])
+          const tarefa = flat.find(t => t.id === tarefaId)
+          return {
+            descricao:    tarefa?.nome ?? tarefaId,
+            quantidade:   v.quantidade ? Number(v.quantidade) : undefined,
+            unidade:      tarefa?.unidade,
+            tarefaObraId: tarefaId,
+          }
+        })
+    } else {
+      atividadesFiltradas = atividades
+        .filter(a => a.descricao.trim())
+        .map(a => ({ descricao: a.descricao.trim(), quantidade: a.quantidade ? Number(a.quantidade) : undefined, unidade: a.unidade.trim() || undefined }))
+    }
     const equipeFiltrada = equipe
       .filter(e => e.funcao.trim())
       .map(e => ({ funcao: e.funcao.trim(), quantidade: Number(e.quantidade) || 1, statusPresenca: e.statusPresenca }))
@@ -275,27 +296,114 @@ export default function NovoRdoPage() {
 
         {/* 3. Atividades */}
         <div className="bg-white rounded-2xl border border-border shadow-sm p-5 space-y-4">
-          <h3 className="text-sm font-semibold text-[var(--text-primary)]">Atividades realizadas</h3>
-          <div className="space-y-3">
-            {atividades.map((a, i) => (
-              <div key={i} className="grid grid-cols-[1fr_90px_90px_36px] gap-2 items-start">
-                <input type="text" value={a.descricao} onChange={e => updateAtividade(i, "descricao", e.target.value)}
-                  placeholder="Descrição da atividade" className={inputCls} />
-                <input type="number" value={a.quantidade} onChange={e => updateAtividade(i, "quantidade", e.target.value)}
-                  placeholder="Qtd" className={inputCls} />
-                <input type="text" value={a.unidade} onChange={e => updateAtividade(i, "unidade", e.target.value)}
-                  placeholder="Un (m², m³…)" className={inputCls} />
-                <button type="button" onClick={() => removeAtividade(i)} disabled={atividades.length === 1}
-                  className="h-[42px] w-[36px] flex items-center justify-center rounded-xl border border-border text-[var(--text-muted)] hover:text-red-500 hover:border-red-300 transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer">
-                  <Trash2 size={14} />
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Atividades realizadas</h3>
+            {tarefasObra.length > 0 && (
+              <div className="flex rounded-xl border border-border overflow-hidden text-xs font-semibold">
+                <button type="button"
+                  onClick={() => setModoAtividade("avulso")}
+                  className={`px-3 py-1.5 transition-colors cursor-pointer ${modoAtividade === "avulso" ? "bg-orange-500 text-white" : "bg-white text-[var(--text-muted)] hover:bg-muted"}`}>
+                  Avulso
+                </button>
+                <button type="button"
+                  onClick={() => setModoAtividade("lista")}
+                  className={`px-3 py-1.5 transition-colors cursor-pointer ${modoAtividade === "lista" ? "bg-orange-500 text-white" : "bg-white text-[var(--text-muted)] hover:bg-muted"}`}>
+                  Da lista
                 </button>
               </div>
-            ))}
+            )}
           </div>
-          <button type="button" onClick={addAtividade}
-            className="flex items-center gap-2 text-sm text-orange-500 font-medium hover:text-orange-600 transition-colors cursor-pointer">
-            <Plus size={14} /> Adicionar atividade
-          </button>
+
+          {modoAtividade === "avulso" && (
+            <>
+              <div className="space-y-3">
+                {atividades.map((a, i) => (
+                  <div key={i} className="grid grid-cols-[1fr_90px_90px_36px] gap-2 items-start">
+                    <input type="text" value={a.descricao} onChange={e => updateAtividade(i, "descricao", e.target.value)}
+                      placeholder="Descrição da atividade" className={inputCls} />
+                    <input type="number" value={a.quantidade} onChange={e => updateAtividade(i, "quantidade", e.target.value)}
+                      placeholder="Qtd" className={inputCls} />
+                    <input type="text" value={a.unidade} onChange={e => updateAtividade(i, "unidade", e.target.value)}
+                      placeholder="Un (m², m³…)" className={inputCls} />
+                    <button type="button" onClick={() => removeAtividade(i)} disabled={atividades.length === 1}
+                      className="h-[42px] w-[36px] flex items-center justify-center rounded-xl border border-border text-[var(--text-muted)] hover:text-red-500 hover:border-red-300 transition-colors disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button type="button" onClick={addAtividade}
+                className="flex items-center gap-2 text-sm text-orange-500 font-medium hover:text-orange-600 transition-colors cursor-pointer">
+                <Plus size={14} /> Adicionar atividade
+              </button>
+            </>
+          )}
+
+          {modoAtividade === "lista" && (
+            <div className="space-y-3">
+              <input
+                type="search"
+                value={buscaTarefa}
+                onChange={e => setBuscaTarefa(e.target.value)}
+                placeholder="Filtrar tarefas por nome, código ou setor…"
+                className={inputCls}
+              />
+              <div className="space-y-1 max-h-64 overflow-y-auto pr-1">
+                {tarefasObra
+                  .flatMap(t => [t, ...t.filhos])
+                  .filter(t =>
+                    !buscaTarefa ||
+                    t.nome.toLowerCase().includes(buscaTarefa.toLowerCase()) ||
+                    (t.codigo ?? "").toLowerCase().includes(buscaTarefa.toLowerCase()) ||
+                    (t.setor ?? "").toLowerCase().includes(buscaTarefa.toLowerCase())
+                  )
+                  .map(tarefa => {
+                    const sel = tarefasSelecionadas[tarefa.id]
+                    return (
+                      <div key={tarefa.id}
+                        className={`flex items-center gap-3 px-3 py-2 rounded-xl border transition-colors ${sel?.selecionado ? "border-orange-400 bg-orange-50" : "border-border bg-white hover:bg-muted/40"}`}>
+                        <input
+                          type="checkbox"
+                          checked={!!sel?.selecionado}
+                          onChange={e => setTarefasSelecionadas(prev => ({
+                            ...prev,
+                            [tarefa.id]: { selecionado: e.target.checked, quantidade: prev[tarefa.id]?.quantidade ?? "" }
+                          }))}
+                          className="accent-orange-500 w-4 h-4 cursor-pointer"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-[var(--text-primary)] truncate">
+                            {tarefa.codigo && <span className="text-[var(--text-muted)] font-mono mr-1.5">{tarefa.codigo}</span>}
+                            {tarefa.nome}
+                          </p>
+                          {tarefa.setor && <p className="text-[10px] text-[var(--text-muted)]">{tarefa.setor}</p>}
+                        </div>
+                        {sel?.selecionado && (
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            <input
+                              type="number"
+                              min="0"
+                              step="any"
+                              value={sel.quantidade}
+                              onChange={e => setTarefasSelecionadas(prev => ({
+                                ...prev,
+                                [tarefa.id]: { ...prev[tarefa.id], quantidade: e.target.value }
+                              }))}
+                              placeholder="Qtd"
+                              className="w-20 px-2 py-1 border border-border rounded-lg text-xs bg-white outline-none focus:ring-1 focus:ring-orange-400"
+                            />
+                            <span className="text-xs text-[var(--text-muted)]">{tarefa.unidade}</span>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+              </div>
+              {Object.values(tarefasSelecionadas).filter(v => v.selecionado).length === 0 && (
+                <p className="text-xs text-[var(--text-muted)] italic">Selecione pelo menos uma tarefa da lista acima.</p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* 4. Equipe */}

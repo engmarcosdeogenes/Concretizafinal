@@ -7,6 +7,9 @@ import { StatusPresencaMO } from "@prisma/client"
 import { criarRdoSienge } from "@/lib/sienge/client"
 import { decrypt, isEncrypted } from "@/lib/encrypt"
 
+const PODE_VERIFICAR_ENG  = ["ENGENHEIRO", "ADMIN", "DONO"] as const
+const PODE_VERIFICAR_CORD = ["ADMIN", "DONO"] as const
+
 const assinaturaSchema = z.object({
   label: z.string().min(1),
   imagemUrl: z.string().optional().nullable(),
@@ -40,12 +43,16 @@ export const rdoRouter = createTRPCRouter({
           obra: { empresaId: ctx.session.empresaId },
         },
         include: {
-          atividades: true,
+          atividades: { include: { tarefaObra: { select: { id: true, codigo: true, nome: true } } } },
           equipe: true,
           assinaturas: { orderBy: { ordem: "asc" } },
           materiaisRecebidos: true,
           materiaisUtilizados: true,
           responsavel: { select: { nome: true } },
+          verificacoes: {
+            orderBy: { criadoEm: "asc" },
+            include: { usuario: { select: { nome: true } } },
+          },
           obra: {
             select: {
               nome: true,
@@ -161,6 +168,7 @@ export const rdoRouter = createTRPCRouter({
         descricao: z.string(),
         quantidade: z.number().optional(),
         unidade: z.string().optional(),
+        tarefaObraId: z.string().optional(),
       })),
       equipe: z.array(z.object({
         funcao: z.string(),
@@ -295,7 +303,7 @@ export const rdoRouter = createTRPCRouter({
   atualizarStatus: protectedProcedure
     .input(z.object({
       id: z.string(),
-      status: z.enum(["RASCUNHO", "ENVIADO", "APROVADO", "REJEITADO"]),
+      status: z.enum(["RASCUNHO", "ENVIADO", "EM_REVISAO", "APROVADO", "REJEITADO"]),
     }))
     .mutation(async ({ ctx, input }) => {
       const rdo = await ctx.db.rDO.findFirst({
@@ -372,6 +380,97 @@ export const rdoRouter = createTRPCRouter({
       const updated = await ctx.db.rDO.update({ where: { id }, data })
       await logAudit(ctx, { entityType: "RDO", entityId: id, obraId: updated.obraId, acao: "atualizou" })
       return updated
+    }),
+
+  verificar: protectedProcedure
+    .input(z.object({
+      rdoId:     z.string(),
+      acao:      z.enum(["APROVAR", "REJEITAR"]),
+      comentario: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const role = ctx.session.role as string
+
+      const rdo = await ctx.db.rDO.findFirst({
+        where: { id: input.rdoId, obra: { empresaId: ctx.session.empresaId } },
+        include: {
+          atividades: { where: { tarefaObraId: { not: null } } },
+        },
+      })
+      if (!rdo) throw new TRPCError({ code: "NOT_FOUND" })
+
+      // Engenheiro age sobre ENVIADO
+      if (rdo.status === "ENVIADO") {
+        if (!(PODE_VERIFICAR_ENG as readonly string[]).includes(role))
+          throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão para verificar nesta etapa" })
+
+        if (input.acao === "APROVAR") {
+          await ctx.db.$transaction(async (tx) => {
+            await tx.rDO.update({ where: { id: input.rdoId }, data: { status: "EM_REVISAO" } })
+            await tx.verificacaoRDO.create({
+              data: { rdoId: input.rdoId, usuarioId: ctx.session.userId, etapa: "ENGENHEIRO", status: "APROVADO", comentario: input.comentario },
+            })
+          })
+        } else {
+          await ctx.db.$transaction(async (tx) => {
+            await tx.rDO.update({ where: { id: input.rdoId }, data: { status: "RASCUNHO" } })
+            await tx.verificacaoRDO.create({
+              data: { rdoId: input.rdoId, usuarioId: ctx.session.userId, etapa: "ENGENHEIRO", status: "REJEITADO", comentario: input.comentario },
+            })
+          })
+        }
+        return
+      }
+
+      // Coordenador age sobre EM_REVISAO
+      if (rdo.status === "EM_REVISAO") {
+        if (!(PODE_VERIFICAR_CORD as readonly string[]).includes(role))
+          throw new TRPCError({ code: "FORBIDDEN", message: "Sem permissão para aprovar nesta etapa" })
+
+        if (input.acao === "APROVAR") {
+          await ctx.db.$transaction(async (tx) => {
+            await tx.rDO.update({ where: { id: input.rdoId }, data: { status: "APROVADO" } })
+            await tx.verificacaoRDO.create({
+              data: { rdoId: input.rdoId, usuarioId: ctx.session.userId, etapa: "COORDENADOR", status: "APROVADO", comentario: input.comentario },
+            })
+            // Atualizar tarefas com base nas atividades vinculadas
+            for (const atividade of rdo.atividades) {
+              if (!atividade.tarefaObraId || !atividade.quantidade) continue
+              const tarefa = await tx.tarefaObra.findUnique({ where: { id: atividade.tarefaObraId } })
+              if (!tarefa) continue
+              const novaExec = tarefa.quantidadeExecutada + atividade.quantidade
+              const novaPct  = tarefa.quantidadeTotal > 0
+                ? Math.min(100, (novaExec / tarefa.quantidadeTotal) * 100)
+                : 0
+              await tx.tarefaObra.update({
+                where: { id: atividade.tarefaObraId },
+                data: {
+                  quantidadeExecutada: novaExec,
+                  percentual: novaPct,
+                  status: novaPct >= 100 ? "CONCLUIDO" : "EM_ANDAMENTO",
+                },
+              })
+            }
+          })
+          await logAudit(ctx, { entityType: "RDO", entityId: input.rdoId, obraId: rdo.obraId, acao: "aprovou" })
+          notificarEmpresa(ctx.session.empresaId, {
+            title: "RDO Aprovado",
+            body:  `${ctx.session.nome} aprovou o Relatório Diário de Obra`,
+            url:   `/obras/${rdo.obraId}/rdo/${input.rdoId}`,
+          }).catch(() => {})
+        } else {
+          await ctx.db.$transaction(async (tx) => {
+            await tx.rDO.update({ where: { id: input.rdoId }, data: { status: "RASCUNHO" } })
+            await tx.verificacaoRDO.create({
+              data: { rdoId: input.rdoId, usuarioId: ctx.session.userId, etapa: "COORDENADOR", status: "REJEITADO", comentario: input.comentario },
+            })
+          })
+          await logAudit(ctx, { entityType: "RDO", entityId: input.rdoId, obraId: rdo.obraId, acao: "rejeitou" })
+        }
+        return
+      }
+
+      throw new TRPCError({ code: "BAD_REQUEST", message: "RDO não está em estado verificável" })
     }),
 
   excluir: protectedProcedure

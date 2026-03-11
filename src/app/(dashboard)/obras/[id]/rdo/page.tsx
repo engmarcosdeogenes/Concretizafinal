@@ -27,15 +27,17 @@ function ClimaIcon({ clima }: { clima?: string | null }) {
 
 function StatusChip({ status }: { status: string }) {
   const map = {
-    APROVADO:  { label: "Aprovado",  cls: "bg-green-50 text-green-700 border border-green-200" },
-    ENVIADO:   { label: "Enviado",   cls: "bg-blue-50 text-blue-700 border border-blue-200" },
-    RASCUNHO:  { label: "Rascunho",  cls: "bg-slate-50 text-slate-600 border border-slate-200" },
-    REJEITADO: { label: "Rejeitado", cls: "bg-red-50 text-red-700 border border-red-200" },
+    APROVADO:   { label: "Aprovado",    cls: "bg-green-50 text-green-700 border border-green-200" },
+    ENVIADO:    { label: "Enviado",     cls: "bg-blue-50 text-blue-700 border border-blue-200" },
+    EM_REVISAO: { label: "Em Revisão",  cls: "bg-sky-50 text-sky-700 border border-sky-200" },
+    RASCUNHO:   { label: "Rascunho",   cls: "bg-slate-50 text-slate-600 border border-slate-200" },
+    REJEITADO:  { label: "Rejeitado",  cls: "bg-red-50 text-red-700 border border-red-200" },
   }
   const s = map[status as keyof typeof map] ?? map.RASCUNHO
+  const Icon = status === "APROVADO" ? CheckCircle2 : status === "ENVIADO" || status === "EM_REVISAO" ? Clock : AlertCircle
   return (
     <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${s.cls}`}>
-      {status === "APROVADO" ? <CheckCircle2 size={10} className="inline mr-1" /> : status === "ENVIADO" ? <Clock size={10} className="inline mr-1" /> : <AlertCircle size={10} className="inline mr-1" />}
+      <Icon size={10} className="inline mr-1" />
       {s.label}
     </span>
   )
