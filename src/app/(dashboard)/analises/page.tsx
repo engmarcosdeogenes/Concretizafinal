@@ -66,7 +66,7 @@ function AnalisesNav() {
 }
 
 export default function AnalisesPage() {
-  const { data, isLoading } = trpc.analises.resumo.useQuery()
+  const { data, isLoading, isError, error } = trpc.analises.resumo.useQuery()
 
   if (isLoading) {
     return (
@@ -79,7 +79,18 @@ export default function AnalisesPage() {
     )
   }
 
-  if (!data) return null
+  if (isError || !data) {
+    return (
+      <div className="p-8">
+        <AnalisesNav />
+        <div className="flex flex-col items-center justify-center h-64 gap-3">
+          <AlertTriangle size={32} className="text-amber-400" />
+          <p className="text-sm font-medium text-[var(--text-primary)]">Não foi possível carregar as análises</p>
+          {error && <p className="text-xs text-[var(--text-muted)] max-w-sm text-center">{error.message}</p>}
+        </div>
+      </div>
+    )
+  }
 
   const { kpis, rdosPorMes, ocorrenciasPorTipo, statusOc, statusFvs, financeiroPorMes, orcamentoVsCusto } = data
 
