@@ -177,4 +177,78 @@ export const solicitacaoRouter = createTRPCRouter({
       if (!sol) throw new TRPCError({ code: "NOT_FOUND", message: "Solicitação não encontrada ou não pode ser excluída" })
       return ctx.db.solicitacaoCompra.delete({ where: { id: input.id } })
     }),
+
+  aprovarItens: protectedProcedure
+    .input(z.object({
+      solicitacaoId: z.string(),
+      itens: z.array(z.object({
+        itemId:   z.string(),
+        aprovado: z.boolean(),
+        obs:      z.string().optional(),
+      })),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Verificar que a solicitação pertence à empresa
+      const sol = await ctx.db.solicitacaoCompra.findFirstOrThrow({
+        where: { id: input.solicitacaoId, obra: { empresaId: ctx.session.empresaId } },
+      })
+      // Atualizar cada item
+      await Promise.all(input.itens.map((item) =>
+        ctx.db.itemSolicitacao.update({
+          where: { id: item.itemId },
+          data: {
+            statusAprovacao: item.aprovado ? "APROVADO" : "REJEITADO",
+            obsAprovacao:    item.obs ?? null,
+          },
+        })
+      ))
+      return ctx.db.solicitacaoCompra.findUnique({
+        where: { id: sol.id },
+        include: {
+          obra:        { select: { id: true, nome: true, empresaId: true } },
+          solicitante: { select: { id: true, nome: true } },
+          itens: {
+            include: { material: { select: { id: true, nome: true, unidade: true } } },
+          },
+          pedidos: {
+            select: { id: true, status: true, total: true, fornecedor: { select: { nome: true } } },
+          },
+        },
+      })
+    }),
+
+  listarPendentesParaTransferencia: protectedProcedure
+    .input(z.object({ obraId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const { empresaId } = ctx.session
+      const solicitacoes = await ctx.db.solicitacaoCompra.findMany({
+        where: {
+          status: { in: ["PENDENTE", "APROVADA"] },
+          obraId: { not: input.obraId },
+          obra:   { empresaId },
+        },
+        include: {
+          obra: { select: { id: true, nome: true } },
+          itens: {
+            include: { material: { select: { id: true, nome: true, unidade: true } } },
+          },
+        },
+      })
+      // Agrupar por obra
+      const porObra = new Map<string, { obraId: string; obraNome: string; itens: { descricao: string; quantidade: number; unidade: string }[] }>()
+      for (const sol of solicitacoes) {
+        if (!porObra.has(sol.obraId)) {
+          porObra.set(sol.obraId, { obraId: sol.obraId, obraNome: sol.obra.nome, itens: [] })
+        }
+        const entry = porObra.get(sol.obraId)!
+        for (const item of sol.itens) {
+          entry.itens.push({
+            descricao:  item.material.nome,
+            quantidade: item.quantidade,
+            unidade:    item.unidade ?? item.material.unidade,
+          })
+        }
+      }
+      return [...porObra.values()]
+    }),
 })

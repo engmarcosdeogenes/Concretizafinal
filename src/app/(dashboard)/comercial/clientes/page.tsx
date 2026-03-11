@@ -75,13 +75,14 @@ export default function ClientesPage() {
           </div>
 
           <div className="bg-white border border-border rounded-xl overflow-hidden">
-            <div className="grid grid-cols-[2fr_1.5fr_1fr_90px] gap-3 px-5 py-2.5 border-b border-border bg-muted text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">
+            <div className="grid grid-cols-[2fr_1.5fr_1fr_90px_90px] gap-3 px-5 py-2.5 border-b border-border bg-muted text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">
               <span>Nome</span><span>CPF / CNPJ</span><span>E-mail</span>
               <span className="text-center">Informe IR</span>
+              <span className="text-center">Perfil</span>
             </div>
             <div className="divide-y divide-border">
               {filtrados.map(c => (
-                <div key={c.id} className="grid grid-cols-[2fr_1.5fr_1fr_90px] gap-3 px-5 py-3 items-center text-sm hover:bg-muted/30">
+                <div key={c.id} className="grid grid-cols-[2fr_1.5fr_1fr_90px_90px] gap-3 px-5 py-3 items-center text-sm hover:bg-muted/30">
                   <p className="font-medium text-[var(--text-primary)] truncate">{c.name ?? "—"}</p>
                   <p className="text-xs text-[var(--text-muted)] font-mono truncate">{formatDoc(c.cpf, c.cnpj)}</p>
                   <p className="text-xs text-[var(--text-muted)] truncate">{c.email ?? "—"}</p>
@@ -94,6 +95,14 @@ export default function ClientesPage() {
                     >
                       <FileDown size={11} /> {ano}
                     </a>
+                  </div>
+                  <div className="flex justify-center">
+                    <Link
+                      href={`/comercial/clientes/${c.id}`}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border text-[10px] font-semibold text-[var(--text-muted)] hover:border-blue-300 hover:text-blue-600 transition-all"
+                    >
+                      Ver perfil
+                    </Link>
                   </div>
                 </div>
               ))}

@@ -1,5 +1,21 @@
 import { z } from "zod"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
+import { decrypt, isEncrypted } from "@/lib/encrypt"
+import {
+  criarCreditorSienge,
+  atualizarCreditorSienge,
+  ativarCreditorSienge,
+  desativarCreditorSienge,
+} from "@/lib/sienge/client"
+
+async function getSiengeHelper(ctx: { db: typeof import("../db").db; session: { empresaId: string } }) {
+  const config = await ctx.db.integracaoConfig.findUnique({
+    where: { empresaId: ctx.session.empresaId },
+  })
+  if (!config) return null
+  const pass = isEncrypted(config.senha) ? decrypt(config.senha) : config.senha
+  return { sub: config.subdominio, user: config.usuario, pass }
+}
 
 export const fornecedorRouter = createTRPCRouter({
 
@@ -12,7 +28,13 @@ export const fornecedorRouter = createTRPCRouter({
       ctx.db.fornecedor.findMany({
         where: { empresaId },
         orderBy: [{ ativo: "desc" }, { nome: "asc" }],
-        include: { _count: { select: { pedidos: true } } },
+        select: {
+          id: true, nome: true, cnpj: true, categoria: true,
+          cidade: true, estado: true, telefone: true, email: true,
+          site: true, ativo: true, siengeCreditorId: true,
+          notaMedia: true, totalAvaliacoes: true,
+          _count: { select: { pedidos: true } },
+        },
       }),
       ctx.db.fornecedor.count({
         where: { empresaId, createdAt: { gte: inicioMes } },
@@ -34,7 +56,7 @@ export const fornecedorRouter = createTRPCRouter({
     }))
     .mutation(async ({ ctx, input }) => {
       const { empresaId } = ctx.session
-      return ctx.db.fornecedor.create({
+      const fornecedor = await ctx.db.fornecedor.create({
         data: {
           empresaId,
           nome:      input.nome,
@@ -47,6 +69,25 @@ export const fornecedorRouter = createTRPCRouter({
           site:      input.site || null,
         },
       })
+
+      // Fire-and-forget: criar creditor no Sienge
+      getSiengeHelper(ctx).then(async (cfg) => {
+        if (!cfg) return
+        const creditorId = await criarCreditorSienge(cfg.sub, cfg.user, cfg.pass, {
+          companyName: input.nome,
+          cnpj: input.cnpj || undefined,
+          email: input.email || undefined,
+          phone: input.telefone || undefined,
+        })
+        if (creditorId) {
+          await ctx.db.fornecedor.update({
+            where: { id: fornecedor.id },
+            data: { siengeCreditorId: creditorId },
+          }).catch(() => {})
+        }
+      }).catch(() => {})
+
+      return fornecedor
     }),
 
   excluir: protectedProcedure
@@ -72,7 +113,14 @@ export const fornecedorRouter = createTRPCRouter({
     }))
     .mutation(async ({ ctx, input }) => {
       const { id, ...data } = input
-      return ctx.db.fornecedor.update({
+
+      // Buscar fornecedor antes para ter siengeCreditorId e ativo anterior
+      const atual = await ctx.db.fornecedor.findFirst({
+        where: { id, empresaId: ctx.session.empresaId },
+        select: { siengeCreditorId: true, ativo: true },
+      })
+
+      const updated = await ctx.db.fornecedor.update({
         where: { id, empresaId: ctx.session.empresaId },
         data: {
           ...data,
@@ -85,5 +133,32 @@ export const fornecedorRouter = createTRPCRouter({
           site:      data.site !== undefined ? (data.site || null) : undefined,
         },
       })
+
+      // Fire-and-forget Sienge sync
+      if (atual?.siengeCreditorId) {
+        const creditorId = atual.siengeCreditorId
+        getSiengeHelper(ctx).then(async (cfg) => {
+          if (!cfg) return
+          // Atualizar dados
+          const updateData: Record<string, unknown> = {}
+          if (data.nome)     updateData.companyName = data.nome
+          if (data.cnpj)     updateData.cnpj        = data.cnpj
+          if (data.email)    updateData.email        = data.email
+          if (data.telefone) updateData.phone        = data.telefone
+          if (Object.keys(updateData).length > 0) {
+            await atualizarCreditorSienge(cfg.sub, cfg.user, cfg.pass, creditorId, updateData)
+          }
+          // Toggle ativo se mudou
+          if (data.ativo !== undefined && atual.ativo !== data.ativo) {
+            if (data.ativo) {
+              await ativarCreditorSienge(cfg.sub, cfg.user, cfg.pass, creditorId)
+            } else {
+              await desativarCreditorSienge(cfg.sub, cfg.user, cfg.pass, creditorId)
+            }
+          }
+        }).catch(() => {})
+      }
+
+      return updated
     }),
 })

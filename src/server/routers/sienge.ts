@@ -47,6 +47,9 @@ import {
   listarRdosSienge,
   listarSolicitacoesPorObraSienge,
   listarPedidosSienge,
+  ativarCreditorSienge,
+  desativarCreditorSienge,
+  criarContaPagarSienge,
 } from "@/lib/sienge/client"
 
 type Ctx = { db: typeof import("../db").db; session: { empresaId: string; userId: string; nome: string } }
@@ -289,7 +292,95 @@ export const siengeRouter = createTRPCRouter({
         observacao: input.observacao,
       })
       await logAudit(ctx, { entityType: "SIENGE_AVALIACAO", entityId: String(input.pedidoId), acao: "avaliou fornecedor" })
+
+      // Atualizar nota média do fornecedor local
+      if (input.criterios.length > 0) {
+        const novaNota = input.criterios.reduce((sum, c) => sum + c.nota, 0) / input.criterios.length
+        const pedido = await ctx.db.pedidoCompra.findFirst({
+          where: { siengePurchaseOrderId: input.pedidoId },
+          select: { fornecedorId: true },
+        })
+        if (pedido) {
+          const fornecedor = await ctx.db.fornecedor.findFirst({
+            where: { id: pedido.fornecedorId, empresa: { id: ctx.session.empresaId } },
+            select: { id: true, notaMedia: true, totalAvaliacoes: true },
+          })
+          if (fornecedor) {
+            const total = fornecedor.totalAvaliacoes
+            const mediaAtual = fornecedor.notaMedia ?? 0
+            const novaMedia = (mediaAtual * total + novaNota) / (total + 1)
+            await ctx.db.fornecedor.update({
+              where: { id: fornecedor.id },
+              data: { notaMedia: novaMedia, totalAvaliacoes: { increment: 1 } },
+            }).catch(() => {})
+          }
+        }
+      }
+
       return { sucesso: true }
+    }),
+
+  // ── Toggle Ativo Creditor ─────────────────────────────────────────────────
+  toggleAtivoCreditor: protectedProcedure
+    .input(z.object({ credorId: z.number(), ativo: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      const config = await getSiengeConfig(ctx)
+      if (input.ativo) {
+        await ativarCreditorSienge(config.sub, config.user, config.pass, input.credorId)
+      } else {
+        await desativarCreditorSienge(config.sub, config.user, config.pass, input.credorId)
+      }
+      return { sucesso: true }
+    }),
+
+  // ── Criar Conta a Pagar ───────────────────────────────────────────────────
+  criarContaPagar: protectedProcedure
+    .input(z.object({
+      creditorId:     z.number(),
+      documentNumber: z.string().optional(),
+      dueDate:        z.string(),
+      amount:         z.number().positive(),
+      description:    z.string().optional(),
+      obraId:         z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const config = await getSiengeConfig(ctx)
+      let buildingId: number | undefined
+      if (input.obraId) {
+        const obra = await ctx.db.obra.findFirst({
+          where: { id: input.obraId, empresaId: ctx.session.empresaId },
+          select: { siengeId: true },
+        })
+        if (obra?.siengeId) buildingId = parseInt(obra.siengeId)
+      }
+      const result = await criarContaPagarSienge(config.sub, config.user, config.pass, {
+        creditorId:     input.creditorId,
+        documentNumber: input.documentNumber,
+        dueDate:        input.dueDate,
+        amount:         input.amount,
+        description:    input.description,
+        buildingId,
+      })
+      if (!result) throw new TRPCError({ code: "BAD_REQUEST", message: "Erro ao criar título no Sienge." })
+      await logAudit(ctx, { entityType: "SIENGE_CONTA_PAGAR", entityId: String(result.id), acao: "criou título a pagar" })
+      return { id: result.id }
+    }),
+
+  // ── Buscar Cliente por ID ─────────────────────────────────────────────────
+  buscarClientePorId: protectedProcedure
+    .input(z.object({ clienteId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const config = await getSiengeConfigOptional(ctx)
+      if (!config) return { cliente: null, contratos: [] }
+      const [clientes, contratos] = await Promise.all([
+        listarClientesSienge(config.sub, config.user, config.pass),
+        listarContratosVendaSienge(config.sub, config.user, config.pass),
+      ])
+      const cliente = clientes.find((c) => String(c.id) === input.clienteId) ?? null
+      const clienteContratos = cliente
+        ? contratos.filter((c) => (c.clientName ?? "").toLowerCase() === (cliente.name ?? "").toLowerCase())
+        : []
+      return { cliente, contratos: clienteContratos }
     }),
 
   // ── Estoque Real ─────────────────────────────────────────────────────────

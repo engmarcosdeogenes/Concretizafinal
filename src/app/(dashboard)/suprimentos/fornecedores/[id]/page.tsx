@@ -1,8 +1,8 @@
 "use client"
 
-import { use } from "react"
+import { use, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, Building2, Phone, Mail, MapPin, CreditCard, QrCode, AlertCircle, ExternalLink } from "lucide-react"
+import { ArrowLeft, Building2, Phone, Mail, MapPin, CreditCard, QrCode, AlertCircle, ExternalLink, PowerOff, Power } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { cn } from "@/lib/utils"
 
@@ -16,7 +16,9 @@ const PIX_LABEL: Record<string, string> = {
 
 export default function FornecedorDetalhePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
+  const [toggleMsg, setToggleMsg] = useState("")
 
+  const utils = trpc.useUtils()
   const { data: resultado } = trpc.fornecedor.listar.useQuery()
   const fornecedor = resultado?.fornecedores.find(f => f.id === id)
 
@@ -24,6 +26,15 @@ export default function FornecedorDetalhePage({ params }: { params: Promise<{ id
     { cnpj: fornecedor?.cnpj ?? "" },
     { enabled: !!fornecedor?.cnpj },
   )
+
+  const toggleAtivo = trpc.sienge.toggleAtivoCreditor.useMutation({
+    onSuccess: () => {
+      setToggleMsg("Atualizado no Sienge!")
+      utils.fornecedor.listar.invalidate()
+      setTimeout(() => setToggleMsg(""), 3000)
+    },
+    onError: () => setToggleMsg("Erro ao atualizar no Sienge."),
+  })
 
   if (!fornecedor) {
     return (
@@ -46,20 +57,43 @@ export default function FornecedorDetalhePage({ params }: { params: Promise<{ id
       </Link>
 
       {/* Header */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
           <Building2 size={20} className="text-blue-600" />
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">{fornecedor.nome}</h1>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-2xl font-bold text-[var(--text-primary)]">{fornecedor.nome}</h1>
+            {fornecedor.siengeCreditorId && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-700">Sienge #{fornecedor.siengeCreditorId}</span>
+            )}
+          </div>
           <p className="text-sm text-[var(--text-muted)]">{fornecedor.categoria ?? "Fornecedor"}</p>
         </div>
-        <span className={cn(
-          "ml-auto px-2 py-0.5 rounded-full text-xs font-semibold",
-          fornecedor.ativo ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"
-        )}>
-          {fornecedor.ativo ? "Ativo" : "Inativo"}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className={cn(
+            "px-2 py-0.5 rounded-full text-xs font-semibold",
+            fornecedor.ativo ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"
+          )}>
+            {fornecedor.ativo ? "Ativo" : "Inativo"}
+          </span>
+          {fornecedor.siengeCreditorId && (
+            <button
+              type="button"
+              disabled={toggleAtivo.isPending}
+              onClick={() => toggleAtivo.mutate({ credorId: fornecedor.siengeCreditorId!, ativo: !fornecedor.ativo })}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all disabled:opacity-60",
+                fornecedor.ativo
+                  ? "border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
+                  : "border-green-200 bg-green-50 text-green-600 hover:bg-green-100"
+              )}
+            >
+              {fornecedor.ativo ? <><PowerOff size={12} /> Desativar no Sienge</> : <><Power size={12} /> Ativar no Sienge</>}
+            </button>
+          )}
+        </div>
+        {toggleMsg && <p className="w-full text-xs font-semibold text-emerald-600 mt-1">{toggleMsg}</p>}
       </div>
 
       {/* Informações gerais */}

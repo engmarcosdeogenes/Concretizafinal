@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react"
 import Link from "next/link"
-import { TrendingDown, Settings, AlertTriangle, Clock, CheckCircle2, Filter } from "lucide-react"
+import { TrendingDown, Settings, AlertTriangle, Clock, CheckCircle2, Filter, Plus, X } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { formatMoeda } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -32,8 +32,26 @@ export default function ContasPagarPage() {
   const [filtro,     setFiltro]     = useState("todos")
   const [dataInicio, setDataInicio] = useState("")
   const [dataFim,    setDataFim]    = useState("")
+  const [showNovoTitulo, setShowNovoTitulo] = useState(false)
+  const [novoForm, setNovoForm] = useState({ creditorId: "", documentNumber: "", dueDate: "", amount: "", description: "", obraId: "" })
+  const [novoMsg, setNovoMsg] = useState("")
 
+  const utils = trpc.useUtils()
   const { data: contas = [], isLoading } = trpc.sienge.listarContasPagar.useQuery()
+  const { data: resultFornecedores } = trpc.fornecedor.listar.useQuery()
+  const fornecedoresComSienge = (resultFornecedores?.fornecedores ?? []).filter(f => f.siengeCreditorId)
+  const { data: obras = [] } = trpc.obra.listar.useQuery()
+  const obrasComSienge = obras.filter(o => o.siengeId)
+
+  const criarContaPagar = trpc.sienge.criarContaPagar.useMutation({
+    onSuccess: (data) => {
+      setNovoMsg(`Título #${data.id} criado no Sienge!`)
+      utils.sienge.listarContasPagar.invalidate()
+      setNovoForm({ creditorId: "", documentNumber: "", dueDate: "", amount: "", description: "", obraId: "" })
+      setTimeout(() => { setShowNovoTitulo(false); setNovoMsg("") }, 2000)
+    },
+    onError: (e) => setNovoMsg(`Erro: ${e.message}`),
+  })
 
   const hoje = new Date()
   hoje.setHours(0, 0, 0, 0)
@@ -79,7 +97,7 @@ export default function ContasPagarPage() {
   return (
     <div className="p-6 md:p-8 max-w-5xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold text-[var(--text-primary)] flex items-center gap-2">
             <TrendingDown size={22} className="text-red-500" />
@@ -90,7 +108,128 @@ export default function ContasPagarPage() {
             Títulos a pagar via integração
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => setShowNovoTitulo(true)}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition-colors"
+        >
+          <Plus size={15} /> Novo Título
+        </button>
       </div>
+
+      {/* Modal Novo Título */}
+      {showNovoTitulo && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-sm text-[var(--text-primary)] flex items-center gap-2">
+                <Plus size={16} className="text-orange-500" /> Novo Título a Pagar
+              </h3>
+              <button type="button" onClick={() => { setShowNovoTitulo(false); setNovoMsg("") }} className="p-1 rounded hover:bg-muted">
+                <X size={16} />
+              </button>
+            </div>
+
+            {novoMsg && (
+              <p className={cn("text-xs font-semibold px-3 py-2 rounded-lg", novoMsg.startsWith("Erro") ? "bg-red-50 text-red-600" : "bg-green-50 text-green-700")}>
+                {novoMsg}
+              </p>
+            )}
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">Fornecedor (Sienge) <span className="text-red-500">*</span></label>
+                <select
+                  value={novoForm.creditorId}
+                  onChange={e => setNovoForm(p => ({ ...p, creditorId: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:border-orange-400"
+                >
+                  <option value="">Selecionar fornecedor...</option>
+                  {fornecedoresComSienge.map(f => (
+                    <option key={f.id} value={String(f.siengeCreditorId)}>{f.nome}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">Número do documento</label>
+                <input
+                  type="text"
+                  value={novoForm.documentNumber}
+                  onChange={e => setNovoForm(p => ({ ...p, documentNumber: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:border-orange-400"
+                  placeholder="Ex: NF-001"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">Vencimento <span className="text-red-500">*</span></label>
+                  <input
+                    type="date"
+                    value={novoForm.dueDate}
+                    onChange={e => setNovoForm(p => ({ ...p, dueDate: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:border-orange-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">Valor (R$) <span className="text-red-500">*</span></label>
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={novoForm.amount}
+                    onChange={e => setNovoForm(p => ({ ...p, amount: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:border-orange-400"
+                    placeholder="0,00"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">Descrição</label>
+                <textarea
+                  rows={2}
+                  value={novoForm.description}
+                  onChange={e => setNovoForm(p => ({ ...p, description: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:border-orange-400 resize-none"
+                  placeholder="Descrição opcional"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">Obra (opcional)</label>
+                <select
+                  value={novoForm.obraId}
+                  onChange={e => setNovoForm(p => ({ ...p, obraId: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:border-orange-400"
+                >
+                  <option value="">Nenhuma obra</option>
+                  {obrasComSienge.map(o => <option key={o.id} value={o.id}>{o.nome}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-2">
+              <button type="button" onClick={() => { setShowNovoTitulo(false); setNovoMsg("") }}
+                className="px-4 py-2 rounded-lg border border-border text-xs font-medium text-[var(--text-muted)]">
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={!novoForm.creditorId || !novoForm.dueDate || !novoForm.amount || criarContaPagar.isPending}
+                onClick={() => criarContaPagar.mutate({
+                  creditorId:     Number(novoForm.creditorId),
+                  documentNumber: novoForm.documentNumber || undefined,
+                  dueDate:        novoForm.dueDate,
+                  amount:         Number(novoForm.amount),
+                  description:    novoForm.description || undefined,
+                  obraId:         novoForm.obraId || undefined,
+                })}
+                className="px-4 py-2 rounded-lg bg-orange-500 text-white text-xs font-semibold hover:bg-orange-600 disabled:opacity-50 flex items-center gap-2"
+              >
+                {criarContaPagar.isPending ? "Criando..." : "Criar no Sienge"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

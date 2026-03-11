@@ -453,19 +453,22 @@ model MembroEquipe {
 // ─── Suprimentos ─────────────────────────────────────────────────────────────
 
 model Fornecedor {
-  id        String   @id @default(cuid())
-  empresaId String
-  nome      String
-  cnpj      String?
-  categoria String?
-  cidade    String?
-  estado    String?
-  telefone  String?
-  email     String?
-  site      String?
-  ativo     Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String   @id @default(cuid())
+  empresaId        String
+  nome             String
+  cnpj             String?
+  categoria        String?
+  cidade           String?
+  estado           String?
+  telefone         String?
+  email            String?
+  site             String?
+  ativo            Boolean  @default(true)
+  siengeCreditorId Int?
+  notaMedia        Float?
+  totalAvaliacoes  Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   empresa Empresa        @relation(fields: [empresaId], references: [id])
   pedidos PedidoCompra[]
@@ -533,12 +536,14 @@ model SolicitacaoCompra {
 }
 
 model ItemSolicitacao {
-  id            String  @id @default(cuid())
-  solicitacaoId String
-  materialId    String
-  quantidade    Float
-  unidade       String?
-  observacao    String?
+  id              String  @id @default(cuid())
+  solicitacaoId   String
+  materialId      String
+  quantidade      Float
+  unidade         String?
+  observacao      String?
+  statusAprovacao String?
+  obsAprovacao    String?
 
   solicitacao SolicitacaoCompra @relation(fields: [solicitacaoId], references: [id], onDelete: Cascade)
   material    MaterialCatalogo  @relation(fields: [materialId], references: [id])

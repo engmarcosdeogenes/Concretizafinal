@@ -151,11 +151,12 @@ export const integracoesRouter = createTRPCRouter({
         if (!existe) {
           await ctx.db.fornecedor.create({
             data: {
-              empresaId: ctx.session.empresaId,
-              nome:      f.name,
-              cnpj:      f.cnpj ?? undefined,
-              cidade:    f.address?.cityName ?? undefined,
-              estado:    f.address?.state ?? undefined,
+              empresaId:       ctx.session.empresaId,
+              nome:            f.name,
+              cnpj:            f.cnpj ?? undefined,
+              cidade:          f.address?.cityName ?? undefined,
+              estado:          f.address?.state ?? undefined,
+              siengeCreditorId: f.id,
             },
           })
           criados++

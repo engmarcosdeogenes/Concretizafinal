@@ -1263,3 +1263,91 @@ export async function getInformeIRPdfSienge(
     return await res.arrayBuffer()
   } catch { return null }
 }
+
+// ── Write-back de Credores ──────────────────────────────────────────────────
+
+export async function criarCreditorSienge(
+  subdominio: string,
+  usuario: string,
+  senha: string,
+  data: { companyName: string; cnpj?: string; email?: string; phone?: string },
+): Promise<number | null> {
+  try {
+    const res = await fetch(`${BASE(subdominio)}/creditors`, {
+      method: "POST",
+      headers: { Authorization: authHeader(usuario, senha), "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) return null
+    const json = await res.json() as { id?: number }
+    return json.id ?? null
+  } catch { return null }
+}
+
+export async function atualizarCreditorSienge(
+  subdominio: string,
+  usuario: string,
+  senha: string,
+  creditorId: number,
+  data: Record<string, unknown>,
+): Promise<void> {
+  try {
+    await fetch(`${BASE(subdominio)}/creditors/${creditorId}`, {
+      method: "PATCH",
+      headers: { Authorization: authHeader(usuario, senha), "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(data),
+    })
+  } catch { /* silent */ }
+}
+
+export async function ativarCreditorSienge(
+  subdominio: string,
+  usuario: string,
+  senha: string,
+  creditorId: number,
+): Promise<void> {
+  try {
+    await fetch(`${BASE(subdominio)}/creditors/${creditorId}/activate`, {
+      method: "PUT",
+      headers: { Authorization: authHeader(usuario, senha) },
+    })
+  } catch { /* silent */ }
+}
+
+export async function desativarCreditorSienge(
+  subdominio: string,
+  usuario: string,
+  senha: string,
+  creditorId: number,
+): Promise<void> {
+  try {
+    await fetch(`${BASE(subdominio)}/creditors/${creditorId}/deactivate`, {
+      method: "PUT",
+      headers: { Authorization: authHeader(usuario, senha) },
+    })
+  } catch { /* silent */ }
+}
+
+export async function criarContaPagarSienge(
+  subdominio: string,
+  usuario: string,
+  senha: string,
+  data: {
+    creditorId: number
+    documentNumber?: string
+    dueDate: string
+    amount: number
+    description?: string
+    buildingId?: number
+  },
+): Promise<{ id: number } | null> {
+  try {
+    const res = await fetch(`${BASE(subdominio)}/bill-debts`, {
+      method: "POST",
+      headers: { Authorization: authHeader(usuario, senha), "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) return null
+    return await res.json() as { id: number }
+  } catch { return null }
+}

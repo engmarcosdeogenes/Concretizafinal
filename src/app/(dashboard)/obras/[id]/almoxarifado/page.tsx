@@ -2,7 +2,7 @@
 
 import { use, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, Package, AlertTriangle, TrendingDown, ClipboardList, ArrowRightLeft, X, CheckCircle2 } from "lucide-react"
+import { ArrowLeft, Package, AlertTriangle, TrendingDown, ClipboardList, ArrowRightLeft, X, CheckCircle2, Zap } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { cn } from "@/lib/utils"
 import { formatNumero } from "@/lib/format"
@@ -26,6 +26,10 @@ export default function AlmoxarifadoPage({ params }: { params: Promise<{ id: str
   const atenderMutation = trpc.sienge.atenderReserva.useMutation({
     onSuccess: () => { setAtendendoId(null); setQtdAtender(""); refetchReservas() }
   })
+
+  // Sugestões de transferência
+  const { data: pendentesTx = [] } = trpc.solicitacao.listarPendentesParaTransferencia.useQuery({ obraId })
+  const [showSugestoes, setShowSugestoes] = useState(false)
 
   // Transferência
   const { data: obras = [] } = trpc.obra.listar.useQuery()
@@ -79,6 +83,85 @@ export default function AlmoxarifadoPage({ params }: { params: Promise<{ id: str
       {/* ── Estoque Tab ── */}
       {tab === "estoque" && (
         <>
+          {/* Banner sugestões de transferência */}
+          {(() => {
+            if (!pendentesTx.length) return null
+            // Cruzar nomes de materiais do estoque com solicitações pendentes
+            const matches: { materialNome: string; saldoAtual: number; unidade: string; obraNome: string; quantidade: number }[] = []
+            for (const obra of pendentesTx) {
+              for (const item of obra.itens) {
+                const estoqueItem = estoque.find(e => e.materialNome.toLowerCase().includes(item.descricao.toLowerCase()) || item.descricao.toLowerCase().includes(e.materialNome.toLowerCase()))
+                if (estoqueItem && estoqueItem.saldoAtual > 0) {
+                  matches.push({ materialNome: estoqueItem.materialNome, saldoAtual: estoqueItem.saldoAtual, unidade: estoqueItem.unidade, obraNome: obra.obraNome, quantidade: item.quantidade })
+                }
+              }
+            }
+            if (!matches.length) return null
+            return (
+              <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                <Zap size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-amber-800">
+                    Sugestões: {matches.length} {matches.length === 1 ? "material" : "materiais"} desta obra {matches.length === 1 ? "pode atender" : "podem atender"} solicitações de outras obras
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowSugestoes(true)}
+                    className="mt-1 text-xs text-amber-700 underline hover:text-amber-900 transition-colors"
+                  >
+                    Ver sugestões
+                  </button>
+                </div>
+
+                {/* Modal Sugestões */}
+                {showSugestoes && (
+                  <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setShowSugestoes(false)}>
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 space-y-4" onClick={e => e.stopPropagation()}>
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-bold text-sm text-[var(--text-primary)] flex items-center gap-2">
+                          <Zap size={16} className="text-amber-500" /> Sugestões de Transferência
+                        </h3>
+                        <button type="button" onClick={() => setShowSugestoes(false)} className="p-1 rounded hover:bg-muted"><X size={16} /></button>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="bg-muted text-[var(--text-muted)] uppercase tracking-wide text-[10px]">
+                              <th className="px-3 py-2 text-left font-semibold">Material</th>
+                              <th className="px-3 py-2 text-right font-semibold">Saldo aqui</th>
+                              <th className="px-3 py-2 text-left font-semibold">Obra destino</th>
+                              <th className="px-3 py-2 text-right font-semibold">Qtd solicit.</th>
+                              <th className="px-3 py-2 text-center font-semibold">Ação</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border">
+                            {matches.map((m, i) => (
+                              <tr key={i} className="hover:bg-muted/30">
+                                <td className="px-3 py-2 font-medium text-[var(--text-primary)]">{m.materialNome}</td>
+                                <td className="px-3 py-2 text-right font-semibold text-emerald-700">{m.saldoAtual} {m.unidade}</td>
+                                <td className="px-3 py-2 text-[var(--text-muted)]">{m.obraNome}</td>
+                                <td className="px-3 py-2 text-right text-[var(--text-muted)]">{m.quantidade}</td>
+                                <td className="px-3 py-2 text-center">
+                                  <button
+                                    type="button"
+                                    onClick={() => { setShowSugestoes(false); setShowTransferModal(true) }}
+                                    className="px-2 py-1 rounded border border-border text-[10px] font-medium text-[var(--text-muted)] hover:border-orange-300 hover:text-orange-600 transition-all"
+                                  >
+                                    Transferir
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+
           {!isLoading && (abaixoMinimo.length > 0 || zerado.length > 0) && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {zerado.length > 0 && (
@@ -120,19 +203,26 @@ export default function AlmoxarifadoPage({ params }: { params: Promise<{ id: str
               </div>
             ) : (
               <div>
-                <div className="grid grid-cols-[1fr_80px_80px_100px] gap-4 px-4 py-2.5 bg-slate-50 border-b border-border text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
+                <div className="grid grid-cols-[1fr_80px_80px_90px_100px] gap-4 px-4 py-2.5 bg-slate-50 border-b border-border text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
                   <span>Material</span>
                   <span className="text-right">Saldo</span>
                   <span className="text-right">Mínimo</span>
+                  <span className="text-right">Saldo Real</span>
                   <span className="text-right">Situação</span>
                 </div>
                 <div className="divide-y divide-border">
                   {estoque.map((item, i) => {
                     const critico = item.saldoAtual === 0
                     const alerta  = item.saldoAtual < item.saldoMinimo && !critico
+                    // Saldo real = saldo atual - reservas do mesmo material
+                    const somaReservas = reservas
+                      .filter(r => (r.materialNome ?? "").toLowerCase() === item.materialNome.toLowerCase())
+                      .reduce((s, r) => s + (r.quantidade ?? 0) - (r.quantidadeAtendida ?? 0), 0)
+                    const saldoReal = item.saldoAtual - somaReservas
+                    const alertaAmbar = saldoReal < item.saldoMinimo && item.saldoAtual >= item.saldoMinimo
                     return (
                       <div key={i} className={cn(
-                        "grid grid-cols-[1fr_80px_80px_100px] gap-4 px-4 py-3 items-center text-sm",
+                        "grid grid-cols-[1fr_80px_80px_90px_100px] gap-4 px-4 py-3 items-center text-sm",
                         critico ? "bg-red-50/50" : alerta ? "bg-amber-50/50" : ""
                       )}>
                         <div>
@@ -143,6 +233,9 @@ export default function AlmoxarifadoPage({ params }: { params: Promise<{ id: str
                           {formatNumero(item.saldoAtual)} <span className="text-xs font-normal text-[var(--text-muted)]">{item.unidade}</span>
                         </p>
                         <p className="text-right text-xs text-[var(--text-muted)]">{formatNumero(item.saldoMinimo)} {item.unidade}</p>
+                        <p className={cn("text-right text-xs font-semibold", alertaAmbar ? "text-amber-600" : saldoReal < 0 ? "text-red-600" : "text-[var(--text-primary)]")}>
+                          {formatNumero(saldoReal)}
+                        </p>
                         <div className="flex justify-end">
                           {critico ? (
                             <span className="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-semibold">Zerado</span>

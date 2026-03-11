@@ -15,6 +15,7 @@ type Fornecedor = {
   id: string; nome: string; cnpj?: string | null; categoria?: string | null
   cidade?: string | null; estado?: string | null; telefone?: string | null
   email?: string | null; site?: string | null; ativo: boolean
+  siengeCreditorId?: number | null; notaMedia?: number | null; totalAvaliacoes?: number
   _count: { pedidos: number }
 }
 
@@ -280,6 +281,7 @@ export default function FornecedoresPage() {
               <th className="px-5 py-4 font-semibold text-muted-foreground">Categoria</th>
               <th className="px-5 py-4 font-semibold text-muted-foreground">Cidade</th>
               <th className="px-5 py-4 font-semibold text-muted-foreground">Telefone/Email</th>
+              <th className="px-5 py-4 font-semibold text-muted-foreground">Avaliação</th>
               <th className="px-5 py-4 font-semibold text-muted-foreground">Status</th>
               <th className="px-5 py-4 font-semibold text-muted-foreground text-right">Ações</th>
             </tr>
@@ -287,13 +289,13 @@ export default function FornecedoresPage() {
           <tbody className="divide-y">
             {isLoading && (
               <tr>
-                <td colSpan={7} className="px-5 py-12 text-center text-muted-foreground">Carregando...</td>
+                <td colSpan={8} className="px-5 py-12 text-center text-muted-foreground">Carregando...</td>
               </tr>
             )}
 
             {!isLoading && filtered.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-5 py-16 text-center">
+                <td colSpan={8} className="px-5 py-16 text-center">
                   <div className="bg-primary/5 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Building2 size={32} className="text-primary opacity-80" />
                   </div>
@@ -308,7 +310,12 @@ export default function FornecedoresPage() {
             {paginado.map(f => (
               <tr key={f.id} className="hover:bg-muted/50 transition-colors group">
                 <td className="px-5 py-4">
-                  <span className="font-bold text-foreground group-hover:text-primary transition-colors">{f.nome}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-foreground group-hover:text-primary transition-colors">{f.nome}</span>
+                    {f.siengeCreditorId && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-700">Sienge</span>
+                    )}
+                  </div>
                 </td>
 
                 <td className="px-5 py-4 text-muted-foreground font-mono">
@@ -337,6 +344,12 @@ export default function FornecedoresPage() {
                       <Mail size={12} className="shrink-0" /> <span className="truncate max-w-[150px]">{f.email || "Não info"}</span>
                     </div>
                   </div>
+                </td>
+
+                <td className="px-5 py-4 text-sm text-muted-foreground">
+                  {f.notaMedia != null
+                    ? <span className="font-semibold">⭐ {f.notaMedia.toFixed(1)}<span className="font-normal text-xs"> /10</span></span>
+                    : "—"}
                 </td>
 
                 <td className="px-5 py-4">

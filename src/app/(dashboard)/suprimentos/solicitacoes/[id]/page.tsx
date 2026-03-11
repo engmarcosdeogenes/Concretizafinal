@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation"
 import { useState } from "react"
 import {
   ArrowLeft, ClipboardList, Clock, CheckCircle2, XCircle, Send, ThumbsUp, ThumbsDown,
-  Pencil, Trash2, Plus, Loader2, Save, Link2,
+  Pencil, Trash2, Plus, Loader2, Save, Link2, Check, X,
 } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { formatDataLonga } from "@/lib/format"
@@ -44,6 +44,19 @@ export default function SolicitacaoDetalhePage() {
   const [obsEdit,      setObsEdit]      = useState("")
   const [itensEdit,    setItensEdit]    = useState<ItemEdit[]>([])
   const [confirmDel,   setConfirmDel]   = useState(false)
+
+  // Aprovação granular por item
+  const [decisoes, setDecisoes] = useState<Map<string, boolean | null>>(new Map())
+  const [obsDecisoes, setObsDecisoes] = useState<Map<string, string>>(new Map())
+
+  const aprovarItensMut = trpc.solicitacao.aprovarItens.useMutation({
+    onSuccess: () => {
+      utils.solicitacao.buscarPorId.invalidate({ id })
+      utils.solicitacao.listar.invalidate({})
+      setDecisoes(new Map())
+      setObsDecisoes(new Map())
+    },
+  })
 
   const atualizarStatus = trpc.solicitacao.atualizarStatus.useMutation({
     onSuccess: () => {
@@ -379,21 +392,87 @@ export default function SolicitacaoDetalhePage() {
                     <th className="text-left px-4 py-2 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Material</th>
                     <th className="text-right px-4 py-2 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Quantidade</th>
                     <th className="text-left px-4 py-2 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Obs.</th>
+                    {sol.status === "PENDENTE" && (
+                      <th className="text-center px-4 py-2 text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Decisão</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
-                  {sol.itens.map(item => (
-                    <tr key={item.id} className="border-t border-border">
-                      <td className="px-4 py-2.5 text-[var(--text-primary)]">{item.material.nome}</td>
-                      <td className="px-4 py-2.5 text-right font-semibold text-[var(--text-primary)]">
-                        {item.quantidade} {item.unidade ?? item.material.unidade}
-                      </td>
-                      <td className="px-4 py-2.5 text-xs text-[var(--text-muted)]">{item.observacao ?? "—"}</td>
-                    </tr>
-                  ))}
+                  {sol.itens.map(item => {
+                    const dbStatus = (item as { statusAprovacao?: string | null }).statusAprovacao
+                    const decisao = decisoes.get(item.id)
+                    const displayStatus = decisao !== undefined ? decisao : (dbStatus === "APROVADO" ? true : dbStatus === "REJEITADO" ? false : null)
+                    return (
+                      <tr key={item.id} className="border-t border-border">
+                        <td className="px-4 py-2.5 text-[var(--text-primary)]">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {item.material.nome}
+                            {displayStatus === true && <span className="px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-[10px] font-semibold">Aprovado</span>}
+                            {displayStatus === false && <span className="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[10px] font-semibold">Rejeitado</span>}
+                            {displayStatus === null && <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] font-semibold">Pendente</span>}
+                          </div>
+                          {displayStatus === false && sol.status === "PENDENTE" && (
+                            <input
+                              type="text"
+                              placeholder="Motivo da rejeição..."
+                              value={obsDecisoes.get(item.id) ?? ""}
+                              onChange={e => setObsDecisoes(prev => { const m = new Map(prev); m.set(item.id, e.target.value); return m })}
+                              className="mt-1 w-full px-2 py-1 border border-red-200 rounded text-xs focus:outline-none focus:border-red-400"
+                            />
+                          )}
+                        </td>
+                        <td className="px-4 py-2.5 text-right font-semibold text-[var(--text-primary)]">
+                          {item.quantidade} {item.unidade ?? item.material.unidade}
+                        </td>
+                        <td className="px-4 py-2.5 text-xs text-[var(--text-muted)]">{item.observacao ?? "—"}</td>
+                        {sol.status === "PENDENTE" && (
+                          <td className="px-4 py-2.5">
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => setDecisoes(prev => { const m = new Map(prev); m.set(item.id, true); return m })}
+                                className={`p-1.5 rounded-lg transition-colors ${decisoes.get(item.id) === true ? "bg-green-500 text-white" : "border border-border text-[var(--text-muted)] hover:border-green-400 hover:text-green-600"}`}
+                              >
+                                <Check size={12} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setDecisoes(prev => { const m = new Map(prev); m.set(item.id, false); return m })}
+                                className={`p-1.5 rounded-lg transition-colors ${decisoes.get(item.id) === false ? "bg-red-500 text-white" : "border border-border text-[var(--text-muted)] hover:border-red-400 hover:text-red-600"}`}
+                              >
+                                <X size={12} />
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
+
+            {/* Botão confirmar decisões */}
+            {sol.status === "PENDENTE" && decisoes.size > 0 && (
+              <div className="mt-4 flex justify-end">
+                <button
+                  type="button"
+                  disabled={aprovarItensMut.isPending}
+                  onClick={() => {
+                    const itens = Array.from(decisoes.entries()).map(([itemId, aprovado]) => ({
+                      itemId,
+                      aprovado: aprovado === true,
+                      obs: obsDecisoes.get(itemId) || undefined,
+                    }))
+                    aprovarItensMut.mutate({ solicitacaoId: id, itens })
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white text-sm font-semibold rounded-xl transition-colors"
+                >
+                  {aprovarItensMut.isPending ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                  Confirmar decisões ({decisoes.size} {decisoes.size === 1 ? "item" : "itens"})
+                </button>
+              </div>
+            )}
           </div>
 
           {sol.observacoes && (
