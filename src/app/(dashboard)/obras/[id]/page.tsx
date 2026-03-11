@@ -214,6 +214,12 @@ export default function ObraOverviewPage() {
   const fvsTotal = obra._count.fvs
   const ocAbertas = obra.ocorrencias.length
   const fvsConformes = obra.fvs.filter(f => f.status === "APROVADO").length
+  const hasSienge = !!obra.siengeId
+
+  const { data: pedidosSienge = [] }  = trpc.sienge.listarPedidosPorObra.useQuery({ obraId: id }, { enabled: hasSienge })
+  const { data: cotacoesSienge = [] } = trpc.sienge.listarCotacoes.useQuery({ obraId: id }, { enabled: hasSienge })
+  const { data: contratosSienge = [] } = trpc.sienge.listarContratos.useQuery({ obraId: id }, { enabled: hasSienge })
+  const { data: estoqueSienge = [] }  = trpc.sienge.listarEstoque.useQuery({ obraId: id }, { enabled: hasSienge })
 
   return (
     <div className="p-6 space-y-5">
@@ -301,6 +307,32 @@ export default function ObraOverviewPage() {
           </div>
         ))}
       </div>
+
+      {/* Card Sienge — só quando integrado */}
+      {hasSienge && (
+        <div className="bg-white rounded-2xl border border-blue-200 shadow-sm p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-6 h-6 bg-blue-50 rounded-lg flex items-center justify-center">
+              <Package size={13} className="text-blue-600" />
+            </div>
+            <span className="text-sm font-semibold text-[var(--text-primary)]">Integração Sienge</span>
+            <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-[10px] font-semibold border border-blue-200 ml-auto">Conectado</span>
+          </div>
+          <div className="grid grid-cols-4 gap-3">
+            {[
+              { label: "Pedidos",     value: pedidosSienge.length,  color: "text-blue-600" },
+              { label: "Cotações",    value: cotacoesSienge.length, color: "text-purple-600" },
+              { label: "Contratos",   value: contratosSienge.length,color: "text-teal-600" },
+              { label: "Est. itens",  value: estoqueSienge.length,  color: "text-orange-600" },
+            ].map(({ label, value, color }) => (
+              <div key={label} className="text-center">
+                <p className={`text-xl font-extrabold ${color}`}>{value}</p>
+                <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Grid principal */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">

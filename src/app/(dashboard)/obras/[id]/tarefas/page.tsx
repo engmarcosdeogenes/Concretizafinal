@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useParams } from "next/navigation"
-import { ListTodo, Plus, Pencil, Trash2, ChevronRight, ChevronDown, Download, X, Check } from "lucide-react"
+import { ListTodo, Plus, Pencil, Trash2, ChevronRight, ChevronDown, Download, X, Check, Upload, FileSpreadsheet, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
 import { trpc } from "@/lib/trpc/client"
 import { cn } from "@/lib/utils"
@@ -25,6 +25,16 @@ const STATUS_MAP = {
   SUSPENSO:     { label: "Suspenso",     cls: "bg-amber-50 text-amber-700 border-amber-200" },
 }
 
+// ── tipos de importação ────────────────────────────────────────────────────
+type TarefaImport = {
+  codigo?: string
+  codigoPai?: string
+  nome: string
+  setor?: string
+  unidade: string
+  quantidadeTotal: number
+}
+
 // ── tipos ──────────────────────────────────────────────────────────────────
 type TarefaBase = {
   id: string; obraId: string; parentId: string | null
@@ -40,6 +50,203 @@ type FormData = {
 }
 
 const EMPTY_FORM: FormData = { codigo: "", nome: "", setor: "", unidade: "un", quantidadeTotal: "0", parentId: "", ordem: "0" }
+
+// ── parsing Excel ─────────────────────────────────────────────────────────
+async function parseExcel(file: File): Promise<TarefaImport[]> {
+  const xlsx = await import("xlsx")
+  const buf  = await file.arrayBuffer()
+  const wb   = xlsx.read(buf)
+  const ws   = wb.Sheets[wb.SheetNames[0]]
+  const rows = xlsx.utils.sheet_to_json<Record<string, unknown>>(ws)
+  return rows
+    .filter(r => r["Nome"] ?? r["Serviço"] ?? r["Name"])
+    .map((r, i) => ({
+      codigo:          String(r["Código"] ?? r["WBS"] ?? r["Code"] ?? "").trim() || undefined,
+      codigoPai:       String(r["Cód. Pai"] ?? r["Código Pai"] ?? r["Parent"] ?? "").trim() || undefined,
+      nome:            String(r["Nome"] ?? r["Serviço"] ?? r["Name"] ?? `Tarefa ${i + 1}`).trim(),
+      setor:           r["Setor"] != null ? String(r["Setor"]).trim() || undefined : undefined,
+      unidade:         String(r["Unidade"] ?? r["Un"] ?? "un").trim() || "un",
+      quantidadeTotal: Number(r["Qtd Total"] ?? r["Quantidade"] ?? r["Qty"] ?? 0) || 0,
+    }))
+}
+
+// ── parsing MS Project XML ─────────────────────────────────────────────────
+async function parseXml(file: File): Promise<TarefaImport[]> {
+  const text = await file.text()
+  const doc  = new DOMParser().parseFromString(text, "text/xml")
+  const tasks = Array.from(doc.querySelectorAll("Tasks > Task"))
+  const levelStack: string[] = []
+
+  return tasks
+    .filter(t => {
+      const name = t.querySelector("Name")?.textContent ?? ""
+      const isSum = t.querySelector("Summary")?.textContent === "1"
+      const isMilestone = t.querySelector("Milestone")?.textContent === "1"
+      return name && !isMilestone && name !== "Project Summary Task" && !isSum
+    })
+    .map(t => {
+      const wbs   = (t.querySelector("WBS")?.textContent ?? "").trim()
+      const nome  = (t.querySelector("Name")?.textContent ?? "").trim()
+      const level = Number(t.querySelector("OutlineLevel")?.textContent ?? 1)
+      levelStack[level - 1] = wbs
+      const codigoPai = level > 1 ? levelStack[level - 2] : undefined
+      return { codigo: wbs || undefined, codigoPai, nome: nome || "Sem nome", unidade: "un", quantidadeTotal: 0 }
+    })
+    .filter(t => t.nome)
+}
+
+// ── template Excel ─────────────────────────────────────────────────────────
+async function baixarTemplate() {
+  const xlsx = await import("xlsx")
+  const ws = xlsx.utils.aoa_to_sheet([
+    ["Código", "Cód. Pai", "Nome", "Setor", "Unidade", "Qtd Total"],
+    ["1",      "",        "Estrutura", "Bloco A", "m³", 100],
+    ["1.1",    "1",       "Pilares",   "Bloco A", "un", 20],
+  ])
+  const wb = xlsx.utils.book_new()
+  xlsx.utils.book_append_sheet(wb, ws, "Tarefas")
+  xlsx.writeFile(wb, "template_tarefas_wbs.xlsx")
+}
+
+// ── modal de importação ────────────────────────────────────────────────────
+function ImportarModal({ obraId, onClose }: { obraId: string; onClose: () => void }) {
+  const utils = trpc.useUtils()
+  const [preview, setPreview] = useState<TarefaImport[]>([])
+  const [erro, setErro] = useState("")
+  const [arquivo, setArquivo] = useState<string>("")
+
+  const criarLote = trpc.tarefaObra.criarLote.useMutation({
+    onSuccess: (data) => {
+      utils.tarefaObra.listar.invalidate({ obraId })
+      toast.success(`${data.criadas} tarefa(s) importada(s)`)
+      onClose()
+    },
+    onError: (e) => toast.error(e.message),
+  })
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setErro(""); setPreview([]); setArquivo(file.name)
+    try {
+      const ext = file.name.split(".").pop()?.toLowerCase()
+      let items: TarefaImport[] = []
+      if (ext === "xml") items = await parseXml(file)
+      else items = await parseExcel(file)
+      if (items.length === 0) { setErro("Nenhuma tarefa encontrada. Verifique o formato do arquivo."); return }
+      setPreview(items)
+    } catch {
+      setErro("Erro ao processar o arquivo. Verifique se está no formato correto.")
+    }
+  }
+
+  function handleImportar() {
+    if (preview.length === 0) return
+    criarLote.mutate({ obraId, tarefas: preview })
+  }
+
+  const inputCls = "w-full px-3 py-2 border border-border rounded-xl text-sm bg-white placeholder:text-[var(--text-muted)] outline-none focus:border-[var(--blue)] transition-all"
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
+          <h3 className="font-bold text-[var(--text-primary)] flex items-center gap-2">
+            <Upload size={16} className="text-orange-500" />
+            Importar Tarefas
+          </h3>
+          <button type="button" onClick={onClose} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="p-5 space-y-4 overflow-y-auto flex-1">
+          {/* Formatos suportados */}
+          <div className="flex gap-2 text-xs text-[var(--text-muted)]">
+            <span className="bg-muted px-2 py-0.5 rounded-full">.xlsx</span>
+            <span className="bg-muted px-2 py-0.5 rounded-full">.csv</span>
+            <span className="bg-muted px-2 py-0.5 rounded-full">MS Project .xml</span>
+          </div>
+
+          {/* Upload */}
+          <div>
+            <label className="flex flex-col items-center gap-2 border-2 border-dashed border-border rounded-xl p-6 cursor-pointer hover:border-orange-400 hover:bg-orange-50/30 transition-all">
+              <FileSpreadsheet size={32} className="text-[var(--text-muted)]" />
+              <span className="text-sm text-[var(--text-muted)]">{arquivo || "Clique para selecionar o arquivo"}</span>
+              <input type="file" accept=".xlsx,.csv,.xml" onChange={handleFile} className="hidden" />
+            </label>
+          </div>
+
+          {/* Template */}
+          <button type="button" onClick={baixarTemplate} className="btn-ghost text-xs flex items-center gap-1.5">
+            <Download size={12} />
+            Baixar template Excel
+          </button>
+
+          {/* Erro */}
+          {erro && (
+            <div className="flex items-start gap-2 p-3 bg-red-50 text-red-700 rounded-xl text-sm border border-red-200">
+              <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />
+              {erro}
+            </div>
+          )}
+
+          {/* Preview */}
+          {preview.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-[var(--text-muted)] mb-2 uppercase tracking-wide">
+                Preview — {preview.length} tarefa(s) encontrada(s)
+              </p>
+              <div className="border border-border rounded-xl overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted">
+                    <tr>
+                      {["Código", "Cód. Pai", "Nome", "Setor", "Unid.", "Qtd"].map(h => (
+                        <th key={h} className="px-3 py-2 text-left font-semibold text-[var(--text-muted)] uppercase tracking-wide">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {preview.slice(0, 20).map((t, i) => (
+                      <tr key={i} className="border-t border-border">
+                        <td className="px-3 py-1.5 font-mono text-[var(--text-muted)]">{t.codigo ?? "—"}</td>
+                        <td className="px-3 py-1.5 font-mono text-[var(--text-muted)]">{t.codigoPai ?? "—"}</td>
+                        <td className="px-3 py-1.5 font-medium text-[var(--text-primary)] max-w-[200px] truncate">{t.nome}</td>
+                        <td className="px-3 py-1.5 text-[var(--text-muted)]">{t.setor ?? "—"}</td>
+                        <td className="px-3 py-1.5 text-[var(--text-muted)]">{t.unidade}</td>
+                        <td className="px-3 py-1.5 text-[var(--text-muted)]">{t.quantidadeTotal}</td>
+                      </tr>
+                    ))}
+                    {preview.length > 20 && (
+                      <tr className="border-t border-border">
+                        <td colSpan={6} className="px-3 py-2 text-center text-[var(--text-muted)]">
+                          … e mais {preview.length - 20} tarefa(s)
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="flex gap-3 px-5 py-4 border-t border-border flex-shrink-0">
+          <button
+            type="button"
+            onClick={handleImportar}
+            disabled={preview.length === 0 || criarLote.isPending}
+            className="btn-orange flex-1 justify-center min-h-[40px] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          >
+            <Upload size={14} />
+            {criarLote.isPending ? "Importando…" : `Importar ${preview.length > 0 ? preview.length : ""} tarefa(s)`}
+          </button>
+          <button type="button" onClick={onClose} className="btn-ghost flex-1 justify-center min-h-[40px] cursor-pointer">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // ── modal de criação/edição ────────────────────────────────────────────────
 function TarefaModal({
@@ -266,6 +473,7 @@ export default function TarefasPage() {
   const params  = useParams()
   const obraId  = params.id as string
   const [modal, setModal] = useState(false)
+  const [importModal, setImportModal] = useState(false)
   const [busca, setBusca] = useState("")
 
   const { data: tarefas = [], isLoading } = trpc.tarefaObra.listar.useQuery({ obraId })
@@ -299,6 +507,9 @@ export default function TarefasPage() {
           onClose={() => setModal(false)}
         />
       )}
+      {importModal && (
+        <ImportarModal obraId={obraId} onClose={() => setImportModal(false)} />
+      )}
 
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
@@ -322,6 +533,14 @@ export default function TarefasPage() {
             <Download size={14} />
             PDF
           </a>
+          <button
+            type="button"
+            onClick={() => setImportModal(true)}
+            className="btn-ghost min-h-[44px] flex-shrink-0"
+          >
+            <Upload size={14} />
+            Importar
+          </button>
           <button
             type="button"
             onClick={() => setModal(true)}

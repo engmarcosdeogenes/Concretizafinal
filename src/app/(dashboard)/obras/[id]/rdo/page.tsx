@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ClipboardList, Plus, Sun, Cloud, CloudRain, Wind, CheckCircle2, Clock, AlertCircle, Users, Copy, Download } from "lucide-react"
+import { ClipboardList, Plus, Sun, Cloud, CloudRain, Wind, CheckCircle2, Clock, AlertCircle, Users, Copy, Download, ChevronDown } from "lucide-react"
 import { toast } from "sonner"
 import { trpc } from "@/lib/trpc/client"
 import { formatDataCurta, diaSemanaAbrev } from "@/lib/format"
@@ -52,6 +52,13 @@ export default function RdoPage() {
   const { canDelete, canFvs } = useRole()
   const utils = trpc.useUtils()
   const { data: rdos = [], isLoading } = trpc.rdo.listar.useQuery({ obraId: id })
+  const { data: obra } = trpc.obra.buscarPorId.useQuery({ id })
+  const hasSienge = !!obra?.siengeId
+  const { data: rdosSienge = [], isLoading: loadingSienge } = trpc.sienge.listarRdosPorObra.useQuery(
+    { obraId: id },
+    { enabled: hasSienge }
+  )
+  const [siengeAberto, setSiengeAberto] = useState(false)
 
   const duplicar = trpc.rdo.duplicar.useMutation({
     onSuccess: (rdo) => {
@@ -210,6 +217,46 @@ export default function RdoPage() {
           )
         })}
       </div>
+
+      {/* Seção Sienge */}
+      {hasSienge && (
+        <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setSiengeAberto(v => !v)}
+            className="w-full flex items-center justify-between px-5 py-4 hover:bg-muted/30 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <ClipboardList size={14} className="text-blue-500" />
+              <span className="text-sm font-semibold text-[var(--text-primary)]">RDOs no Sienge</span>
+              {rdosSienge.length > 0 && (
+                <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-[11px] font-semibold border border-blue-200">
+                  {rdosSienge.length}
+                </span>
+              )}
+            </div>
+            <ChevronDown size={14} className={`text-[var(--text-muted)] transition-transform ${siengeAberto ? "rotate-180" : ""}`} />
+          </button>
+          {siengeAberto && (
+            <div className="border-t border-border">
+              {loadingSienge ? (
+                <p className="px-5 py-4 text-sm text-[var(--text-muted)]">Carregando…</p>
+              ) : rdosSienge.length === 0 ? (
+                <p className="px-5 py-4 text-sm text-[var(--text-muted)]">Nenhum RDO encontrado no Sienge para esta obra.</p>
+              ) : (
+                <div className="divide-y divide-border">
+                  {(rdosSienge as Array<{ id: number; date?: string; status?: string }>).map((r) => (
+                    <div key={r.id} className="flex items-center justify-between px-5 py-3 text-sm">
+                      <span className="text-[var(--text-primary)]">{r.date ?? `RDO #${r.id}`}</span>
+                      <span className="text-xs text-[var(--text-muted)] bg-muted px-2 py-0.5 rounded-full">{r.status ?? "—"}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

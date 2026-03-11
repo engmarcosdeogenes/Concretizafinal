@@ -1212,6 +1212,43 @@ export async function listarClientesSienge(
   } catch { return [] }
 }
 
+// ── RDOs por Obra ─────────────────────────────────────────────────────────────
+
+export interface SiengeRDO {
+  id: number
+  buildingId?: number
+  date?: string
+  status?: string
+  [key: string]: unknown
+}
+
+export async function listarRdosSienge(
+  subdominio: string,
+  usuario: string,
+  senha: string,
+  buildingId?: number,
+): Promise<SiengeRDO[]> {
+  try {
+    const qs = buildingId ? `?buildingId=${buildingId}&limit=50&offset=0` : "?limit=50&offset=0"
+    const data = await siengeGet(subdominio, usuario, senha, `/construction-daily-reports${qs}`)
+    return normalizeList(data) as SiengeRDO[]
+  } catch { return [] }
+}
+
+// ── Solicitações de Compra por Obra ───────────────────────────────────────────
+
+export async function listarSolicitacoesPorObraSienge(
+  subdominio: string,
+  usuario: string,
+  senha: string,
+  buildingId: number,
+): Promise<unknown[]> {
+  try {
+    const data = await siengeGet(subdominio, usuario, senha, `/purchase-requests?buildingId=${buildingId}&limit=50&offset=0`)
+    return normalizeList(data)
+  } catch { return [] }
+}
+
 // ── Informe de Rendimentos IR ───────────────────────────────────────────────
 
 export async function getInformeIRPdfSienge(

@@ -96,9 +96,17 @@ export default function IntegracoesPage() {
     onError: (e) => toast.error(e.message),
   })
 
+  const [atualizarObrasExistentes, setAtualizarObrasExistentes] = useState(false)
+
   const importarObras = trpc.integracoes.importarObras.useMutation({
-    onSuccess: (r) => { toast.success(`${r.criadas} obra(s) importada(s) de ${r.total} encontrada(s).`); utils.integracoes.listarSyncs.invalidate() },
-    onError:   (e) => { toast.error(e.message); utils.integracoes.listarSyncs.invalidate() },
+    onSuccess: (r) => {
+      const msg = r.atualizadas > 0
+        ? `${r.criadas} criada(s), ${r.atualizadas} atualizada(s) de ${r.total} obra(s) no Sienge.`
+        : `${r.criadas} obra(s) importada(s) de ${r.total} encontrada(s).`
+      toast.success(msg)
+      utils.integracoes.listarSyncs.invalidate()
+    },
+    onError: (e) => { toast.error(e.message); utils.integracoes.listarSyncs.invalidate() },
   })
 
   const importarFornecedores = trpc.integracoes.importarFornecedores.useMutation({
@@ -247,14 +255,25 @@ export default function IntegracoesPage() {
                 </button>
 
                 {/* Importar Obras */}
-                <button onClick={() => importarObras.mutate()} disabled={loading}
-                  className="flex items-center gap-3 h-14 px-4 rounded-xl border border-[#0055A5]/30 bg-[#0055A5]/5 hover:bg-[#0055A5]/10 transition-colors disabled:opacity-50 text-left">
-                  <Building2 size={18} className={cn("text-[#0055A5]", importarObras.isPending && "animate-spin")} />
-                  <div>
-                    <p className="text-sm font-medium text-[#0055A5]">{importarObras.isPending ? "Importando…" : "Importar Obras"}</p>
-                    <p className="text-xs text-muted-foreground">Sincroniza empreendimentos do Sienge</p>
-                  </div>
-                </button>
+                <div className="flex flex-col gap-1.5">
+                  <button onClick={() => importarObras.mutate({ atualizarExistentes: atualizarObrasExistentes })} disabled={loading}
+                    className="flex items-center gap-3 h-14 px-4 rounded-xl border border-[#0055A5]/30 bg-[#0055A5]/5 hover:bg-[#0055A5]/10 transition-colors disabled:opacity-50 text-left">
+                    <Building2 size={18} className={cn("text-[#0055A5]", importarObras.isPending && "animate-spin")} />
+                    <div>
+                      <p className="text-sm font-medium text-[#0055A5]">{importarObras.isPending ? "Importando…" : "Importar Obras"}</p>
+                      <p className="text-xs text-muted-foreground">Sincroniza empreendimentos do Sienge</p>
+                    </div>
+                  </button>
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer pl-1">
+                    <input
+                      type="checkbox"
+                      checked={atualizarObrasExistentes}
+                      onChange={e => setAtualizarObrasExistentes(e.target.checked)}
+                      className="accent-[#0055A5]"
+                    />
+                    Atualizar obras já importadas (nome e endereço)
+                  </label>
+                </div>
 
                 {/* Importar Fornecedores */}
                 <button onClick={() => importarFornecedores.mutate()} disabled={loading}

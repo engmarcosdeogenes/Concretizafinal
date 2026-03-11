@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useParams } from "next/navigation"
-import { Package, Plus, X, TrendingUp, TrendingDown, RefreshCw, Settings } from "lucide-react"
+import { Package, Plus, X, TrendingUp, TrendingDown, RefreshCw, Settings, ChevronDown } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { formatDataCurta } from "@/lib/format"
 
@@ -42,6 +42,13 @@ export default function MateriaisPage() {
   const { data: movs = [], isLoading: loadingMovs }        = trpc.movimentacao.listar.useQuery({ obraId })
   const { data: saldo = [], isLoading: loadingSaldo }      = trpc.movimentacao.saldoPorMaterial.useQuery({ obraId })
   const { data: materiais = [] }                            = trpc.material.listar.useQuery()
+  const { data: obra }                                      = trpc.obra.buscarPorId.useQuery({ id: obraId })
+  const hasSienge = !!obra?.siengeId
+  const { data: estoqueSienge = [], isLoading: loadingEstoque } = trpc.sienge.listarEstoque.useQuery(
+    { obraId },
+    { enabled: hasSienge }
+  )
+  const [siengeAberto, setSiengeAberto] = useState(false)
 
   const criar = trpc.movimentacao.criar.useMutation({
     onSuccess: () => {
@@ -191,6 +198,48 @@ export default function MateriaisPage() {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Estoque Sienge */}
+      {hasSienge && (
+        <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setSiengeAberto(v => !v)}
+            className="w-full flex items-center justify-between px-5 py-4 hover:bg-muted/30 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Package size={14} className="text-blue-500" />
+              <span className="text-sm font-semibold text-[var(--text-primary)]">Estoque no Sienge</span>
+              {estoqueSienge.length > 0 && (
+                <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-[11px] font-semibold border border-blue-200">
+                  {estoqueSienge.length} itens
+                </span>
+              )}
+            </div>
+            <ChevronDown size={14} className={`text-[var(--text-muted)] transition-transform ${siengeAberto ? "rotate-180" : ""}`} />
+          </button>
+          {siengeAberto && (
+            <div className="border-t border-border">
+              {loadingEstoque ? (
+                <p className="px-5 py-4 text-sm text-[var(--text-muted)]">Carregando…</p>
+              ) : estoqueSienge.length === 0 ? (
+                <p className="px-5 py-4 text-sm text-[var(--text-muted)]">Nenhum item em estoque no Sienge para esta obra.</p>
+              ) : (
+                <div className="divide-y divide-border">
+                  {(estoqueSienge as unknown as Array<{ materialId: number; materialNome: string; unidade: string; saldoAtual: number }>).map((i) => (
+                    <div key={i.materialId} className="flex items-center justify-between px-5 py-3 text-sm">
+                      <span className="text-[var(--text-primary)]">{i.materialNome ?? `Material #${i.materialId}`}</span>
+                      <span className="text-[var(--text-muted)] text-xs font-mono">
+                        {i.saldoAtual ?? 0} {i.unidade ?? ""}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

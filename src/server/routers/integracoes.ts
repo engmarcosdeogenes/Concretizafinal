@@ -57,8 +57,10 @@ export const integracoesRouter = createTRPCRouter({
   // ── Sincronizações ────────────────────────────────────────────────────────
 
   importarObras: protectedProcedure
-    .mutation(async ({ ctx }) => {
+    .input(z.object({ atualizarExistentes: z.boolean().default(false) }).optional())
+    .mutation(async ({ ctx, input }) => {
       const config = await getConfig(ctx)
+      const atualizarExistentes = input?.atualizarExistentes ?? false
 
       let obras: Awaited<ReturnType<typeof listarObras>>
       try {
@@ -72,6 +74,7 @@ export const integracoesRouter = createTRPCRouter({
       }
 
       let criadas = 0
+      let atualizadas = 0
       for (const obra of obras) {
         const siengeId = String(obra.id)
         const existe = await ctx.db.obra.findFirst({
@@ -88,14 +91,24 @@ export const integracoesRouter = createTRPCRouter({
             },
           })
           criadas++
+        } else if (atualizarExistentes) {
+          await ctx.db.obra.update({
+            where: { id: existe.id },
+            data: {
+              nome:    obra.name ?? undefined,
+              endereco: obra.adress ?? undefined,
+            },
+          })
+          atualizadas++
         }
       }
 
       await ctx.db.integracaoSync.create({
         data: { integracaoId: config.id, tipo: "IMPORTAR_OBRAS", status: "SUCESSO",
-                registros: criadas, detalhes: `${criadas} obra(s) importada(s) de ${obras.length} encontrada(s) no Sienge.` },
+                registros: criadas + atualizadas,
+                detalhes: `${criadas} criada(s), ${atualizadas} atualizada(s) de ${obras.length} encontrada(s) no Sienge.` },
       })
-      return { criadas, total: obras.length }
+      return { criadas, atualizadas, total: obras.length }
     }),
 
   importarFornecedores: protectedProcedure

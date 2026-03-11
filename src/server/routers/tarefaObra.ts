@@ -58,4 +58,48 @@ export const tarefaObraRouter = createTRPCRouter({
       })
       return ctx.db.tarefaObra.delete({ where: { id: input.id } })
     }),
+
+  criarLote: protectedProcedure
+    .input(z.object({
+      obraId: z.string(),
+      tarefas: z.array(z.object({
+        codigo:          z.string().optional(),
+        codigoPai:       z.string().optional(),
+        nome:            z.string().min(1),
+        setor:           z.string().optional(),
+        unidade:         z.string().optional(),
+        quantidadeTotal: z.number().min(0).optional(),
+        ordem:           z.number().int().optional(),
+      })),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const obra = await ctx.db.obra.findFirst({
+        where: { id: input.obraId, empresaId: ctx.session.empresaId },
+      })
+      if (!obra) throw new Error("Obra não encontrada")
+
+      const codigoMap = new Map<string, string>() // codigo → id criado
+      let criadas = 0
+
+      for (let i = 0; i < input.tarefas.length; i++) {
+        const t = input.tarefas[i]
+        const parentId = t.codigoPai ? codigoMap.get(t.codigoPai) : undefined
+        const criada = await ctx.db.tarefaObra.create({
+          data: {
+            obraId:          input.obraId,
+            codigo:          t.codigo,
+            nome:            t.nome,
+            setor:           t.setor,
+            unidade:         t.unidade ?? "un",
+            quantidadeTotal: t.quantidadeTotal ?? 0,
+            parentId,
+            ordem:           t.ordem ?? i,
+          },
+        })
+        if (t.codigo) codigoMap.set(t.codigo, criada.id)
+        criadas++
+      }
+
+      return { criadas }
+    }),
 })

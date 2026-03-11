@@ -44,6 +44,9 @@ import {
   getExtratoClientePdfSienge,
   listarClientesSienge,
   getInformeIRPdfSienge,
+  listarRdosSienge,
+  listarSolicitacoesPorObraSienge,
+  listarPedidosSienge,
 } from "@/lib/sienge/client"
 
 type Ctx = { db: typeof import("../db").db; session: { empresaId: string; userId: string; nome: string } }
@@ -479,5 +482,44 @@ export const siengeRouter = createTRPCRouter({
       const config = await getSiengeConfigOptional(ctx)
       if (!config) return null
       return { url: `/api/sienge/pdf/ir/${input.clienteId}?ano=${input.ano}` }
+    }),
+
+  listarRdosPorObra: protectedProcedure
+    .input(z.object({ obraId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const config = await getSiengeConfigOptional(ctx)
+      if (!config) return []
+      const obra = await ctx.db.obra.findFirst({
+        where: { id: input.obraId, empresaId: ctx.session.empresaId },
+        select: { siengeId: true },
+      })
+      if (!obra?.siengeId) return []
+      return listarRdosSienge(config.sub, config.user, config.pass, parseInt(obra.siengeId))
+    }),
+
+  listarSolicitacoesPorObra: protectedProcedure
+    .input(z.object({ obraId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const config = await getSiengeConfigOptional(ctx)
+      if (!config) return []
+      const obra = await ctx.db.obra.findFirst({
+        where: { id: input.obraId, empresaId: ctx.session.empresaId },
+        select: { siengeId: true },
+      })
+      if (!obra?.siengeId) return []
+      return listarSolicitacoesPorObraSienge(config.sub, config.user, config.pass, parseInt(obra.siengeId))
+    }),
+
+  listarPedidosPorObra: protectedProcedure
+    .input(z.object({ obraId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const config = await getSiengeConfigOptional(ctx)
+      if (!config) return []
+      const obra = await ctx.db.obra.findFirst({
+        where: { id: input.obraId, empresaId: ctx.session.empresaId },
+        select: { siengeId: true },
+      })
+      if (!obra?.siengeId) return []
+      return listarPedidosSienge(config.sub, config.user, config.pass, parseInt(obra.siengeId))
     }),
 })
