@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useState } from "react"
-import { Plus, HardHat, FileText, Image, MessageSquare, MapPin, Search, LayoutGrid, List, Loader2 } from "lucide-react"
+import { Plus, HardHat, FileText, MessageSquare, MapPin, Search, LayoutGrid, List, Loader2 } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { cn } from "@/lib/utils"
 
@@ -217,10 +217,6 @@ export default function ObrasPage() {
                         <div className="flex items-center gap-1.5 text-muted-foreground group-hover:text-foreground transition-colors">
                           <FileText className="h-4 w-4" />
                           <span className="text-xs font-semibold">{obra._count.rdos}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-muted-foreground group-hover:text-foreground transition-colors">
-                          <Image className="h-4 w-4" />
-                          <span className="text-xs font-semibold">{obra._count.midias}</span>
                         </div>
                         <div className="flex items-center gap-1.5 text-muted-foreground group-hover:text-foreground transition-colors">
                           <MessageSquare className="h-4 w-4" />

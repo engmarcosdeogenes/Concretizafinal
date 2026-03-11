@@ -22,7 +22,7 @@ export const obraRouter = createTRPCRouter({
           ...(input?.grupo ? { grupo: input.grupo } : {}),
         },
         include: {
-          _count: { select: { rdos: true, fvs: true, ocorrencias: true, midias: true } },
+          _count: { select: { rdos: true, fvs: true, ocorrencias: true } },
         },
         orderBy: { updatedAt: "desc" },
       })
@@ -45,7 +45,7 @@ export const obraRouter = createTRPCRouter({
           _count: {
             select: {
               rdos: true, fvs: true, fvm: true,
-              ocorrencias: true, documentos: true, midias: true,
+              ocorrencias: true, documentos: true,
             },
           },
         },

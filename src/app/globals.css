@@ -37,6 +37,10 @@
   --radius-sm: calc(var(--radius) - 4px);
 }
 
+html {
+  font-size: 87.5%; /* ~14px — reduz UI para ~87.5% do tamanho padrão */
+}
+
 :root {
   /* Sidebar */
   --sidebar-bg: #0a0e27;
