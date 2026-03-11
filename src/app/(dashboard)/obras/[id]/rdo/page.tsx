@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ClipboardList, Plus, Sun, Cloud, CloudRain, Wind, Camera, CheckCircle2, Clock, AlertCircle, Users, Copy, Download } from "lucide-react"
+import { ClipboardList, Plus, Sun, Cloud, CloudRain, Wind, CheckCircle2, Clock, AlertCircle, Users, Copy, Download } from "lucide-react"
 import { toast } from "sonner"
 import { trpc } from "@/lib/trpc/client"
 import { formatDataCurta, diaSemanaAbrev } from "@/lib/format"
@@ -191,11 +191,6 @@ export default function RdoPage() {
                 ) : (
                   <p className="text-xs text-[var(--text-muted)] italic">Sem atividades</p>
                 )}
-                <div className="flex items-center gap-3 mt-1.5">
-                  <span className="flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
-                    <Camera size={10} /> {rdo._count.midias} fotos
-                  </span>
-                </div>
               </div>
 
               {/* Responsável */}

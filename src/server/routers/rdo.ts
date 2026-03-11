@@ -25,7 +25,6 @@ export const rdoRouter = createTRPCRouter({
         include: {
           atividades: { select: { descricao: true } },
           equipe: { select: { quantidade: true } },
-          _count: { select: { midias: true } },
           responsavel: { select: { nome: true } },
         },
         orderBy: { data: "desc" },
@@ -46,7 +45,6 @@ export const rdoRouter = createTRPCRouter({
           assinaturas: { orderBy: { ordem: "asc" } },
           materiaisRecebidos: true,
           materiaisUtilizados: true,
-          _count: { select: { midias: true } },
           responsavel: { select: { nome: true } },
           obra: {
             select: {
