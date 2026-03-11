@@ -92,6 +92,7 @@ export default function ObraOverviewPage() {
   const [form, setForm] = useState({
     nome: "", descricao: "", endereco: "", cidade: "", estado: "",
     status: "", progresso: "", orcamento: "", dataInicio: "", dataFim: "",
+    grupo: "", numContrato: "", prazoContratualDias: "",
   })
   const [editImagemUrl, setEditImagemUrl] = useState<string | null>(null)
   const [uploadandoCapa, setUploadandoCapa] = useState(false)
@@ -114,16 +115,19 @@ export default function ObraOverviewPage() {
   function abrirModal() {
     if (!obra) return
     setForm({
-      nome:       obra.nome,
-      descricao:  obra.descricao ?? "",
-      endereco:   obra.endereco ?? "",
-      cidade:     obra.cidade ?? "",
-      estado:     obra.estado ?? "",
-      status:     obra.status,
-      progresso:  String(obra.progresso ?? 0),
-      orcamento:  obra.orcamento ? String(obra.orcamento) : "",
-      dataInicio: obra.dataInicio ? new Date(obra.dataInicio).toISOString().slice(0, 10) : "",
-      dataFim:    obra.dataFim    ? new Date(obra.dataFim).toISOString().slice(0, 10) : "",
+      nome:               obra.nome,
+      descricao:          obra.descricao ?? "",
+      endereco:           obra.endereco ?? "",
+      cidade:             obra.cidade ?? "",
+      estado:             obra.estado ?? "",
+      status:             obra.status,
+      progresso:          String(obra.progresso ?? 0),
+      orcamento:          obra.orcamento ? String(obra.orcamento) : "",
+      dataInicio:         obra.dataInicio ? new Date(obra.dataInicio).toISOString().slice(0, 10) : "",
+      dataFim:            obra.dataFim    ? new Date(obra.dataFim).toISOString().slice(0, 10) : "",
+      grupo:              obra.grupo ?? "",
+      numContrato:        obra.numContrato ?? "",
+      prazoContratualDias: obra.prazoContratualDias ? String(obra.prazoContratualDias) : "",
     })
     setEditImagemUrl(obra.imagemUrl ?? null)
     setEditOpen(true)
@@ -161,7 +165,10 @@ export default function ObraOverviewPage() {
       orcamento:  form.orcamento ? Number(form.orcamento) : undefined,
       dataInicio: form.dataInicio || undefined,
       dataFim:    form.dataFim    || undefined,
-      imagemUrl:  editImagemUrl,
+      imagemUrl:           editImagemUrl,
+      grupo:               form.grupo || undefined,
+      numContrato:         form.numContrato || undefined,
+      prazoContratualDias: form.prazoContratualDias ? parseInt(form.prazoContratualDias, 10) : undefined,
     })
   }
 
@@ -391,6 +398,9 @@ export default function ObraOverviewPage() {
                 { label: "Início",           value: obra.dataInicio ? formatDataCurta(obra.dataInicio) : "—" },
                 { label: "Término previsto", value: obra.dataFim    ? formatDataCurta(obra.dataFim)    : "—" },
                 { label: "Orçamento",        value: obra.orcamento  ? `R$ ${obra.orcamento.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—" },
+                ...(obra.numContrato        ? [{ label: "Contrato",  value: obra.numContrato }] : []),
+                ...(obra.prazoContratualDias ? [{ label: "Prazo",    value: `${obra.prazoContratualDias} dias` }] : []),
+                ...(obra.grupo              ? [{ label: "Grupo",    value: obra.grupo }] : []),
               ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between items-center py-1 border-b border-border last:border-0">
                   <span className="text-xs text-[var(--text-muted)]">{label}</span>
@@ -575,6 +585,25 @@ export default function ObraOverviewPage() {
                   <label className={labelCls}>Estado</label>
                   <input type="text" value={form.estado} onChange={e => set("estado", e.target.value)}
                     className={inputCls} placeholder="SP" maxLength={2} />
+                </div>
+              </div>
+
+              <div>
+                <label className={labelCls}>Grupo / Regional</label>
+                <input type="text" value={form.grupo} onChange={e => set("grupo", e.target.value)}
+                  className={inputCls} placeholder="Ex: Goiânia, FNDE, Cliente ABC..." />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={labelCls}>N° do Contrato</label>
+                  <input type="text" value={form.numContrato} onChange={e => set("numContrato", e.target.value)}
+                    className={inputCls} placeholder="Ex: 034/2025" />
+                </div>
+                <div>
+                  <label className={labelCls}>Prazo Contratual (dias)</label>
+                  <input type="number" min="1" value={form.prazoContratualDias} onChange={e => set("prazoContratualDias", e.target.value)}
+                    className={inputCls} placeholder="Ex: 389" />
                 </div>
               </div>
 

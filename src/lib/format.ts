@@ -20,3 +20,13 @@ export function diaSemanaAbrev(d: Date | string): string {
 export function diaSemanaNome(d: Date | string): string {
   return DIAS_NOME[new Date(d).getDay()]
 }
+
+/** R$ 1.234,56 */
+export function formatMoeda(v: number): string {
+  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+}
+
+/** 1.234,56 (sem símbolo) */
+export function formatNumero(v: number, decimais = 2): string {
+  return v.toLocaleString("pt-BR", { minimumFractionDigits: decimais, maximumFractionDigits: decimais })
+}

@@ -4,9 +4,10 @@ import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts"
+import Link from "next/link"
 import {
   TrendingUp, AlertTriangle, CheckSquare, ClipboardList,
-  HardHat, BarChart2, DollarSign, Package,
+  HardHat, BarChart2, DollarSign, Package, Images,
 } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 
@@ -48,13 +49,32 @@ const tooltipStyle = {
   itemStyle: { fontWeight: 600 },
 }
 
+function AnalisesNav() {
+  return (
+    <div className="flex gap-1 mb-6 border-b border-border">
+      <Link href="/analises" className="px-5 py-2.5 text-sm font-medium border-b-2 border-orange-500 text-orange-600 -mb-px">
+        Indicadores
+      </Link>
+      <Link href="/analises/mao-de-obra" className="px-5 py-2.5 text-sm font-medium border-b-2 border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)] -mb-px">
+        Mão de Obra
+      </Link>
+      <Link href="/analises/galeria" className="px-5 py-2.5 text-sm font-medium border-b-2 border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)] -mb-px">
+        Galeria
+      </Link>
+    </div>
+  )
+}
+
 export default function AnalisesPage() {
   const { data, isLoading } = trpc.analises.resumo.useQuery()
 
   if (isLoading) {
     return (
-      <div className="p-8 flex items-center justify-center h-64">
-        <p className="text-sm text-[var(--text-muted)]">Carregando análises...</p>
+      <div className="p-8">
+        <AnalisesNav />
+        <div className="flex items-center justify-center h-64">
+          <p className="text-sm text-[var(--text-muted)]">Carregando análises...</p>
+        </div>
       </div>
     )
   }
@@ -80,16 +100,26 @@ export default function AnalisesPage() {
 
   return (
     <div className="p-6 md:p-8 space-y-8 max-w-7xl mx-auto">
+      <AnalisesNav />
 
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-          <BarChart2 size={20} className="text-blue-600" />
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+            <BarChart2 size={20} className="text-blue-600" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-[var(--text-primary)]">Análises</h1>
+            <p className="text-[var(--text-muted)] text-sm mt-0.5">Indicadores e tendências de todas as obras</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--text-primary)]">Análises</h1>
-          <p className="text-[var(--text-muted)] text-sm mt-0.5">Indicadores e tendências de todas as obras</p>
-        </div>
+        <Link
+          href="/analises/galeria"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-border rounded-xl text-sm font-medium text-[var(--text-primary)] hover:bg-slate-50 transition-colors"
+        >
+          <Images size={15} className="text-violet-500" />
+          Galeria de fotos
+        </Link>
       </div>
 
       {/* KPIs */}

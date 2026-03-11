@@ -122,25 +122,55 @@ enum RecorrenciaTipo {
   MENSAL
 }
 
+enum StatusPresencaMO {
+  PRESENTE
+  AFASTADO
+  ATESTADO
+  DESLOCANDO
+  FALTA_JUSTIFICADA
+  FERIAS
+  FOLGA
+  LICENCA
+  TREINAMENTO
+  VIAGEM
+}
+
 // ─── Multi-tenant ─────────────────────────────────────────────────────────────
 
 model Empresa {
-  id        String       @id @default(cuid())
-  nome      String
-  cnpj      String?      @unique
-  plano     PlanoEmpresa @default(BASICO)
-  logoUrl   String?
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  id                  String       @id @default(cuid())
+  nome                String
+  cnpj                String?      @unique
+  plano               PlanoEmpresa @default(BASICO)
+  logoUrl             String?
+  camposPersonalizados Json?        // [{ id, nome, tipo, secao, obrigatorio, opcoes? }]
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
 
-  usuarios      Usuario[]
-  obras         Obra[]
-  fornecedores  Fornecedor[]
-  materiais     MaterialCatalogo[]
-  equipamentos  Equipamento[]
-  convites      Convite[]
-  templatesFvs  TemplateFVS[]
-  integracao    IntegracaoConfig?
+  usuarios           Usuario[]
+  obras              Obra[]
+  fornecedores       Fornecedor[]
+  materiais          MaterialCatalogo[]
+  equipamentos       Equipamento[]
+  convites           Convite[]
+  templatesFvs       TemplateFVS[]
+  templatesChecklist TemplateChecklist[]
+  integracao         IntegracaoConfig?
+  modelosRelatorio   ModeloRelatorio[]
+}
+
+model ModeloRelatorio {
+  id             String   @id @default(cuid())
+  empresaId      String
+  nome           String
+  nomeRelatorio  String   @default("Relatório Diário de Obra")
+  logoUrl        String?
+  secoesVisiveis Json     @default("[\"equipe\",\"atividades\",\"equipamentos\",\"ocorrencias\",\"materiais\",\"clima\",\"fotos\",\"assinaturas\"]")
+  ativo          Boolean  @default(true)
+  criadoEm       DateTime @default(now())
+  atualizadoEm   DateTime @updatedAt
+
+  empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 }
 
 model Usuario {
@@ -182,26 +212,33 @@ model Obra {
   custoAtual  Float      @default(0)
   dataInicio  DateTime?
   dataFim     DateTime?
-  imagemUrl   String?
-  siengeId    String?
-  empresaId   String
+  imagemUrl           String?
+  siengeId            String?
+  grupo               String?
+  numContrato         String?
+  prazoContratualDias Int?
+  equipePredef        Json?
+  equipamentosPredef  Json?
+  empresaId           String
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
-  empresa      Empresa               @relation(fields: [empresaId], references: [id])
-  usuarios     ObraUsuario[]
-  rdos         RDO[]
-  fvs          FVS[]
-  fvm          FVM[]
-  ocorrencias  Ocorrencia[]
-  plantas      Planta[]
-  equipe       MembroEquipe[]
-  documentos   Documento[]
-  midias       Midia[]
-  mensagens    MensagemChat[]
-  solicitacoes SolicitacaoCompra[]
-  movimentacoes MovimentacaoMaterial[]
-  lancamentos  LancamentoFinanceiro[]
+  empresa              Empresa               @relation(fields: [empresaId], references: [id])
+  usuarios             ObraUsuario[]
+  rdos                 RDO[]
+  fvs                  FVS[]
+  fvm                  FVM[]
+  ocorrencias          Ocorrencia[]
+  plantas              Planta[]
+  equipe               MembroEquipe[]
+  documentos           Documento[]
+  midias               Midia[]
+  mensagens            MensagemChat[]
+  solicitacoes         SolicitacaoCompra[]
+  movimentacoes        MovimentacaoMaterial[]
+  lancamentos          LancamentoFinanceiro[]
+  medicoes             MedicaoObra[]
+  respostasChecklist   RespostaChecklist[]
 }
 
 model ObraUsuario {
@@ -233,11 +270,18 @@ model RDO {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  obra        Obra           @relation(fields: [obraId], references: [id], onDelete: Cascade)
-  responsavel Usuario        @relation(fields: [responsavelId], references: [id])
-  atividades  RDOAtividade[]
-  equipe      RDOEquipe[]
-  midias      Midia[]
+  siengeReportId           String?   // ID do RDO criado no Sienge (evita duplicatas)
+  visualizacoes            Int       @default(0)
+  valoresCamposPersonalizados Json?  // { [campoId]: valor }
+
+  obra               Obra                  @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  responsavel        Usuario               @relation(fields: [responsavelId], references: [id])
+  atividades         RDOAtividade[]
+  equipe             RDOEquipe[]
+  midias             Midia[]
+  assinaturas        AssinaturaRDO[]
+  materiaisRecebidos RDOMaterialRecebido[]
+  materiaisUtilizados RDOMaterialUtilizado[]
 }
 
 model RDOAtividade {
@@ -252,11 +296,45 @@ model RDOAtividade {
 }
 
 model RDOEquipe {
-  id         String @id @default(cuid())
-  rdoId      String
-  funcao     String
-  quantidade Int
-  observacao String?
+  id             String           @id @default(cuid())
+  rdoId          String
+  funcao         String
+  quantidade     Int
+  observacao     String?
+  statusPresenca StatusPresencaMO @default(PRESENTE)
+
+  rdo RDO @relation(fields: [rdoId], references: [id], onDelete: Cascade)
+}
+
+model AssinaturaRDO {
+  id        String   @id @default(cuid())
+  rdoId     String
+  label     String   // ex: "Responsável Técnico", "Mestre de Obras"
+  imagemUrl String?
+  ordem     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  rdo RDO @relation(fields: [rdoId], references: [id], onDelete: Cascade)
+}
+
+model RDOMaterialRecebido {
+  id           String  @id @default(cuid())
+  rdoId        String
+  materialNome String
+  quantidade   Float
+  unidade      String?
+  fornecedor   String?
+
+  rdo RDO @relation(fields: [rdoId], references: [id], onDelete: Cascade)
+}
+
+model RDOMaterialUtilizado {
+  id            String  @id @default(cuid())
+  rdoId         String
+  materialNome  String
+  quantidade    Float
+  unidade       String?
+  localAplicado String?
 
   rdo RDO @relation(fields: [rdoId], references: [id], onDelete: Cascade)
 }
@@ -354,8 +432,9 @@ model MembroEquipe {
   obraId      String
   nome        String
   funcao      String
-  cpf         String?
-  telefone    String?
+  cpf              String?
+  siengeCreditorId Int?
+  telefone         String?
   empresaNome String?
   dataEntrada DateTime  @default(now())
   dataSaida   DateTime?
@@ -436,9 +515,10 @@ model SolicitacaoCompra {
   solicitanteId String
   status        StatusSolicitacao @default(RASCUNHO)
   urgencia      Int               @default(2)
-  observacoes   String?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
+  observacoes              String?
+  siengePurchaseRequestId  Int?
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
 
   obra        Obra              @relation(fields: [obraId], references: [id])
   solicitante Usuario           @relation(fields: [solicitanteId], references: [id])
@@ -466,11 +546,12 @@ model PedidoCompra {
   total            Float?
   previsaoEntrega  DateTime?
   observacoes      String?
-  notaFiscalNumero String?
-  notaFiscalUrl    String?
-  notaFiscalValor  Float?
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  notaFiscalNumero      String?
+  notaFiscalUrl         String?
+  notaFiscalValor       Float?
+  siengePurchaseOrderId Int?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
 
   solicitacao SolicitacaoCompra? @relation(fields: [solicitacaoId], references: [id])
   fornecedor  Fornecedor         @relation(fields: [fornecedorId], references: [id])
@@ -622,15 +703,17 @@ model PushSubscription {
 // ─── Integrações ──────────────────────────────────────────────────────────────
 
 model IntegracaoConfig {
-  id         String   @id @default(cuid())
-  empresaId  String   @unique
-  tipo       String   @default("SIENGE")
-  subdominio String
-  usuario    String
-  senha      String
-  ativo      Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id               String   @id @default(cuid())
+  empresaId        String   @unique
+  tipo             String   @default("SIENGE")
+  subdominio       String
+  usuario          String
+  senha            String
+  ativo            Boolean  @default(true)
+  webhookSecret    String?
+  siengeWebhookId  Int?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   empresa Empresa        @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   syncs   IntegracaoSync[]
@@ -660,4 +743,84 @@ model MensagemChat {
 
   obra    Obra    @relation(fields: [obraId], references: [id], onDelete: Cascade)
   usuario Usuario @relation(fields: [usuarioId], references: [id])
+}
+
+// ─── Medição de Obra ──────────────────────────────────────────────────────────
+
+model MedicaoObra {
+  id        String      @id @default(cuid())
+  obraId    String
+  data      DateTime
+  descricao String?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  obra  Obra          @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  itens MedicaoItem[]
+}
+
+model MedicaoItem {
+  id                  String  @id @default(cuid())
+  medicaoId           String
+  descricao           String
+  unidade             String?
+  qtdPrevista         Float?
+  qtdMedida           Float
+  percentual          Float?
+  siengeProgressLogId String?
+
+  medicao MedicaoObra @relation(fields: [medicaoId], references: [id], onDelete: Cascade)
+}
+
+// ─── Checklist Personalizável ──────────────────────────────────────────────────
+
+model TemplateChecklist {
+  id        String   @id @default(cuid())
+  empresaId String
+  nome      String
+  descricao String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  empresa   Empresa                 @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  itens     ItemTemplateChecklist[]
+  respostas RespostaChecklist[]
+}
+
+model ItemTemplateChecklist {
+  id          String  @id @default(cuid())
+  templateId  String
+  descricao   String
+  secao       String?
+  obrigatorio Boolean @default(false)
+  ordem       Int     @default(0)
+
+  template  TemplateChecklist       @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  respostas ItemRespostaChecklist[]
+}
+
+model RespostaChecklist {
+  id             String   @id @default(cuid())
+  obraId         String
+  templateId     String
+  data           DateTime @default(now())
+  assinaturaUrl  String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  obra     Obra                    @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  template TemplateChecklist       @relation(fields: [templateId], references: [id])
+  itens    ItemRespostaChecklist[]
+}
+
+model ItemRespostaChecklist {
+  id         String   @id @default(cuid())
+  respostaId String
+  itemId     String
+  conforme   Boolean?
+  observacao String?
+  fotoUrl    String?
+
+  resposta RespostaChecklist     @relation(fields: [respostaId], references: [id], onDelete: Cascade)
+  item     ItemTemplateChecklist @relation(fields: [itemId], references: [id])
 }

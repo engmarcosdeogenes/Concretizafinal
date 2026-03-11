@@ -3,6 +3,15 @@ import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
 import { canManageUsers, getDefaultPermissoes } from "@/lib/permissions"
 
+export type CampoPersonalizado = {
+  id:          string
+  nome:        string
+  tipo:        "TEXT" | "NUMBER" | "BOOLEAN" | "SELECT"
+  secao:       "GERAL" | "ATIVIDADES" | "OCORRENCIAS"
+  obrigatorio: boolean
+  opcoes?:     string[]
+}
+
 const permissoesSchema = z.object({
   verFinanceiro:       z.boolean(),
   aprovarRdo:          z.boolean(),
@@ -138,5 +147,34 @@ export const configuracoesRouter = createTRPCRouter({
         where: { id: input.usuarioId },
         data:  { ativo: false },
       })
+    }),
+
+  // ── Campos Personalizados do RDO ─────────────────────────────────────────
+  buscarCamposPersonalizados: protectedProcedure
+    .query(async ({ ctx }) => {
+      const empresa = await ctx.db.empresa.findUnique({
+        where: { id: ctx.session.empresaId },
+        select: { camposPersonalizados: true },
+      })
+      return (empresa?.camposPersonalizados ?? []) as CampoPersonalizado[]
+    }),
+
+  salvarCamposPersonalizados: protectedProcedure
+    .input(z.object({
+      campos: z.array(z.object({
+        id:          z.string(),
+        nome:        z.string().min(1),
+        tipo:        z.enum(["TEXT", "NUMBER", "BOOLEAN", "SELECT"]),
+        secao:       z.enum(["GERAL", "ATIVIDADES", "OCORRENCIAS"]),
+        obrigatorio: z.boolean(),
+        opcoes:      z.array(z.string()).optional(),
+      })),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.empresa.update({
+        where: { id: ctx.session.empresaId },
+        data:  { camposPersonalizados: input.campos },
+      })
+      return { sucesso: true }
     }),
 })

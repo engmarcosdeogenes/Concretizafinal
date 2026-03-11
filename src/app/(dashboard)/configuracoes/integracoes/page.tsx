@@ -5,6 +5,7 @@ import { useState } from "react"
 import {
   ArrowLeft, Puzzle, CheckCircle2, Clock, RefreshCw, Plug,
   Eye, EyeOff, Building2, Users, ShoppingCart, ChevronDown, ChevronUp,
+  Webhook, Zap, ZapOff,
 } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { toast } from "sonner"
@@ -103,6 +104,21 @@ export default function IntegracoesPage() {
   const importarFornecedores = trpc.integracoes.importarFornecedores.useMutation({
     onSuccess: (r) => { toast.success(`${r.criados} fornecedor(es) importado(s) de ${r.total} analisado(s).`); utils.integracoes.listarSyncs.invalidate() },
     onError:   (e) => { toast.error(e.message); utils.integracoes.listarSyncs.invalidate() },
+  })
+
+  const { data: webhookStatus } = trpc.sienge.buscarStatusWebhook.useQuery(
+    undefined,
+    { enabled: !!config }
+  )
+
+  const registrarWebhook = trpc.sienge.registrarWebhook.useMutation({
+    onSuccess: () => { toast.success("Webhook registrado! Sienge enviará eventos em tempo real."); utils.sienge.buscarStatusWebhook.invalidate() },
+    onError: (e) => toast.error(e.message),
+  })
+
+  const removerWebhook = trpc.sienge.removerWebhook.useMutation({
+    onSuccess: () => { toast.success("Webhook removido."); utils.sienge.buscarStatusWebhook.invalidate() },
+    onError: (e) => toast.error(e.message),
   })
 
   const configurado = !!config
@@ -304,6 +320,48 @@ export default function IntegracoesPage() {
                 )}
               </div>
             )}
+
+            {/* Webhooks */}
+            <div className={cn("rounded-xl border p-4", webhookStatus?.registrado ? "border-green-200 bg-green-50" : "border-border bg-white")}>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <Webhook size={16} className={webhookStatus?.registrado ? "text-green-600" : "text-slate-400"} />
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--text-primary)]">
+                      Webhooks em tempo real
+                      {webhookStatus?.registrado && (
+                        <span className="ml-2 inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 bg-green-100 text-green-700 rounded-full font-semibold">
+                          <Zap size={9} /> Ativo
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {webhookStatus?.registrado
+                        ? `ID ${webhookStatus.webhookId} — recebendo pedidos, contratos e pagamentos automaticamente`
+                        : "Pedidos autorizados, contratos e pagamentos chegam automaticamente ao Concretiza"
+                      }
+                    </p>
+                  </div>
+                </div>
+                {webhookStatus?.registrado ? (
+                  <button
+                    onClick={() => removerWebhook.mutate()}
+                    disabled={removerWebhook.isPending}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-white border border-red-200 hover:bg-red-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <ZapOff size={12} /> {removerWebhook.isPending ? "Removendo..." : "Desativar"}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => registrarWebhook.mutate({ appUrl: window.location.origin })}
+                    disabled={registrarWebhook.isPending}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-orange-500 hover:bg-orange-600 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <Zap size={12} /> {registrarWebhook.isPending ? "Registrando..." : "Ativar webhooks"}
+                  </button>
+                )}
+              </div>
+            </div>
 
             {/* Histórico de syncs */}
             {syncs.length > 0 && (

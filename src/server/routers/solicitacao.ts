@@ -1,6 +1,8 @@
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
+import { decrypt, isEncrypted } from "@/lib/encrypt"
+import { criarSolicitacaoSienge } from "@/lib/sienge/client"
 
 const StatusSolicitacao = z.enum(["RASCUNHO", "PENDENTE", "APROVADA", "REJEITADA", "CANCELADA"])
 
@@ -87,10 +89,42 @@ export const solicitacaoRouter = createTRPCRouter({
       status: StatusSolicitacao,
     }))
     .mutation(async ({ ctx, input }) => {
-      return ctx.db.solicitacaoCompra.update({
+      const result = await ctx.db.solicitacaoCompra.update({
         where: { id: input.id },
         data:  { status: input.status },
       })
+      // Fire-and-forget: criar no Sienge quando enviada para aprovação
+      if (input.status === "PENDENTE") {
+        ctx.db.solicitacaoCompra.findFirst({
+          where: { id: input.id },
+          include: {
+            itens: { include: { material: { select: { nome: true } } } },
+            obra:  { select: { siengeId: true } },
+          },
+        }).then(async sol => {
+          if (!sol?.obra?.siengeId || sol.siengePurchaseRequestId) return
+          const config = await ctx.db.integracaoConfig.findUnique({
+            where: { empresaId: ctx.session.empresaId },
+          })
+          if (!config) return
+          const senha = isEncrypted(config.senha) ? decrypt(config.senha) : config.senha
+          const sienge = await criarSolicitacaoSienge(config.subdominio, config.usuario, senha, {
+            buildingId:   parseInt(sol.obra.siengeId),
+            requestDate:  new Date().toISOString().split("T")[0],
+            observations: sol.observacoes ?? undefined,
+            items: sol.itens.map(i => ({
+              description: i.material.nome,
+              quantity:    i.quantidade,
+              unit:        i.unidade ?? undefined,
+            })),
+          })
+          await ctx.db.solicitacaoCompra.update({
+            where: { id: input.id },
+            data:  { siengePurchaseRequestId: sienge.id },
+          }).catch(() => {})
+        }).catch(() => {})
+      }
+      return result
     }),
 
   atualizar: protectedProcedure

@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react"
 import * as XLSX from "xlsx"
+import Link from "next/link"
 import { Building2, Plus, X, Phone, Mail, MapPin, Search, Filter, Users, Calendar, TrendingUp, FileSpreadsheet, FileJson } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 
@@ -345,14 +346,22 @@ export default function FornecedoresPage() {
                 </td>
 
                 <td className="px-5 py-4 text-right">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => abrirEditar(f)}
-                    className="font-semibold text-primary"
-                  >
-                    Editar
-                  </Button>
+                  <div className="flex items-center justify-end gap-1">
+                    <Link
+                      href={`/suprimentos/fornecedores/${f.id}`}
+                      className="px-2 py-1.5 text-xs border border-border rounded-lg hover:bg-muted transition-colors text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                    >
+                      Detalhes
+                    </Link>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => abrirEditar(f)}
+                      className="font-semibold text-primary"
+                    >
+                      Editar
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}

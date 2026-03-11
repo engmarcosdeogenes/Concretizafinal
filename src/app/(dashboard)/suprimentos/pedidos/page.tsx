@@ -2,10 +2,11 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { ShoppingCart, Plus, Truck, Search } from "lucide-react"
+import { ShoppingCart, Plus, Truck, Search, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { trpc } from "@/lib/trpc/client"
 import { formatDataCurta } from "@/lib/format"
+import { toast } from "sonner"
 
 const STATUS_MAP = {
   RASCUNHO:       { label: "Rascunho",       cls: "bg-slate-50 text-slate-600 border border-slate-200" },
@@ -20,7 +21,17 @@ export default function PedidosPage() {
   const [busca, setBusca] = useState("")
   const [filtroStatus, setFiltroStatus] = useState("")
 
+  const utils = trpc.useUtils()
   const { data: pedidos = [], isLoading } = trpc.pedido.listar.useQuery()
+  const { data: pedidosSienge = [], isLoading: loadingSienge } = trpc.integracoes.pedidosSienge.useQuery({})
+
+  const autorizarPedido = trpc.sienge.autorizarPedido.useMutation({
+    onSuccess: () => {
+      toast.success("Pedido autorizado no Sienge!")
+      void utils.integracoes.pedidosSienge.invalidate()
+    },
+    onError: (err) => toast.error(err.message),
+  })
 
   const filtered = pedidos.filter(p => {
     const q = busca.toLowerCase()
@@ -157,6 +168,68 @@ export default function PedidosPage() {
           )
         })}
       </div>
+
+      {/* Pedidos Sienge */}
+      {(pedidosSienge.length > 0 || loadingSienge) && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">Pedidos no Sienge</h2>
+            {loadingSienge && <RefreshCw size={13} className="text-[var(--text-muted)] animate-spin" />}
+          </div>
+
+          <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
+            <div className="grid grid-cols-[1fr_100px_80px_120px_100px] gap-3 px-5 py-3 bg-muted border-b border-border">
+              <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Pedido</span>
+              <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Data</span>
+              <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Total</span>
+              <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Status</span>
+              <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Ação</span>
+            </div>
+
+            {pedidosSienge.map(p => (
+              <div key={p.id} className="grid grid-cols-[1fr_100px_80px_120px_100px] gap-3 px-5 py-4 border-b border-border last:border-0 items-center">
+                <div>
+                  <p className="text-sm font-medium text-[var(--text-primary)]">
+                    {p.formattedPurchaseOrderId ?? `#${p.id}`}
+                  </p>
+                  {p.notes && <p className="text-xs text-[var(--text-muted)] truncate">{p.notes}</p>}
+                </div>
+                <span className="text-xs text-[var(--text-muted)]">{p.date ? formatDataCurta(new Date(p.date)) : "—"}</span>
+                <span className="text-sm font-semibold text-[var(--text-primary)]">
+                  {p.totalAmount != null ? `R$ ${p.totalAmount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—"}
+                </span>
+                <div>
+                  {p.authorized ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
+                      <CheckCircle2 size={10} />Autorizado
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                      <AlertCircle size={10} />Pendente
+                    </span>
+                  )}
+                </div>
+                <div>
+                  {!p.authorized && (
+                    <button
+                      type="button"
+                      disabled={autorizarPedido.isPending}
+                      onClick={() => {
+                        if (confirm(`Autorizar pedido ${p.formattedPurchaseOrderId ?? `#${p.id}`} no Sienge?`)) {
+                          autorizarPedido.mutate({ pedidoId: p.id })
+                        }
+                      }}
+                      className="btn-orange text-xs py-1.5 px-3 min-h-0 disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                      Autorizar
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

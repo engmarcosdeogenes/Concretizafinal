@@ -10,6 +10,7 @@ type Membro = {
   id: string; nome: string; funcao: string; cpf?: string | null
   telefone?: string | null; empresaNome?: string | null
   dataEntrada: Date; dataSaida?: Date | null; ativo: boolean
+  siengeCreditorId?: number | null
 }
 
 type FormState = {
@@ -161,7 +162,14 @@ export default function EquipePage() {
             <div key={m.id}
               className="grid grid-cols-[1fr_140px_120px_100px_80px] gap-3 px-5 py-3.5 border-b border-border last:border-0 items-center hover:bg-muted transition-colors">
               <div>
-                <p className="text-sm font-semibold text-[var(--text-primary)]">{m.nome}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">{m.nome}</p>
+                  {m.siengeCreditorId && (
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-50 text-green-700 border border-green-200">
+                      Sienge
+                    </span>
+                  )}
+                </div>
                 {m.cpf && <p className="text-[11px] text-[var(--text-muted)] font-mono">{m.cpf}</p>}
                 {m.telefone && (
                   <p className="text-[11px] text-[var(--text-muted)] flex items-center gap-1">

@@ -45,6 +45,32 @@ export const midiaRouter = createTRPCRouter({
       return ctx.db.midia.create({ data: { ...input } })
     }),
 
+  galeria: protectedProcedure
+    .input(z.object({
+      obraId:  z.string().optional(),
+      tipo:    z.enum(["FOTO", "VIDEO"]).optional(),
+      page:    z.number().int().min(1).default(1),
+      perPage: z.number().int().min(1).max(60).default(30),
+    }))
+    .query(async ({ ctx, input }) => {
+      const where = {
+        obra: { empresaId: ctx.session.empresaId },
+        ...(input.obraId && { obraId: input.obraId }),
+        ...(input.tipo   && { tipo: input.tipo }),
+      }
+      const [midias, total] = await Promise.all([
+        ctx.db.midia.findMany({
+          where,
+          include: { obra: { select: { nome: true } } },
+          orderBy: { createdAt: "desc" },
+          skip: (input.page - 1) * input.perPage,
+          take: input.perPage,
+        }),
+        ctx.db.midia.count({ where }),
+      ])
+      return { midias, total, pages: Math.ceil(total / input.perPage) }
+    }),
+
   excluir: protectedProcedure
     .input(z.object({ id: z.string() }))
     .mutation(async ({ ctx, input }) => {

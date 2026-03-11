@@ -1,3 +1,4 @@
+import { z } from "zod"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
 
 export const analisesRouter = createTRPCRouter({
@@ -145,4 +146,62 @@ export const analisesRouter = createTRPCRouter({
       avancoFisicoObras,
     }
   }),
+
+  histogramaMO: protectedProcedure
+    .input(z.object({ obraId: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
+      const { empresaId } = ctx.session
+      const equipe = await ctx.db.rDOEquipe.findMany({
+        where: {
+          rdo: {
+            obra: { empresaId },
+            ...(input.obraId ? { obraId: input.obraId } : {}),
+          },
+        },
+        select: {
+          funcao: true,
+          quantidade: true,
+          statusPresenca: true,
+          rdo: { select: { data: true, obraId: true } },
+        },
+        take: 3000,
+        orderBy: { rdo: { data: "desc" } },
+      })
+
+      const hoje = new Date()
+
+      // Por função: presentes vs ausentes
+      const funcaoMap: Record<string, { presentes: number; ausentes: number }> = {}
+      for (const e of equipe) {
+        if (!funcaoMap[e.funcao]) funcaoMap[e.funcao] = { presentes: 0, ausentes: 0 }
+        if (e.statusPresenca === "PRESENTE") funcaoMap[e.funcao].presentes += e.quantidade
+        else funcaoMap[e.funcao].ausentes += e.quantidade
+      }
+      const porFuncao = Object.entries(funcaoMap)
+        .map(([funcao, v]) => ({ funcao, ...v, total: v.presentes + v.ausentes }))
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 12)
+
+      // Por mês (últimos 6 meses) — total trabalhadores
+      const porMes = Array.from({ length: 6 }, (_, i) => {
+        const d   = new Date(hoje.getFullYear(), hoje.getMonth() - (5 - i), 1)
+        const fim = new Date(hoje.getFullYear(), hoje.getMonth() - (5 - i) + 1, 1)
+        const mes = d.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" })
+        const period = equipe.filter(e => { const ed = new Date(e.rdo.data); return ed >= d && ed < fim })
+        const presentes = period.filter(e => e.statusPresenca === "PRESENTE").reduce((s, e) => s + e.quantidade, 0)
+        const ausentes  = period.filter(e => e.statusPresenca !== "PRESENTE").reduce((s, e) => s + e.quantidade, 0)
+        return { mes, presentes, ausentes, total: presentes + ausentes }
+      })
+
+      // Breakdown por status
+      const statusMap: Record<string, number> = {}
+      for (const e of equipe) {
+        statusMap[e.statusPresenca] = (statusMap[e.statusPresenca] ?? 0) + e.quantidade
+      }
+      const statusBreakdown = Object.entries(statusMap)
+        .map(([status, total]) => ({ status, total }))
+        .sort((a, b) => b.total - a.total)
+
+      return { porFuncao, porMes, statusBreakdown, totalRegistros: equipe.length }
+    }),
 })

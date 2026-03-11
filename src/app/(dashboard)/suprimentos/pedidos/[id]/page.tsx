@@ -3,8 +3,9 @@
 import Link from "next/link"
 import { useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ArrowLeft, ShoppingCart, Truck, Phone, Mail, Send, CheckCircle2, Package, RotateCcw, XCircle, FileText, Upload, DollarSign, Loader2, Pencil, Save, Trash2, Plus } from "lucide-react"
+import { ArrowLeft, ShoppingCart, Truck, Phone, Mail, Send, CheckCircle2, Package, RotateCcw, XCircle, FileText, Upload, DollarSign, Loader2, Pencil, Save, Trash2, Plus, ExternalLink, Star } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
+import { cn } from "@/lib/utils"
 import { formatDataLonga } from "@/lib/format"
 
 type StatusPedido = "RASCUNHO" | "ENVIADO" | "CONFIRMADO" | "ENTREGUE_PARCIAL" | "ENTREGUE" | "CANCELADO"
@@ -42,6 +43,9 @@ export default function PedidoDetalhePage() {
   const [prevEdit,     setPrevEdit]     = useState("")
   const [obsEditPed,   setObsEditPed]   = useState("")
   const [confirmDel,   setConfirmDel]   = useState(false)
+  const [notasAvaliacao, setNotasAvaliacao] = useState<Record<number, number>>({})
+  const [obsAvaliacao,   setObsAvaliacao]   = useState("")
+  const [avaliacaoSalva, setAvaliacaoSalva] = useState(false)
 
   const atualizarStatus = trpc.pedido.atualizarStatus.useMutation({
     onSuccess: () => {
@@ -109,6 +113,18 @@ export default function PedidoDetalhePage() {
       })),
     })
   }
+
+  // Sienge: pedido ID (numeric) via siengePurchaseOrderId ou fallback
+  const siengePedidoId = (pedido as unknown as { siengePurchaseOrderId?: number | null })?.siengePurchaseOrderId ?? null
+
+  const { data: criterios = [] } = trpc.sienge.listarCriteriosAvaliacao.useQuery(
+    { pedidoId: siengePedidoId! },
+    { enabled: !!siengePedidoId && pedido?.status === "ENTREGUE" },
+  )
+
+  const salvarAvaliacaoMut = trpc.sienge.salvarAvaliacao.useMutation({
+    onSuccess: () => setAvaliacaoSalva(true),
+  })
 
   const salvarNf = trpc.pedido.salvarNotaFiscal.useMutation({
     onSuccess: () => {
@@ -606,6 +622,100 @@ export default function PedidoDetalhePage() {
         <div className="bg-white rounded-2xl border border-border shadow-sm p-5">
           <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">Observações</h3>
           <p className="text-sm text-[var(--text-primary)] whitespace-pre-wrap leading-relaxed">{pedido.observacoes}</p>
+        </div>
+      )}
+
+      {/* PDF Análise de Pedido (Sienge) */}
+      {siengePedidoId && (
+        <div className="bg-white rounded-2xl border border-border shadow-sm p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-[var(--text-primary)]">Análise de Pedido (Sienge)</h3>
+              <p className="text-xs text-[var(--text-muted)] mt-0.5">PDF oficial gerado pelo Sienge</p>
+            </div>
+            <a
+              href={`/api/sienge/pdf/pedido/${siengePedidoId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-xl transition-colors"
+            >
+              <ExternalLink size={14} /> Abrir PDF
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* Avaliação de Fornecedor (só quando ENTREGUE e tem Sienge) */}
+      {pedido.status === "ENTREGUE" && siengePedidoId && (
+        <div className="bg-white rounded-2xl border border-border shadow-sm p-5 space-y-4">
+          <div className="flex items-center gap-2">
+            <Star size={16} className="text-amber-500" />
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Avaliar Fornecedor</h3>
+          </div>
+
+          {avaliacaoSalva ? (
+            <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-sm font-medium">
+              <CheckCircle2 size={14} /> Avaliação enviada ao Sienge!
+            </div>
+          ) : criterios.length === 0 ? (
+            <p className="text-sm text-[var(--text-muted)]">Nenhum critério de avaliação disponível no Sienge para este pedido.</p>
+          ) : (
+            <>
+              <div className="space-y-3">
+                {criterios.map((c) => (
+                  <div key={c.id}>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-medium text-[var(--text-primary)]">
+                        {c.nome}
+                        {c.descricao && <span className="text-[var(--text-muted)] font-normal"> — {c.descricao}</span>}
+                      </label>
+                      <span className="text-xs font-bold text-orange-500">{notasAvaliacao[c.id] ?? "—"}/10</span>
+                    </div>
+                    <div className="flex gap-1">
+                      {[1,2,3,4,5,6,7,8,9,10].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setNotasAvaliacao(prev => ({ ...prev, [c.id]: n }))}
+                          className={cn(
+                            "w-7 h-7 rounded-lg text-xs font-semibold transition-colors cursor-pointer",
+                            notasAvaliacao[c.id] === n
+                              ? "bg-orange-500 text-white"
+                              : "bg-slate-100 text-[var(--text-muted)] hover:bg-orange-100 hover:text-orange-600"
+                          )}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <textarea
+                value={obsAvaliacao}
+                onChange={e => setObsAvaliacao(e.target.value)}
+                placeholder="Observações sobre a entrega (opcional)..."
+                rows={2}
+                className="w-full px-3 py-2 border border-border rounded-xl text-sm resize-none outline-none focus:border-orange-400 transition-colors"
+              />
+              <button
+                type="button"
+                disabled={
+                  salvarAvaliacaoMut.isPending ||
+                  criterios.some(c => notasAvaliacao[c.id] == null)
+                }
+                onClick={() => salvarAvaliacaoMut.mutate({
+                  pedidoId:   siengePedidoId!,
+                  criterios:  criterios.map(c => ({ criterioId: c.id, nota: notasAvaliacao[c.id] })),
+                  observacao: obsAvaliacao || undefined,
+                })}
+                className="btn-orange min-h-[40px] disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <Star size={14} />
+                {salvarAvaliacaoMut.isPending ? "Enviando..." : "Enviar avaliação"}
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>

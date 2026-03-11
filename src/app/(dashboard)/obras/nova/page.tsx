@@ -50,15 +50,19 @@ export default function NovaObraPage() {
     setErro("")
     const form = new FormData(e.currentTarget)
     const orcamentoStr = form.get("orcamento") as string
+    const prazoStr = form.get("prazoContratualDias") as string
     criar.mutate({
-      nome:       (form.get("nome") as string).trim(),
-      endereco:   (form.get("endereco") as string) || undefined,
-      cidade:     (form.get("cidade") as string) || undefined,
-      estado:     (form.get("estado") as string) || undefined,
-      orcamento:  orcamentoStr ? parseFloat(orcamentoStr) : undefined,
-      dataInicio: (form.get("dataInicio") as string) || undefined,
-      dataFim:    (form.get("dataFim") as string) || undefined,
-      imagemUrl:  imagemUrl ?? undefined,
+      nome:                (form.get("nome") as string).trim(),
+      endereco:            (form.get("endereco") as string) || undefined,
+      cidade:              (form.get("cidade") as string) || undefined,
+      estado:              (form.get("estado") as string) || undefined,
+      orcamento:           orcamentoStr ? parseFloat(orcamentoStr) : undefined,
+      dataInicio:          (form.get("dataInicio") as string) || undefined,
+      dataFim:             (form.get("dataFim") as string) || undefined,
+      imagemUrl:           imagemUrl ?? undefined,
+      grupo:               (form.get("grupo") as string) || undefined,
+      numContrato:         (form.get("numContrato") as string) || undefined,
+      prazoContratualDias: prazoStr ? parseInt(prazoStr, 10) : undefined,
     })
   }
 
@@ -168,6 +172,33 @@ export default function NovaObraPage() {
               <option value="">Selecione</option>
               {ESTADOS.map(uf => <option key={uf} value={uf}>{uf}</option>)}
             </select>
+          </div>
+        </div>
+
+        {/* Grupo */}
+        <div>
+          <label htmlFor="grupo" className={labelCls}>Grupo / Regional</label>
+          <input id="grupo" name="grupo" type="text"
+            placeholder="Ex: Goiânia, Palmas, FNDE, Cliente ABC..."
+            className={inputCls}
+          />
+        </div>
+
+        {/* Contrato */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="numContrato" className={labelCls}>N° do Contrato</label>
+            <input id="numContrato" name="numContrato" type="text"
+              placeholder="Ex: 034/2025"
+              className={inputCls}
+            />
+          </div>
+          <div>
+            <label htmlFor="prazoContratualDias" className={labelCls}>Prazo Contratual (dias)</label>
+            <input id="prazoContratualDias" name="prazoContratualDias" type="number" min="1"
+              placeholder="Ex: 389"
+              className={inputCls}
+            />
           </div>
         </div>
 

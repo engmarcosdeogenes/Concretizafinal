@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useParams } from "next/navigation"
-import { DollarSign, Plus, X, Trash2, TrendingUp, TrendingDown, Wallet, RefreshCw } from "lucide-react"
+import { DollarSign, Plus, X, Trash2, TrendingUp, TrendingDown, Wallet, RefreshCw, Building2, Landmark } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { formatDataCurta } from "@/lib/format"
 
@@ -43,6 +43,8 @@ export default function FinanceiroObraPage() {
   const utils = trpc.useUtils()
   const { data: lancamentos = [], isLoading } = trpc.financeiro.listar.useQuery({ obraId })
   const { data: resumo }                       = trpc.financeiro.resumo.useQuery({ obraId })
+  const { data: contasPagar = [] }             = trpc.sienge.listarContasPagar.useQuery(undefined, { staleTime: 5 * 60 * 1000 })
+  const { data: saldos = [] }                  = trpc.sienge.listarSaldos.useQuery(undefined, { staleTime: 5 * 60 * 1000 })
 
   const criar   = trpc.financeiro.criar.useMutation({
     onSuccess: () => {
@@ -199,6 +201,71 @@ export default function FinanceiroObraPage() {
           </div>
         ))}
       </div>
+
+      {/* Contas a Pagar Sienge */}
+      {contasPagar.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Building2 size={15} className="text-orange-500" />
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">Contas a Pagar — Sienge</h2>
+          </div>
+          <div className="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
+            <div className="grid grid-cols-[1fr_110px_110px_100px] gap-3 px-4 py-2.5 bg-muted border-b border-border">
+              <span className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Credor</span>
+              <span className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">Vencimento</span>
+              <span className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide text-right">Valor</span>
+              <span className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide text-center">Status</span>
+            </div>
+            {contasPagar.slice(0, 20).map((c) => {
+              const hoje = new Date()
+              const venc = c.dueDate ? new Date(c.dueDate) : null
+              const atrasada = venc && venc < hoje
+              const proxima = venc && !atrasada && (venc.getTime() - hoje.getTime()) <= 7 * 86400000
+              return (
+                <div key={c.id} className="grid grid-cols-[1fr_110px_110px_100px] gap-3 px-4 py-3 border-t border-border items-center">
+                  <span className="text-sm text-[var(--text-primary)] truncate">{c.creditorName ?? `#${c.id}`}</span>
+                  <span className={`text-xs font-medium ${atrasada ? "text-red-600 font-semibold" : proxima ? "text-amber-600 font-semibold" : "text-[var(--text-muted)]"}`}>
+                    {venc ? venc.toLocaleDateString("pt-BR") : "—"}
+                  </span>
+                  <span className="text-sm font-semibold text-[var(--text-primary)] text-right">
+                    {c.amount != null ? fmt(c.amount) : "—"}
+                  </span>
+                  <div className="text-center">
+                    {atrasada ? (
+                      <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-50 text-red-700">Vencida</span>
+                    ) : proxima ? (
+                      <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700">A vencer</span>
+                    ) : (
+                      <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-50 text-green-700">Ok</span>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Saldos Bancários Sienge */}
+      {saldos.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Landmark size={15} className="text-orange-500" />
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">Saldos Bancários — Sienge</h2>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {saldos.map((s) => (
+              <div key={s.id} className="bg-white rounded-xl border border-border shadow-sm p-4">
+                <p className="text-xs font-medium text-[var(--text-muted)] truncate">{s.name}</p>
+                {s.bankName && <p className="text-[10px] text-[var(--text-muted)] truncate">{s.bankName}</p>}
+                <p className={`text-lg font-extrabold mt-1 ${s.saldo >= 0 ? "text-green-600" : "text-red-600"}`}>
+                  {fmt(s.saldo)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Modal novo lançamento */}
       {showModal && (

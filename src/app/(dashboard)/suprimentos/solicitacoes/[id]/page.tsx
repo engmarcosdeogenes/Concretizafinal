@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation"
 import { useState } from "react"
 import {
   ArrowLeft, ClipboardList, Clock, CheckCircle2, XCircle, Send, ThumbsUp, ThumbsDown,
-  Pencil, Trash2, Plus, Loader2, Save,
+  Pencil, Trash2, Plus, Loader2, Save, Link2,
 } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { formatDataLonga } from "@/lib/format"
@@ -155,6 +155,11 @@ export default function SolicitacaoDetalhePage() {
           <h1 className="text-[var(--text-primary)] font-bold text-xl flex items-center gap-2">
             <ClipboardList size={20} className="text-orange-500 flex-shrink-0" />
             Solicitação de Compra
+            {sol.siengePurchaseRequestId && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-200">
+                <Link2 size={10} />Sienge #{sol.siengePurchaseRequestId}
+              </span>
+            )}
           </h1>
           <p className="text-[var(--text-muted)] text-sm mt-0.5">
             {sol.obra.nome} · {formatDataLonga(sol.createdAt)}

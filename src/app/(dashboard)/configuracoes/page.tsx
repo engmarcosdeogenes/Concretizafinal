@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Settings, Users, Building2, User, CreditCard, Bell, Puzzle } from "lucide-react"
+import { Settings, Users, Building2, User, CreditCard, Bell, Puzzle, ClipboardCheck, LayoutList, FileText } from "lucide-react"
 import { Card, CardTitle, CardDescription } from "@/components/ui/card"
 
 type Item = {
@@ -66,6 +66,33 @@ const ITEMS: Item[] = [
     iconBg: "bg-pink-100",
     iconColor: "text-pink-600",
     hoverBorder: "hover:border-pink-400/60",
+  },
+  {
+    title: "Checklists",
+    description: "Templates de verificação rápida",
+    href: "/configuracoes/checklists",
+    icon: ClipboardCheck,
+    iconBg: "bg-teal-100",
+    iconColor: "text-teal-600",
+    hoverBorder: "hover:border-teal-400/60",
+  },
+  {
+    title: "Campos do RDO",
+    description: "Campos extras personalizados no diário de obra",
+    href: "/configuracoes/campos-rdo",
+    icon: LayoutList,
+    iconBg: "bg-indigo-100",
+    iconColor: "text-indigo-600",
+    hoverBorder: "hover:border-indigo-400/60",
+  },
+  {
+    title: "Modelos de Relatório",
+    description: "Customize seções e título do PDF do RDO",
+    href: "/configuracoes/modelos-relatorio",
+    icon: FileText,
+    iconBg: "bg-sky-100",
+    iconColor: "text-sky-600",
+    hoverBorder: "hover:border-sky-400/60",
   },
 ]
 

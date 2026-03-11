@@ -9,7 +9,7 @@ import {
   Package, FileText, MessageSquare, Settings,
   ChevronDown, DollarSign, ArrowLeft,
   ClipboardList, AlertTriangle, Users, Box, MapPin,
-  TrendingUp,
+  TrendingUp, ListTodo, BarChart3, BarChart2, Tags, CheckSquare, Building2, Warehouse,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -28,8 +28,32 @@ const globalNavItems = [
       { label: "Equipamentos", href: "/suprimentos/equipamentos" },
       { label: "Solicitações", href: "/suprimentos/solicitacoes" },
       { label: "Pedidos", href: "/suprimentos/pedidos" },
+      { label: "Cotações", href: "/suprimentos/cotacoes", icon: Tags },
+      { label: "Notas Fiscais", href: "/suprimentos/nfe" },
     ],
   },
+  {
+    label: "Financeiro", href: "/financeiro", icon: DollarSign,
+    children: [
+      { label: "Contas a Pagar",   href: "/financeiro/contas-pagar" },
+      { label: "Recebimentos",     href: "/financeiro/recebimentos" },
+      { label: "Saldos Bancários", href: "/financeiro/caixa" },
+      { label: "Balancete",        href: "/financeiro/balancete" },
+    ],
+  },
+  {
+    label: "Comercial", href: "/comercial", icon: Building2,
+    children: [
+      { label: "Mapa Imobiliário",  href: "/comercial/mapa" },
+      { label: "Contratos",         href: "/comercial/contratos" },
+      { label: "Locações",          href: "/comercial/locacoes" },
+      { label: "Comissões",         href: "/comercial/comissoes" },
+      { label: "Entrega de Chaves", href: "/comercial/entrega-chaves" },
+      { label: "Clientes",          href: "/comercial/clientes" },
+    ],
+  },
+  { label: "Patrimônio", href: "/patrimonio", icon: Warehouse },
+  { label: "Painéis", href: "/paineis", icon: BarChart3 },
   { label: "Análises", href: "/analises", icon: TrendingUp },
   { label: "Relatórios", href: "/relatorios", icon: FileText },
   { label: "Chat", href: "/chat", icon: MessageSquare },
@@ -37,20 +61,29 @@ const globalNavItems = [
 ]
 
 // ── Obra nav ─────────────────────────────────────────────────
-function getObraNavItems(obraId: string) {
+function getObraNavItems(obraId: string, hasSienge = false) {
   const base = `/obras/${obraId}`
   return [
     { label: "Visão Geral", href: base, icon: LayoutDashboard, exact: true },
     { label: "RDO", href: `${base}/rdo`, icon: ClipboardList },
     { label: "FVS", href: `${base}/fvs`, icon: ClipboardCheck },
     { label: "FVM", href: `${base}/fvm`, icon: Package },
+    { label: "Checklist", href: `${base}/checklist`, icon: CheckSquare },
     { label: "Ocorrências", href: `${base}/ocorrencias`, icon: AlertTriangle },
     { label: "Mapa", href: `${base}/mapa`, icon: MapPin },
     { label: "Equipe", href: `${base}/equipe`, icon: Users },
     { label: "Materiais", href: `${base}/materiais`, icon: Box },
     { label: "Documentos", href: `${base}/documentos`, icon: FileText },
     { label: "Financeiro", href: `${base}/financeiro`, icon: DollarSign },
+    { label: "Medição",   href: `${base}/medicao`,   icon: BarChart2 },
+    ...(hasSienge ? [
+      { label: "Tarefas",      href: `${base}/tarefas`,      icon: ListTodo,  exact: false },
+      { label: "Orçamento",    href: `${base}/orcamento`,    icon: BarChart3, exact: false },
+      { label: "Almoxarifado", href: `${base}/almoxarifado`, icon: Package,   exact: false },
+      { label: "Contratos",    href: `${base}/contratos`,    icon: FileText,  exact: false },
+    ] : []),
     { label: "Chat", href: `${base}/chat`, icon: MessageSquare },
+    { label: "Configurações", href: `${base}/configuracoes`, icon: Settings },
   ]
 }
 
@@ -175,9 +208,15 @@ export function Sidebar() {
     overflow: "hidden",
   }
 
+  const { data: obraData } = trpc.obra.buscarPorId.useQuery(
+    { id: obraId ?? "" },
+    { enabled: isInsideObra && !!obraId }
+  )
+  const hasSienge = !!(obraData?.siengeId)
+
   // ── Obra contextual sidebar ──
   if (isInsideObra && obraId) {
-    const obraNavItems = getObraNavItems(obraId)
+    const obraNavItems = getObraNavItems(obraId, hasSienge)
 
     return (
       <aside

@@ -19,10 +19,13 @@ export async function GET(
     const rdo = await db.rDO.findFirst({
       where: { id: rdoId, obra: { empresa: { usuarios: { some: { authId: user.id } } } } },
       include: {
-        obra: { select: { nome: true, endereco: true } },
+        obra: { select: { nome: true, endereco: true, numContrato: true, prazoContratualDias: true, dataInicio: true } },
         responsavel: { select: { nome: true } },
         atividades: true,
         equipe: true,
+        assinaturas: { orderBy: { ordem: "asc" } },
+        materiaisRecebidos: true,
+        materiaisUtilizados: true,
       },
     })
 

@@ -35,15 +35,19 @@ function getProgressColorClass(p: number) {
 export default function ObrasPage() {
   const [busca, setBusca] = useState("")
   const [filtroStatus, setFiltroStatus] = useState<string | null>(null)
+  const [filtroGrupo, setFiltroGrupo] = useState<string | null>(null)
   const [viewGrid, setViewGrid] = useState(true)
 
   const { data: obras, isLoading } = trpc.obra.listar.useQuery()
+
+  const grupos = [...new Set((obras ?? []).map(o => o.grupo).filter(Boolean))] as string[]
 
   const obrasFiltradas = (obras ?? []).filter((obra) => {
     const matchBusca = obra.nome.toLowerCase().includes(busca.toLowerCase()) ||
       (obra.cidade ?? "").toLowerCase().includes(busca.toLowerCase())
     const matchStatus = filtroStatus ? obra.status === filtroStatus : true
-    return matchBusca && matchStatus
+    const matchGrupo = filtroGrupo ? obra.grupo === filtroGrupo : true
+    return matchBusca && matchStatus && matchGrupo
   })
 
   return (
@@ -89,6 +93,22 @@ export default function ObrasPage() {
               </Button>
             )
           })}
+          {grupos.length > 0 && (
+            <>
+              <div className="w-px h-6 bg-border shrink-0" />
+              {grupos.map((g) => (
+                <Button
+                  key={g}
+                  variant={filtroGrupo === g ? "secondary" : "ghost"}
+                  size="sm"
+                  onClick={() => setFiltroGrupo(filtroGrupo === g ? null : g)}
+                  className="whitespace-nowrap text-xs"
+                >
+                  {g}
+                </Button>
+              ))}
+            </>
+          )}
         </div>
 
         <div className="hidden sm:flex items-center bg-card border rounded-md p-1 ml-auto shrink-0 shadow-sm">
@@ -170,9 +190,14 @@ export default function ObrasPage() {
                   </div>
 
                   <CardContent className="p-5 flex flex-col flex-1">
-                    <CardTitle className="text-lg mb-4 group-hover:text-primary transition-colors">
-                      {obra.nome}
-                    </CardTitle>
+                    <div className="mb-4">
+                      <CardTitle className="text-lg group-hover:text-primary transition-colors">
+                        {obra.nome}
+                      </CardTitle>
+                      {obra.grupo && (
+                        <span className="text-xs text-muted-foreground mt-1 block">{obra.grupo}</span>
+                      )}
+                    </div>
 
                     {/* Progress */}
                     <div className="mt-auto mb-5">
@@ -245,12 +270,15 @@ export default function ObrasPage() {
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-4 mb-2">
+                    <div className="flex items-center justify-between gap-4 mb-1">
                       <h3 className="text-base font-bold truncate group-hover:text-primary transition-colors">
                         {obra.nome}
                       </h3>
                       <Badge variant={status.variant} className="shadow-sm">{status.label}</Badge>
                     </div>
+                    {obra.grupo && (
+                      <span className="text-xs text-muted-foreground block mb-2">{obra.grupo}</span>
+                    )}
 
                     <div className="flex items-center gap-6">
                       {/* Progress */}

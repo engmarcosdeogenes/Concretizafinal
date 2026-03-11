@@ -1,5 +1,26 @@
 import { z } from "zod"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
+import { decrypt, isEncrypted } from "@/lib/encrypt"
+import { buscarCreditorPorCpf } from "@/lib/sienge/client"
+
+async function vincularCreditorSienge(
+  ctx: { db: typeof import("../db").db; session: { empresaId: string } },
+  membroId: string,
+  cpf: string,
+) {
+  const config = await ctx.db.integracaoConfig.findUnique({
+    where: { empresaId: ctx.session.empresaId },
+  })
+  if (!config) return
+  const senha = isEncrypted(config.senha) ? decrypt(config.senha) : config.senha
+  const creditor = await buscarCreditorPorCpf(config.subdominio, config.usuario, senha, cpf).catch(() => null)
+  if (creditor) {
+    await ctx.db.membroEquipe.update({
+      where: { id: membroId },
+      data: { siengeCreditorId: creditor.id },
+    }).catch(() => {})
+  }
+}
 
 export const equipeRouter = createTRPCRouter({
 
@@ -33,7 +54,7 @@ export const equipeRouter = createTRPCRouter({
         select: { id: true },
       })
       if (!obra) throw new Error("Obra não encontrada")
-      return ctx.db.membroEquipe.create({
+      const membro = await ctx.db.membroEquipe.create({
         data: {
           obraId:      input.obraId,
           nome:        input.nome,
@@ -44,6 +65,11 @@ export const equipeRouter = createTRPCRouter({
           dataEntrada: input.dataEntrada ? new Date(input.dataEntrada) : new Date(),
         },
       })
+      // Fire-and-forget: vincular ao creditor Sienge pelo CPF
+      if (input.cpf) {
+        vincularCreditorSienge(ctx, membro.id, input.cpf).catch(() => {})
+      }
+      return membro
     }),
 
   excluir: protectedProcedure
@@ -71,7 +97,7 @@ export const equipeRouter = createTRPCRouter({
         where: { id: input.id, obra: { empresaId: ctx.session.empresaId } },
       })
       const { id, dataSaida, ...rest } = input
-      return ctx.db.membroEquipe.update({
+      const membro = await ctx.db.membroEquipe.update({
         where: { id },
         data: {
           ...rest,
@@ -83,5 +109,10 @@ export const equipeRouter = createTRPCRouter({
             : undefined,
         },
       })
+      // Fire-and-forget: vincular ao creditor Sienge pelo CPF se informado
+      if (input.cpf) {
+        vincularCreditorSienge(ctx, id, input.cpf).catch(() => {})
+      }
+      return membro
     }),
 })

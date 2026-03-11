@@ -23,6 +23,10 @@ import { plantaRouter } from "./planta"
 import { midiaRouter } from "./midia"
 import { templateFvsRouter } from "./templateFvs"
 import { integracoesRouter } from "./integracoes"
+import { siengeRouter } from "./sienge"
+import { medicaoRouter } from "./medicao"
+import { checklistRouter } from "./checklist"
+import { modeloRelatorioRouter } from "./modeloRelatorio"
 
 export const appRouter = createTRPCRouter({
   auditLog:       auditLogRouter,
@@ -49,6 +53,10 @@ export const appRouter = createTRPCRouter({
   midia:          midiaRouter,
   templateFvs:    templateFvsRouter,
   integracoes:    integracoesRouter,
+  sienge:         siengeRouter,
+  medicao:        medicaoRouter,
+  checklist:      checklistRouter,
+  modeloRelatorio: modeloRelatorioRouter,
 })
 
 export type AppRouter = typeof appRouter
