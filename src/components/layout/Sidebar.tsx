@@ -9,7 +9,7 @@ import {
   Package, FileText, MessageSquare, Settings,
   ChevronDown, DollarSign, ArrowLeft,
   ClipboardList, AlertTriangle, Users, Box, MapPin,
-  TrendingUp, ListTodo, BarChart3, BarChart2, Tags, CheckSquare, Building2, Warehouse,
+  TrendingUp, ListTodo, BarChart3, BarChart2, Tags, CheckSquare, Building2, Warehouse, Network,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -256,6 +256,8 @@ export function Sidebar() {
   const hasSienge = !!(obraData?.siengeId)
   const { data: me } = trpc.painel.me.useQuery()
   const userRole = me?.role as NavRole
+  const { data: empresa } = trpc.configuracoes.buscarEmpresa.useQuery()
+  const isEnterprise = empresa?.plano === "ENTERPRISE"
 
   // ── Obra contextual sidebar ──
   if (isInsideObra && obraId) {
@@ -411,6 +413,17 @@ export function Sidebar() {
             />
           )
         })}
+
+        {/* Enterprise-only link */}
+        {isEnterprise && (
+          <NavLink
+            href="/enterprise"
+            label="Enterprise"
+            icon={Network}
+            active={isActive("/enterprise")}
+            collapsed={collapsed}
+          />
+        )}
       </nav>
 
       <UserFooter collapsed={collapsed} />
