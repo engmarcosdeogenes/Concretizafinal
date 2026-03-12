@@ -1,10 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { ChevronDown, ChevronRight, Tags, Settings, CheckCircle2, Clock, XCircle, Trophy, ExternalLink } from "lucide-react"
+import { ChevronDown, ChevronRight, Tags, Settings, CheckCircle2, Clock, XCircle, Trophy, ExternalLink, Plus, Trash2, X, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { trpc } from "@/lib/trpc/client"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 const fmt = (v?: number | null) => v != null ? v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—"
 const fmtDate = (d?: string | null) => d ? new Date(d).toLocaleDateString("pt-BR") : "—"
@@ -131,8 +132,159 @@ function CotacaoRow({ item }: { item: {
   )
 }
 
+type ItemForm = { descricao: string; materialId: string; quantidade: string; unidade: string }
+
+function NovaCotacaoModal({ onClose, onRefresh }: { onClose: () => void; onRefresh: () => void }) {
+  const { data: obrasData = [] } = trpc.obra.listar.useQuery({})
+  const { data: fornsData } = trpc.fornecedor.listar.useQuery()
+  const criar = trpc.sienge.criarCotacao.useMutation({
+    onSuccess: () => { toast.success("Cotação criada no Sienge!"); onRefresh(); onClose() },
+    onError:   (e) => toast.error(e.message ?? "Erro ao criar cotação"),
+  })
+
+  const obrasComSienge = obrasData.filter((o) => o.siengeId)
+  const fornsComSienge = (fornsData?.fornecedores ?? []).filter((f) => f.siengeCreditorId != null)
+
+  const [obraId,     setObraId]     = useState("")
+  const [descricao,  setDescricao]  = useState("")
+  const [itens,      setItens]      = useState<ItemForm[]>([{ descricao: "", materialId: "", quantidade: "1", unidade: "UN" }])
+  const [fornIds,    setFornIds]    = useState<number[]>([])
+
+  function addItem() { setItens(p => [...p, { descricao: "", materialId: "", quantidade: "1", unidade: "UN" }]) }
+  function removeItem(i: number) { setItens(p => p.filter((_, idx) => idx !== i)) }
+  function setItem(i: number, field: keyof ItemForm, val: string) {
+    setItens(p => p.map((it, idx) => idx === i ? { ...it, [field]: val } : it))
+  }
+  function toggleForn(id: number) {
+    setFornIds(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id])
+  }
+
+  function handleSubmit() {
+    if (!obraId) { toast.error("Selecione uma obra"); return }
+    if (itens.some(i => !i.descricao && !i.materialId)) { toast.error("Preencha a descrição ou ID do material em cada item"); return }
+    if (fornIds.length === 0) { toast.error("Selecione pelo menos um fornecedor"); return }
+    criar.mutate({
+      obraId,
+      descricao: descricao || undefined,
+      itens: itens.map(i => ({
+        descricao:   i.descricao || undefined,
+        materialId:  i.materialId ? parseInt(i.materialId) : undefined,
+        quantidade:  parseFloat(i.quantidade) || 1,
+        unidade:     i.unidade || "UN",
+      })),
+      fornecedoresIds: fornIds,
+    })
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
+          <div>
+            <h2 className="text-base font-bold text-[var(--text-primary)]">Nova Cotação no Sienge</h2>
+            <p className="text-xs text-[var(--text-muted)] mt-0.5">Cria a cotação no Sienge e notifica os fornecedores</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-muted transition-colors">
+            <X size={16} className="text-[var(--text-muted)]" />
+          </button>
+        </div>
+
+        <div className="px-6 py-5 space-y-5 flex-1">
+          {/* Obra + Descrição */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">Obra *</label>
+              <select
+                value={obraId}
+                onChange={e => setObraId(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white"
+              >
+                <option value="">Selecione a obra…</option>
+                {obrasComSienge.map(o => (
+                  <option key={o.id} value={o.id}>{o.nome}</option>
+                ))}
+              </select>
+              {obrasComSienge.length === 0 && (
+                <p className="text-[10px] text-amber-600 mt-1">Nenhuma obra vinculada ao Sienge.</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">Descrição</label>
+              <input
+                value={descricao}
+                onChange={e => setDescricao(e.target.value)}
+                placeholder="ex: Estrutura bloco B"
+                className="w-full px-3 py-2 text-sm border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white"
+              />
+            </div>
+          </div>
+
+          {/* Itens */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">Itens *</label>
+              <button type="button" onClick={addItem} className="inline-flex items-center gap-1 text-xs text-orange-600 hover:text-orange-700 font-medium">
+                <Plus size={12} /> Adicionar item
+              </button>
+            </div>
+            <div className="border border-border rounded-xl overflow-hidden">
+              <div className="grid grid-cols-[1fr_80px_70px_70px_32px] gap-2 px-3 py-2 bg-muted text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">
+                <span>Descrição do item</span><span>Cód. Sienge</span><span>Qtd.</span><span>Unid.</span><span />
+              </div>
+              {itens.map((it, i) => (
+                <div key={i} className="grid grid-cols-[1fr_80px_70px_70px_32px] gap-2 px-3 py-2 border-t border-border items-center">
+                  <input value={it.descricao} onChange={e => setItem(i, "descricao", e.target.value)} placeholder="Cimento CP-II" className="px-2 py-1.5 text-sm border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-300 bg-white" />
+                  <input value={it.materialId} onChange={e => setItem(i, "materialId", e.target.value)} placeholder="ID" type="number" className="px-2 py-1.5 text-sm border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-300 bg-white font-mono" />
+                  <input value={it.quantidade} onChange={e => setItem(i, "quantidade", e.target.value)} type="number" min="0" step="any" className="px-2 py-1.5 text-sm border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-300 bg-white" />
+                  <input value={it.unidade} onChange={e => setItem(i, "unidade", e.target.value)} placeholder="UN" className="px-2 py-1.5 text-sm border border-border rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-300 bg-white uppercase" />
+                  <button type="button" onClick={() => removeItem(i)} disabled={itens.length === 1} className="p-1 rounded hover:bg-red-50 text-[var(--text-muted)] hover:text-red-500 disabled:opacity-30 transition-colors">
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Fornecedores */}
+          <div>
+            <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-2">Fornecedores * <span className="text-[10px] font-normal normal-case">(apenas os vinculados ao Sienge)</span></label>
+            {fornsComSienge.length === 0 ? (
+              <p className="text-sm text-[var(--text-muted)] italic">Nenhum fornecedor vinculado ao Sienge. Cadastre fornecedores com CNPJ para sincronizar.</p>
+            ) : (
+              <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border border-border rounded-xl p-3">
+                {fornsComSienge.map(f => (
+                  <label key={f.id} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/40 px-2 py-1 rounded-lg">
+                    <input
+                      type="checkbox"
+                      checked={fornIds.includes(f.siengeCreditorId!)}
+                      onChange={() => toggleForn(f.siengeCreditorId!)}
+                      className="accent-orange-500"
+                    />
+                    <span className="text-[var(--text-primary)] truncate">{f.nome}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border flex-shrink-0">
+          <button onClick={onClose} className="px-4 py-2 text-sm font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">Cancelar</button>
+          <button onClick={handleSubmit} disabled={criar.isPending} className="btn-orange flex items-center gap-2">
+            {criar.isPending ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+            Criar Cotação
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function CotacoesPage() {
-  const { data = [], isLoading } = trpc.sienge.listarCotacoes.useQuery({})
+  const [showModal, setShowModal] = useState(false)
+  const { data = [], isLoading, refetch } = trpc.sienge.listarCotacoes.useQuery({})
 
   const total   = data.length
   const abertas = data.filter(d => ["OPEN", "ABERTA"].includes((d.cotacao.status ?? "").toUpperCase())).length
@@ -141,12 +293,18 @@ export default function CotacoesPage() {
   if (!isLoading && data.length === 0) {
     return (
       <div className="p-6 max-w-2xl mx-auto">
-        <div className="mb-4">
-          <h1 className="text-[var(--text-primary)] font-bold text-xl flex items-center gap-2">
-            <Tags size={20} className="text-orange-500 flex-shrink-0" />
-            Cotações
-          </h1>
-          <p className="text-[var(--text-muted)] text-sm mt-0.5">Cotações sincronizadas do Sienge</p>
+        {showModal && <NovaCotacaoModal onClose={() => setShowModal(false)} onRefresh={refetch} />}
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-[var(--text-primary)] font-bold text-xl flex items-center gap-2">
+              <Tags size={20} className="text-orange-500 flex-shrink-0" />
+              Cotações
+            </h1>
+            <p className="text-[var(--text-muted)] text-sm mt-0.5">Cotações sincronizadas do Sienge</p>
+          </div>
+          <button onClick={() => setShowModal(true)} className="btn-orange flex items-center gap-2">
+            <Plus size={14} /> Nova Cotação
+          </button>
         </div>
         <div className="bg-white rounded-2xl border border-border shadow-sm p-8 text-center">
           <Tags size={40} className="text-[var(--text-muted)] mx-auto mb-3" />
@@ -165,13 +323,20 @@ export default function CotacoesPage() {
 
   return (
     <div className="p-6 space-y-5">
+      {showModal && <NovaCotacaoModal onClose={() => setShowModal(false)} onRefresh={refetch} />}
+
       {/* Header */}
-      <div>
-        <h1 className="text-[var(--text-primary)] font-bold text-xl flex items-center gap-2">
-          <Tags size={20} className="text-orange-500 flex-shrink-0" />
-          Cotações
-        </h1>
-        <p className="text-[var(--text-muted)] text-sm mt-0.5">Cotações sincronizadas do Sienge</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-[var(--text-primary)] font-bold text-xl flex items-center gap-2">
+            <Tags size={20} className="text-orange-500 flex-shrink-0" />
+            Cotações
+          </h1>
+          <p className="text-[var(--text-muted)] text-sm mt-0.5">Cotações sincronizadas do Sienge</p>
+        </div>
+        <button onClick={() => setShowModal(true)} className="btn-orange flex items-center gap-2">
+          <Plus size={14} /> Nova Cotação
+        </button>
       </div>
 
       {/* KPIs */}
