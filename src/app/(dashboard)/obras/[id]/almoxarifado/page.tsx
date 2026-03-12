@@ -2,10 +2,11 @@
 
 import { use, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, Package, AlertTriangle, TrendingDown, ClipboardList, ArrowRightLeft, X, CheckCircle2, Zap } from "lucide-react"
+import { ArrowLeft, Package, AlertTriangle, TrendingDown, ClipboardList, ArrowRightLeft, X, CheckCircle2, Zap, PackagePlus, Loader2 } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { cn } from "@/lib/utils"
 import { formatNumero } from "@/lib/format"
+import { toast } from "sonner"
 
 type Tab = "estoque" | "reservas"
 
@@ -16,8 +17,16 @@ export default function AlmoxarifadoPage({ params }: { params: Promise<{ id: str
   const [atendendoId, setAtendendoId] = useState<number | null>(null)
   const [qtdAtender, setQtdAtender] = useState("")
 
+  // Movimentação
+  const [showMovModal, setShowMovModal]   = useState(false)
+  const [movMaterialId, setMovMaterialId] = useState("")
+  const [movTipo, setMovTipo]             = useState<"ENTRADA" | "SAIDA">("ENTRADA")
+  const [movQtd, setMovQtd]               = useState("")
+  const [movData, setMovData]             = useState(new Date().toISOString().slice(0, 10))
+  const [movObs, setMovObs]               = useState("")
+
   // Estoque
-  const { data: estoque = [], isLoading } = trpc.sienge.listarEstoque.useQuery({ obraId })
+  const { data: estoque = [], isLoading, refetch: refetchEstoque } = trpc.sienge.listarEstoque.useQuery({ obraId })
   const { data: obra } = trpc.obra.buscarPorId.useQuery({ id: obraId })
   const siengeObraId = obra?.siengeId ? Number(obra.siengeId) : undefined
 
@@ -41,6 +50,18 @@ export default function AlmoxarifadoPage({ params }: { params: Promise<{ id: str
     onSuccess: () => { setShowTransferModal(false); setTfObraDestino(""); setTfMaterial(""); setTfQtd(""); setTfObs("") }
   })
 
+  const lancarMovMutation = trpc.sienge.lancarMovimentacao.useMutation({
+    onSuccess: () => {
+      toast.success("Movimentação lançada no Sienge!")
+      setShowMovModal(false)
+      setMovMaterialId("")
+      setMovQtd("")
+      setMovObs("")
+      refetchEstoque()
+    },
+    onError: (e) => toast.error(e.message ?? "Erro ao lançar movimentação"),
+  })
+
   const abaixoMinimo = estoque.filter((e) => e.saldoAtual < e.saldoMinimo)
   const zerado      = estoque.filter((e) => e.saldoAtual === 0)
 
@@ -62,10 +83,16 @@ export default function AlmoxarifadoPage({ params }: { params: Promise<{ id: str
             <p className="text-sm text-[var(--text-muted)]">Estoque real via Sienge</p>
           </div>
         </div>
-        <button type="button" onClick={() => setShowTransferModal(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-white text-xs font-medium text-[var(--text-muted)] hover:border-orange-300 hover:text-orange-600 transition-all">
-          <ArrowRightLeft size={14} /> Transferir Estoque
-        </button>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={() => { setMovMaterialId(""); setShowMovModal(true) }}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-white text-xs font-medium text-[var(--text-muted)] hover:border-emerald-300 hover:text-emerald-600 transition-all">
+            <PackagePlus size={14} /> Nova Movimentação
+          </button>
+          <button type="button" onClick={() => setShowTransferModal(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-white text-xs font-medium text-[var(--text-muted)] hover:border-orange-300 hover:text-orange-600 transition-all">
+            <ArrowRightLeft size={14} /> Transferir Estoque
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -203,12 +230,13 @@ export default function AlmoxarifadoPage({ params }: { params: Promise<{ id: str
               </div>
             ) : (
               <div>
-                <div className="grid grid-cols-[1fr_80px_80px_90px_100px] gap-4 px-4 py-2.5 bg-slate-50 border-b border-border text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
+                <div className="grid grid-cols-[1fr_80px_80px_90px_90px_36px] gap-4 px-4 py-2.5 bg-slate-50 border-b border-border text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
                   <span>Material</span>
                   <span className="text-right">Saldo</span>
                   <span className="text-right">Mínimo</span>
                   <span className="text-right">Saldo Real</span>
                   <span className="text-right">Situação</span>
+                  <span />
                 </div>
                 <div className="divide-y divide-border">
                   {estoque.map((item, i) => {
@@ -222,7 +250,7 @@ export default function AlmoxarifadoPage({ params }: { params: Promise<{ id: str
                     const alertaAmbar = saldoReal < item.saldoMinimo && item.saldoAtual >= item.saldoMinimo
                     return (
                       <div key={i} className={cn(
-                        "grid grid-cols-[1fr_80px_80px_90px_100px] gap-4 px-4 py-3 items-center text-sm",
+                        "grid grid-cols-[1fr_80px_80px_90px_90px_36px] gap-4 px-4 py-3 items-center text-sm",
                         critico ? "bg-red-50/50" : alerta ? "bg-amber-50/50" : ""
                       )}>
                         <div>
@@ -245,6 +273,14 @@ export default function AlmoxarifadoPage({ params }: { params: Promise<{ id: str
                             <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-semibold">OK</span>
                           )}
                         </div>
+                        <button
+                          type="button"
+                          title="Lançar movimentação no Sienge"
+                          onClick={() => { setMovMaterialId(String(item.materialId)); setShowMovModal(true) }}
+                          className="flex items-center justify-center w-7 h-7 rounded-lg border border-border hover:border-emerald-400 hover:text-emerald-600 text-[var(--text-muted)] transition-all"
+                        >
+                          <PackagePlus size={12} />
+                        </button>
                       </div>
                     )
                   })}
@@ -321,6 +357,103 @@ export default function AlmoxarifadoPage({ params }: { params: Promise<{ id: str
       )}
 
       <p className="text-xs text-[var(--text-muted)] text-center">Dados fornecidos em tempo real pelo Sienge</p>
+
+      {/* Modal Nova Movimentação */}
+      {showMovModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && setShowMovModal(false)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-sm text-[var(--text-primary)] flex items-center gap-2">
+                <PackagePlus size={16} className="text-emerald-600" /> Nova Movimentação de Estoque
+              </h3>
+              <button type="button" onClick={() => setShowMovModal(false)} className="p-1 rounded hover:bg-muted">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">Material</label>
+                <select value={movMaterialId} onChange={e => setMovMaterialId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:border-emerald-400">
+                  <option value="">Selecionar material...</option>
+                  {estoque.map(it => (
+                    <option key={it.materialId} value={String(it.materialId)}>
+                      {it.materialNome} ({formatNumero(it.saldoAtual)} {it.unidade})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">Tipo</label>
+                <div className="flex gap-2">
+                  {(["ENTRADA", "SAIDA"] as const).map(t => (
+                    <button key={t} type="button" onClick={() => setMovTipo(t)}
+                      className={cn("flex-1 py-2 rounded-lg border text-xs font-semibold transition-all",
+                        movTipo === t
+                          ? t === "ENTRADA" ? "bg-emerald-500 border-emerald-500 text-white" : "bg-red-500 border-red-500 text-white"
+                          : "border-border text-[var(--text-muted)] hover:border-slate-400"
+                      )}>
+                      {t === "ENTRADA" ? "↓ Entrada" : "↑ Saída"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">Quantidade</label>
+                  <input type="number" value={movQtd} onChange={e => setMovQtd(e.target.value)} min="0.01" step="0.01"
+                    className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:border-emerald-400"
+                    placeholder="0,00" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">Data</label>
+                  <input type="date" value={movData} onChange={e => setMovData(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:border-emerald-400" />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">Observação (opcional)</label>
+                <input value={movObs} onChange={e => setMovObs(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:border-emerald-400"
+                  placeholder="ex: Recebimento NF 1234" />
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-2">
+              <button type="button" onClick={() => setShowMovModal(false)}
+                className="px-4 py-2 rounded-lg border border-border text-xs font-medium text-[var(--text-muted)]">
+                Cancelar
+              </button>
+              <button type="button"
+                disabled={!movMaterialId || !movQtd || !siengeObraId || lancarMovMutation.isPending}
+                onClick={() => {
+                  if (!movMaterialId || !movQtd || !siengeObraId) return
+                  lancarMovMutation.mutate({
+                    obraId,
+                    materialId: Number(movMaterialId),
+                    tipo:       movTipo,
+                    quantidade: Number(movQtd),
+                    data:       movData,
+                    observacao: movObs || undefined,
+                  })
+                }}
+                className={cn(
+                  "px-4 py-2 rounded-lg text-white text-xs font-semibold disabled:opacity-50 flex items-center gap-2 transition-colors",
+                  movTipo === "ENTRADA" ? "bg-emerald-500 hover:bg-emerald-600" : "bg-red-500 hover:bg-red-600"
+                )}>
+                {lancarMovMutation.isPending
+                  ? <Loader2 size={13} className="animate-spin" />
+                  : <PackagePlus size={13} />}
+                Confirmar {movTipo === "ENTRADA" ? "Entrada" : "Saída"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Transferência */}
       {showTransferModal && (

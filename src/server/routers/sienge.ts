@@ -40,6 +40,7 @@ import {
   listarReservasEstoqueSienge,
   atenderReservaSienge,
   transferirEstoqueSienge,
+  lancarMovimentacaoEstoqueSienge,
   listarEntregaChavesSienge,
   getExtratoClientePdfSienge,
   listarClientesSienge,
@@ -618,6 +619,35 @@ export const siengeRouter = createTRPCRouter({
       })
       if (!obra?.siengeId) return []
       return listarPedidosSienge(config.sub, config.user, config.pass, parseInt(obra.siengeId))
+    }),
+
+  // ── Movimentação de Estoque ──────────────────────────────────────────────────
+
+  lancarMovimentacao: protectedProcedure
+    .input(z.object({
+      obraId:      z.string(),
+      materialId:  z.number().int(),
+      tipo:        z.enum(["ENTRADA", "SAIDA"]),
+      quantidade:  z.number().positive(),
+      data:        z.string(), // ISO date YYYY-MM-DD
+      observacao:  z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const config = await getSiengeConfigOptional(ctx)
+      if (!config) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Sienge não configurado" })
+      const obra = await ctx.db.obra.findFirst({
+        where: { id: input.obraId, empresaId: ctx.session.empresaId },
+        select: { siengeId: true },
+      })
+      if (!obra?.siengeId) throw new TRPCError({ code: "BAD_REQUEST", message: "Obra não vinculada ao Sienge" })
+      return lancarMovimentacaoEstoqueSienge(config.sub, config.user, config.pass, {
+        materialId: input.materialId,
+        obraId:     parseInt(obra.siengeId),
+        tipo:       input.tipo,
+        quantidade: input.quantidade,
+        data:       input.data,
+        observacao: input.observacao,
+      })
     }),
 
   // ── Boletos / Segunda Via ────────────────────────────────────────────────────
