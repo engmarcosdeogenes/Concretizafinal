@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { TrendingDown, TrendingUp, AlertCircle, ArrowRight, Landmark } from "lucide-react"
+import { TrendingDown, TrendingUp, AlertCircle, ArrowRight, Landmark, Receipt } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { formatMoeda } from "@/lib/format"
 
@@ -50,6 +50,15 @@ export default function FinanceiroPage() {
       icorCor: totalSaldos >= 0 ? "text-blue-600" : "text-red-600",
       Icon:  Landmark,
       href:  "/financeiro/caixa",
+    },
+    {
+      title: "Boletos / 2ª Via",
+      desc:  "Títulos de cobrança via Sienge",
+      valor: "Emitir 2ª via",
+      cor:   "bg-violet-100",
+      icorCor: "text-violet-600",
+      Icon:  Receipt,
+      href:  "/financeiro/boletos",
     },
   ]
 

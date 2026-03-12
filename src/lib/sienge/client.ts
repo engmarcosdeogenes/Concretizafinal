@@ -1351,3 +1351,141 @@ export async function criarContaPagarSienge(
     return await res.json() as { id: number }
   } catch { return null }
 }
+
+// ─── Boletos / Segunda Via ─────────────────────────────────────────────────────
+
+export interface SiengeBoleto {
+  id?: number
+  clientId?: number
+  clientName?: string
+  contractId?: number
+  installmentNumber?: number
+  dueDate?: string
+  amount?: number
+  status?: string
+  documentNumber?: string
+}
+
+export async function enviarBoleto2ViaSienge(
+  subdominio: string,
+  usuario: string,
+  senha: string,
+  data: { customerId: number; email?: string; installmentId?: number },
+): Promise<{ sucesso: boolean }> {
+  try {
+    const res = await fetch(`${BASE(subdominio)}/payment-slip-notification`, {
+      method: "POST",
+      headers: { Authorization: authHeader(usuario, senha), "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    })
+    return { sucesso: res.ok }
+  } catch { return { sucesso: false } }
+}
+
+export async function obterSaldoDevedorSienge(
+  subdominio: string,
+  usuario: string,
+  senha: string,
+  customerId: number,
+): Promise<{ total?: number; vencido?: number; aVencer?: number } | null> {
+  try {
+    const res = await fetch(`${BASE(subdominio)}/current-debit-balance`, {
+      method: "POST",
+      headers: { Authorization: authHeader(usuario, senha), "Content-Type": "application/json" },
+      body: JSON.stringify({ customerId }),
+    })
+    if (!res.ok) return null
+    return await res.json() as { total?: number; vencido?: number; aVencer?: number }
+  } catch { return null }
+}
+
+export async function enviarSaldoDevedorEmailSienge(
+  subdominio: string,
+  usuario: string,
+  senha: string,
+  data: { customerId: number; email: string },
+): Promise<{ sucesso: boolean }> {
+  try {
+    const res = await fetch(`${BASE(subdominio)}/email-current-debit-balance`, {
+      method: "POST",
+      headers: { Authorization: authHeader(usuario, senha), "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    })
+    return { sucesso: res.ok }
+  } catch { return { sucesso: false } }
+}
+
+// ─── Lançamentos Contábeis ─────────────────────────────────────────────────────
+
+export interface SiengeEntradaContabil {
+  accountCode: string
+  costCenterCode?: string
+  description: string
+  value: number
+  date: string
+  documentNumber?: string
+  debitOrCredit?: "D" | "C"
+}
+
+export async function criarLoteContabilSienge(
+  subdominio: string,
+  usuario: string,
+  senha: string,
+  entries: SiengeEntradaContabil[],
+): Promise<{ batchId?: number; sucesso: boolean }> {
+  try {
+    const res = await fetch(`${BASE(subdominio)}/accountancy/entry-generator/entry-batches`, {
+      method: "POST",
+      headers: { Authorization: authHeader(usuario, senha), "Content-Type": "application/json" },
+      body: JSON.stringify({ entries }),
+    })
+    if (!res.ok) return { sucesso: false }
+    const data = await res.json() as { id?: number }
+    return { batchId: data.id, sucesso: true }
+  } catch { return { sucesso: false } }
+}
+
+// ─── Cotações (criar) ──────────────────────────────────────────────────────────
+
+export async function criarCotacaoSienge(
+  subdominio: string,
+  usuario: string,
+  senha: string,
+  data: {
+    buildingId: number
+    description?: string
+    items: Array<{ materialId?: number; description?: string; quantity: number; unit: string }>
+    suppliers: Array<{ creditorId: number }>
+  },
+): Promise<{ id?: number; sucesso: boolean }> {
+  try {
+    const res = await fetch(`${BASE(subdominio)}/purchase-quotations`, {
+      method: "POST",
+      headers: { Authorization: authHeader(usuario, senha), "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) return { sucesso: false }
+    const json = await res.json() as { id?: number }
+    return { id: json.id, sucesso: true }
+  } catch { return { sucesso: false } }
+}
+
+// ─── Multi-empresa ─────────────────────────────────────────────────────────────
+
+export interface SiengeEmpresa {
+  id: number
+  name: string
+  cnpj?: string
+  active?: boolean
+}
+
+export async function listarEmpresasSienge(
+  subdominio: string,
+  usuario: string,
+  senha: string,
+): Promise<SiengeEmpresa[]> {
+  try {
+    const data = await siengeGet(subdominio, usuario, senha, "/companies")
+    return normalizeList(data) as SiengeEmpresa[]
+  } catch { return [] }
+}

@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Settings, Users, Building2, User, CreditCard, Bell, Puzzle, ClipboardCheck, LayoutList, FileText } from "lucide-react"
+import { Settings, Users, Building2, User, CreditCard, Bell, Puzzle, ClipboardCheck, LayoutList, FileText, BookOpen } from "lucide-react"
 import { Card, CardTitle, CardDescription } from "@/components/ui/card"
 
 type Item = {
@@ -93,6 +93,15 @@ const ITEMS: Item[] = [
     iconBg: "bg-sky-100",
     iconColor: "text-sky-600",
     hoverBorder: "hover:border-sky-400/60",
+  },
+  {
+    title: "Plano de Contas",
+    description: "Códigos contábeis para lançamentos automáticos no Sienge",
+    href: "/configuracoes/plano-contas",
+    icon: BookOpen,
+    iconBg: "bg-emerald-100",
+    iconColor: "text-emerald-600",
+    hoverBorder: "hover:border-emerald-400/60",
   },
 ]
 

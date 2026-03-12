@@ -50,6 +50,12 @@ import {
   ativarCreditorSienge,
   desativarCreditorSienge,
   criarContaPagarSienge,
+  enviarBoleto2ViaSienge,
+  obterSaldoDevedorSienge,
+  enviarSaldoDevedorEmailSienge,
+  criarLoteContabilSienge,
+  criarCotacaoSienge,
+  listarEmpresasSienge,
 } from "@/lib/sienge/client"
 
 type Ctx = { db: typeof import("../db").db; session: { empresaId: string; userId: string; nome: string } }
@@ -612,5 +618,94 @@ export const siengeRouter = createTRPCRouter({
       })
       if (!obra?.siengeId) return []
       return listarPedidosSienge(config.sub, config.user, config.pass, parseInt(obra.siengeId))
+    }),
+
+  // ── Boletos / Segunda Via ────────────────────────────────────────────────────
+
+  enviarBoleto2Via: protectedProcedure
+    .input(z.object({
+      customerId: z.number(),
+      email: z.string().email().optional(),
+      installmentId: z.number().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const config = await getSiengeConfigOptional(ctx)
+      if (!config) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Sienge não configurado" })
+      return enviarBoleto2ViaSienge(config.sub, config.user, config.pass, input)
+    }),
+
+  obterSaldoDevedor: protectedProcedure
+    .input(z.object({ customerId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const config = await getSiengeConfigOptional(ctx)
+      if (!config) return null
+      return obterSaldoDevedorSienge(config.sub, config.user, config.pass, input.customerId).catch(() => null)
+    }),
+
+  enviarSaldoDevedorEmail: protectedProcedure
+    .input(z.object({ customerId: z.number(), email: z.string().email() }))
+    .mutation(async ({ ctx, input }) => {
+      const config = await getSiengeConfigOptional(ctx)
+      if (!config) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Sienge não configurado" })
+      return enviarSaldoDevedorEmailSienge(config.sub, config.user, config.pass, input)
+    }),
+
+  // ── Lançamentos Contábeis ────────────────────────────────────────────────────
+
+  criarLoteContabil: protectedProcedure
+    .input(z.object({
+      entries: z.array(z.object({
+        accountCode: z.string(),
+        costCenterCode: z.string().optional(),
+        description: z.string(),
+        value: z.number(),
+        date: z.string(),
+        documentNumber: z.string().optional(),
+        debitOrCredit: z.enum(["D", "C"]).optional(),
+      })),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const config = await getSiengeConfigOptional(ctx)
+      if (!config) return { sucesso: false }
+      return criarLoteContabilSienge(config.sub, config.user, config.pass, input.entries)
+    }),
+
+  // ── Cotação (criar) ──────────────────────────────────────────────────────────
+
+  criarCotacao: protectedProcedure
+    .input(z.object({
+      obraId: z.string(),
+      descricao: z.string().optional(),
+      itens: z.array(z.object({
+        materialId: z.number().optional(),
+        descricao: z.string().optional(),
+        quantidade: z.number(),
+        unidade: z.string(),
+      })),
+      fornecedoresIds: z.array(z.number()),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const config = await getSiengeConfigOptional(ctx)
+      if (!config) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Sienge não configurado" })
+      const obra = await ctx.db.obra.findFirst({
+        where: { id: input.obraId, empresaId: ctx.session.empresaId },
+        select: { siengeId: true, nome: true },
+      })
+      if (!obra?.siengeId) throw new TRPCError({ code: "BAD_REQUEST", message: "Obra não vinculada ao Sienge" })
+      return criarCotacaoSienge(config.sub, config.user, config.pass, {
+        buildingId: parseInt(obra.siengeId),
+        description: input.descricao,
+        items: input.itens.map(i => ({ materialId: i.materialId, description: i.descricao, quantity: i.quantidade, unit: i.unidade })),
+        suppliers: input.fornecedoresIds.map(id => ({ creditorId: id })),
+      })
+    }),
+
+  // ── Multi-empresa ─────────────────────────────────────────────────────────────
+
+  listarEmpresas: protectedProcedure
+    .query(async ({ ctx }) => {
+      const config = await getSiengeConfigOptional(ctx)
+      if (!config) return []
+      return listarEmpresasSienge(config.sub, config.user, config.pass)
     }),
 })

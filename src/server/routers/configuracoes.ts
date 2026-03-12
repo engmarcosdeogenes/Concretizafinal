@@ -177,4 +177,23 @@ export const configuracoesRouter = createTRPCRouter({
       })
       return { sucesso: true }
     }),
+
+  buscarPlanosContas: protectedProcedure
+    .query(async ({ ctx }) => {
+      const empresa = await ctx.db.empresa.findUnique({
+        where: { id: ctx.session.empresaId },
+        select: { planosContas: true },
+      })
+      return (empresa?.planosContas ?? {}) as Record<string, string>
+    }),
+
+  salvarPlanosContas: protectedProcedure
+    .input(z.object({ planosContas: z.record(z.string(), z.string()) }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.empresa.update({
+        where: { id: ctx.session.empresaId },
+        data:  { planosContas: input.planosContas },
+      })
+      return { sucesso: true }
+    }),
 })

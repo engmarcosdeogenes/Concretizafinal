@@ -1,6 +1,8 @@
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
+import { criarLoteContabilSienge } from "@/lib/sienge/client"
+import { decrypt, isEncrypted } from "@/lib/encrypt"
 
 const StatusPedido = z.enum(["RASCUNHO", "ENVIADO", "CONFIRMADO", "ENTREGUE_PARCIAL", "ENTREGUE", "CANCELADO"])
 
@@ -92,10 +94,41 @@ export const pedidoRouter = createTRPCRouter({
       status: StatusPedido,
     }))
     .mutation(async ({ ctx, input }) => {
-      return ctx.db.pedidoCompra.update({
+      const pedido = await ctx.db.pedidoCompra.update({
         where: { id: input.id },
         data:  { status: input.status },
+        include: { itens: { include: { material: true } }, fornecedor: { select: { empresaId: true, nome: true } } },
       })
+
+      // Fire-and-forget: lançamento contábil ao entregar pedido
+      if (input.status === "ENTREGUE" && pedido.total) {
+        const totalValue = pedido.total
+        void (async () => {
+          try {
+            const empresa = await ctx.db.empresa.findUnique({
+              where: { id: ctx.session.empresaId },
+              select: { planosContas: true },
+            })
+            const planos = (empresa?.planosContas ?? {}) as Record<string, string>
+            const accountCode = planos["Materiais"] ?? planos["materiais"]
+            if (!accountCode) return
+            const config = await ctx.db.integracaoConfig.findUnique({ where: { empresaId: ctx.session.empresaId } })
+            if (!config?.ativo) return
+            const senhaDecrypt = isEncrypted(config.senha) ? decrypt(config.senha) : config.senha
+            await criarLoteContabilSienge(config.subdominio, config.usuario, senhaDecrypt, [{
+              accountCode,
+              costCenterCode: planos["centroCusto"],
+              description: `Pedido entregue — ${pedido.fornecedor.nome}`,
+              value: totalValue,
+              date: new Date().toISOString().slice(0, 10),
+              documentNumber: pedido.notaFiscalNumero ?? undefined,
+              debitOrCredit: "D",
+            }])
+          } catch { /* silent fire-and-forget */ }
+        })()
+      }
+
+      return pedido
     }),
 
   salvarNotaFiscal: protectedProcedure

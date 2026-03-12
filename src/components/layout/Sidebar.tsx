@@ -39,6 +39,7 @@ const globalNavItems = [
       { label: "Recebimentos",     href: "/financeiro/recebimentos" },
       { label: "Saldos Bancários", href: "/financeiro/caixa" },
       { label: "Balancete",        href: "/financeiro/balancete" },
+      { label: "Boletos / 2ª Via", href: "/financeiro/boletos" },
     ],
   },
   {

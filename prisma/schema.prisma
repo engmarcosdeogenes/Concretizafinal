@@ -145,6 +145,7 @@ model Empresa {
   plano               PlanoEmpresa @default(BASICO)
   logoUrl             String?
   camposPersonalizados Json?        // [{ id, nome, tipo, secao, obrigatorio, opcoes? }]
+  planosContas        Json?         // { "Materiais": "1.1.01", "Servicos": "1.1.02", centroCusto?: "CC001" }
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
 

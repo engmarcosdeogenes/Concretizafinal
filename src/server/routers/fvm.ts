@@ -1,6 +1,8 @@
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
+import { criarLoteContabilSienge } from "@/lib/sienge/client"
+import { decrypt, isEncrypted } from "@/lib/encrypt"
 
 export const fvmRouter = createTRPCRouter({
   listar: protectedProcedure
@@ -64,10 +66,40 @@ export const fvmRouter = createTRPCRouter({
       })
       if (!fvm) throw new TRPCError({ code: "NOT_FOUND" })
 
-      return ctx.db.fVM.update({
+      const updated = await ctx.db.fVM.update({
         where: { id: input.id },
         data: { status: input.status },
       })
+
+      // Fire-and-forget: lançamento contábil ao aprovar recebimento de material
+      if (input.status === "APROVADO") {
+        void (async () => {
+          try {
+            const empresa = await ctx.db.empresa.findUnique({
+              where: { id: ctx.session.empresaId },
+              select: { planosContas: true },
+            })
+            const planos = (empresa?.planosContas ?? {}) as Record<string, string>
+            const accountCode = planos["Materiais"] ?? planos["materiais"]
+            if (!accountCode) return
+            const config = await ctx.db.integracaoConfig.findUnique({ where: { empresaId: ctx.session.empresaId } })
+            if (!config?.ativo) return
+            const senhaDecrypt = isEncrypted(config.senha) ? decrypt(config.senha) : config.senha
+            // Usa quantidade como valor aproximado se não há valorTotal
+            await criarLoteContabilSienge(config.subdominio, config.usuario, senhaDecrypt, [{
+              accountCode,
+              costCenterCode: planos["centroCusto"],
+              description: `FVM aprovado — ${fvm.material} (${fvm.fornecedorNome ?? ""})`,
+              value: fvm.quantidade,
+              date: new Date().toISOString().slice(0, 10),
+              documentNumber: fvm.notaFiscal ?? undefined,
+              debitOrCredit: "D",
+            }])
+          } catch { /* silent fire-and-forget */ }
+        })()
+      }
+
+      return updated
     }),
 
   excluir: protectedProcedure
