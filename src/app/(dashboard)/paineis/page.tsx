@@ -6,7 +6,7 @@ import {
   BarChart3, Settings2, HardHat, AlertTriangle, ClipboardList,
   DollarSign, TrendingUp, TrendingDown, Package, Landmark,
   X, Eye, EyeOff, ArrowRight, Loader2, FileText, Warehouse,
-  Users, Clock, Building2,
+  Users, Clock, Building2, ShoppingCart,
 } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { formatDataCurta, formatMoeda } from "@/lib/format"
@@ -21,6 +21,7 @@ type WidgetId =
   | "kpis" | "obras-progresso" | "ocorrencias" | "contas-pagar"
   | "saldos" | "estoque-critico" | "comercial" | "patrimonio" | "tendencia"
   | "custo-orcamento" | "fluxo-caixa" | "top-fornecedores" | "inadimplencia" | "contas-vencimento"
+  | "pedidos-recentes"
 
 const WIDGET_DEFS: { id: WidgetId; titulo: string; sienge: boolean }[] = [
   { id: "kpis",              titulo: "KPIs Gerais",             sienge: false },
@@ -28,6 +29,7 @@ const WIDGET_DEFS: { id: WidgetId; titulo: string; sienge: boolean }[] = [
   { id: "ocorrencias",       titulo: "Ocorrências Abertas",     sienge: false },
   { id: "tendencia",         titulo: "Tendência Financeira",    sienge: false },
   { id: "custo-orcamento",   titulo: "Custo vs Orçamento",      sienge: false },
+  { id: "pedidos-recentes",  titulo: "Pedidos Recentes",        sienge: false },
   { id: "contas-pagar",      titulo: "Contas a Pagar",          sienge: true  },
   { id: "saldos",            titulo: "Saldos Bancários",        sienge: true  },
   { id: "estoque-critico",   titulo: "Estoque Crítico",         sienge: true  },
@@ -693,6 +695,67 @@ function WidgetContasVencimento({ contasPagar }: { contasPagar: Array<{ dueDate?
   )
 }
 
+type PedidoItem = {
+  id: string
+  status: string
+  total: number | null
+  createdAt: Date
+  fornecedor: { nome: string }
+}
+
+const STATUS_PEDIDO_MAP: Record<string, { label: string; cls: string }> = {
+  RASCUNHO:         { label: "Rascunho",   cls: "bg-slate-100 text-slate-600" },
+  ENVIADO:          { label: "Enviado",    cls: "bg-blue-100 text-blue-700" },
+  CONFIRMADO:       { label: "Confirmado", cls: "bg-purple-100 text-purple-700" },
+  ENTREGUE_PARCIAL: { label: "Parcial",    cls: "bg-amber-100 text-amber-700" },
+  ENTREGUE:         { label: "Entregue",   cls: "bg-green-100 text-green-700" },
+  CANCELADO:        { label: "Cancelado",  cls: "bg-red-100 text-red-700" },
+}
+
+function WidgetPedidosRecentes({ pedidos }: { pedidos: PedidoItem[] | undefined }) {
+  if (!pedidos) return <SkeletonCard rows={4} />
+  const recentes = pedidos.slice(0, 6)
+  const pendentes = pedidos.filter(p => p.status !== "ENTREGUE" && p.status !== "CANCELADO").length
+  return (
+    <div className="bg-white rounded-2xl border border-border shadow-sm">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+        <div className="flex items-center gap-2">
+          <ShoppingCart size={15} className="text-orange-500" />
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">Pedidos Recentes</h3>
+        </div>
+        <div className="flex items-center gap-2">
+          {pendentes > 0 && (
+            <span className="px-2 py-0.5 bg-orange-100 text-orange-600 text-[10px] font-bold rounded-full">{pendentes} em aberto</span>
+          )}
+          <Link href="/suprimentos/pedidos" className="flex items-center gap-1 text-xs text-blue-600 hover:underline">
+            Ver todos <ArrowRight size={11} />
+          </Link>
+        </div>
+      </div>
+      {recentes.length === 0 ? (
+        <p className="px-5 py-4 text-sm text-[var(--text-muted)]">Nenhum pedido de compra registrado.</p>
+      ) : (
+        <div className="divide-y divide-border">
+          {recentes.map(p => {
+            const s = STATUS_PEDIDO_MAP[p.status] ?? STATUS_PEDIDO_MAP.RASCUNHO
+            return (
+              <Link key={p.id} href={`/suprimentos/pedidos/${p.id}`}
+                className="flex items-center gap-3 px-5 py-2.5 hover:bg-muted/30 transition-colors">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-[var(--text-primary)] truncate">{p.fornecedor.nome}</p>
+                  <p className="text-[10px] text-[var(--text-muted)]">{formatDataCurta(p.createdAt)}</p>
+                </div>
+                <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-semibold shrink-0", s.cls)}>{s.label}</span>
+                <span className="text-xs font-bold text-[var(--text-primary)] shrink-0">{formatMoeda(p.total ?? 0)}</span>
+              </Link>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function SkeletonCard({ rows }: { rows: number }) {
   return (
     <div className="bg-white rounded-2xl border border-border shadow-sm p-5 space-y-3 animate-pulse">
@@ -719,6 +782,7 @@ export default function PaineisPage() {
   const { data: patrimonio, isLoading: loadingPatrimonio } = trpc.sienge.listarPatrimonio.useQuery(undefined, { retry: false })
   const { data: contasReceber, isLoading: loadingCR } = trpc.sienge.listarContasReceber.useQuery({}, { retry: false })
   const { data: inadimplentes, isLoading: loadingInad } = trpc.sienge.listarInadimplentes.useQuery(undefined, { retry: false })
+  const { data: pedidos } = trpc.pedido.listar.useQuery()
 
   const temSienge = !!(contasPagar || saldos || estoque)
 
@@ -772,6 +836,10 @@ export default function PaineisPage() {
             custoAtual: o.custoAtual ?? null,
             status: o.status,
           }))} />
+        )}
+
+        {vis.has("pedidos-recentes") && (
+          <WidgetPedidosRecentes pedidos={pedidos as PedidoItem[] | undefined} />
         )}
 
         {(vis.has("fluxo-caixa") || vis.has("top-fornecedores")) && (

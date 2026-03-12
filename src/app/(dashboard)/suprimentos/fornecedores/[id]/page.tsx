@@ -2,9 +2,10 @@
 
 import { use, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, Building2, Phone, Mail, MapPin, CreditCard, QrCode, AlertCircle, ExternalLink, PowerOff, Power } from "lucide-react"
+import { ArrowLeft, Building2, Phone, Mail, MapPin, CreditCard, QrCode, AlertCircle, ExternalLink, PowerOff, Power, ShoppingCart, TrendingUp } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { cn } from "@/lib/utils"
+import { formatDataCurta, formatMoeda } from "@/lib/format"
 
 const PIX_LABEL: Record<string, string> = {
   CPF:    "CPF",
@@ -21,6 +22,9 @@ export default function FornecedorDetalhePage({ params }: { params: Promise<{ id
   const utils = trpc.useUtils()
   const { data: resultado } = trpc.fornecedor.listar.useQuery()
   const fornecedor = resultado?.fornecedores.find(f => f.id === id)
+
+  const { data: pedidos = [] } = trpc.pedido.listar.useQuery()
+  const pedidosFornecedor = pedidos.filter(p => p.fornecedor.id === id)
 
   const { data: dadosBancarios, isLoading: loadingBanco } = trpc.sienge.buscarDadosBancariosPorCnpj.useQuery(
     { cnpj: fornecedor?.cnpj ?? "" },
@@ -211,6 +215,77 @@ export default function FornecedorDetalhePage({ params }: { params: Promise<{ id
               <p className="text-sm text-[var(--text-muted)]">Nenhum dado bancário ou PIX cadastrado para este fornecedor no Sienge.</p>
             )}
           </div>
+        )}
+      </div>
+
+      {/* Análise de Pedidos */}
+      <div className="bg-white border border-border rounded-xl p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <ShoppingCart size={16} className="text-orange-500" />
+          <h2 className="text-sm font-semibold text-[var(--text-primary)]">Histórico de Pedidos</h2>
+          <span className="ml-auto text-xs text-[var(--text-muted)] bg-slate-100 px-2 py-0.5 rounded-full">dados locais</span>
+        </div>
+
+        {pedidosFornecedor.length === 0 ? (
+          <p className="text-sm text-[var(--text-muted)]">Nenhum pedido de compra registrado para este fornecedor.</p>
+        ) : (
+          <>
+            {/* KPIs */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-muted/50 rounded-xl p-3">
+                <p className="text-[10px] text-[var(--text-muted)] font-semibold uppercase tracking-wide mb-0.5">Pedidos</p>
+                <p className="text-xl font-extrabold text-[var(--text-primary)]">{pedidosFornecedor.length}</p>
+              </div>
+              <div className="bg-orange-50 rounded-xl p-3">
+                <p className="text-[10px] text-orange-600 font-semibold uppercase tracking-wide mb-0.5">Total Gasto</p>
+                <p className="text-xl font-extrabold text-orange-700">{formatMoeda(pedidosFornecedor.reduce((s, p) => s + (p.total ?? 0), 0))}</p>
+              </div>
+              <div className="bg-blue-50 rounded-xl p-3">
+                <p className="text-[10px] text-blue-600 font-semibold uppercase tracking-wide mb-0.5">Ticket Médio</p>
+                <p className="text-xl font-extrabold text-blue-700">
+                  {formatMoeda(pedidosFornecedor.length > 0 ? pedidosFornecedor.reduce((s, p) => s + (p.total ?? 0), 0) / pedidosFornecedor.length : 0)}
+                </p>
+              </div>
+            </div>
+
+            {/* Últimos pedidos */}
+            <div>
+              <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-2 flex items-center gap-1">
+                <TrendingUp size={11} /> Últimos pedidos
+              </p>
+              <div className="space-y-2">
+                {pedidosFornecedor.slice(0, 5).map(p => {
+                  const statusMap: Record<string, { label: string; cls: string }> = {
+                    RASCUNHO:         { label: "Rascunho",   cls: "bg-slate-100 text-slate-600" },
+                    ENVIADO:          { label: "Enviado",    cls: "bg-blue-100 text-blue-700" },
+                    CONFIRMADO:       { label: "Confirmado", cls: "bg-purple-100 text-purple-700" },
+                    ENTREGUE_PARCIAL: { label: "Parcial",    cls: "bg-amber-100 text-amber-700" },
+                    ENTREGUE:         { label: "Entregue",   cls: "bg-green-100 text-green-700" },
+                    CANCELADO:        { label: "Cancelado",  cls: "bg-red-100 text-red-700" },
+                  }
+                  const s = statusMap[p.status] ?? statusMap.RASCUNHO
+                  return (
+                    <Link key={p.id} href={`/suprimentos/pedidos/${p.id}`}
+                      className="flex items-center gap-3 p-3 bg-muted/30 rounded-xl hover:bg-muted/60 transition-colors">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-[var(--text-primary)] truncate">
+                          {p.itens.map(i => i.material.nome).join(", ").slice(0, 40) || "Pedido"}
+                        </p>
+                        <p className="text-[10px] text-[var(--text-muted)]">{formatDataCurta(p.createdAt)}</p>
+                      </div>
+                      <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-semibold", s.cls)}>{s.label}</span>
+                      <span className="text-xs font-bold text-[var(--text-primary)]">{formatMoeda(p.total ?? 0)}</span>
+                    </Link>
+                  )
+                })}
+              </div>
+              {pedidosFornecedor.length > 5 && (
+                <Link href="/suprimentos/pedidos" className="block text-center text-xs text-orange-500 hover:underline mt-2">
+                  Ver todos os {pedidosFornecedor.length} pedidos →
+                </Link>
+              )}
+            </div>
+          </>
         )}
       </div>
 

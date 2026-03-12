@@ -4,7 +4,7 @@ import { createTRPCRouter, protectedProcedure } from "../trpc"
 import { logAudit } from "@/lib/audit"
 import { notificarEmpresa } from "@/lib/push"
 import { StatusPresencaMO } from "@prisma/client"
-import { criarRdoSienge } from "@/lib/sienge/client"
+import { criarRdoSienge, criarProgressLogSienge } from "@/lib/sienge/client"
 import { decrypt, isEncrypted } from "@/lib/encrypt"
 
 const PODE_VERIFICAR_ENG  = ["ENGENHEIRO", "ADMIN", "DONO"] as const
@@ -395,6 +395,7 @@ export const rdoRouter = createTRPCRouter({
         where: { id: input.rdoId, obra: { empresaId: ctx.session.empresaId } },
         include: {
           atividades: { where: { tarefaObraId: { not: null } } },
+          obra: { select: { siengeId: true } },
         },
       })
       if (!rdo) throw new TRPCError({ code: "NOT_FOUND" })
@@ -458,6 +459,37 @@ export const rdoRouter = createTRPCRouter({
             body:  `${ctx.session.nome} aprovou o Relatório Diário de Obra`,
             url:   `/obras/${rdo.obraId}/rdo/${input.rdoId}`,
           }).catch(() => {})
+
+          // Feature F: fire-and-forget progress log para o Sienge
+          if (rdo.obra?.siengeId) {
+            const siengeId = rdo.obra.siengeId
+            const rdoData  = rdo.data
+            const atvsLinked = rdo.atividades.filter(a => a.tarefaObraId)
+            if (atvsLinked.length > 0) {
+              void (async () => {
+                try {
+                  const config = await ctx.db.integracaoConfig.findUnique({
+                    where: { empresaId: ctx.session.empresaId },
+                  })
+                  if (!config?.ativo) return
+                  const pass = isEncrypted(config.senha) ? decrypt(config.senha) : config.senha
+                  const tarefas = await ctx.db.tarefaObra.findMany({
+                    where: { id: { in: atvsLinked.map(a => a.tarefaObraId!).filter(Boolean) } },
+                    select: { percentual: true },
+                  })
+                  const avgPct = tarefas.length > 0
+                    ? tarefas.reduce((s, t) => s + t.percentual, 0) / tarefas.length
+                    : 0
+                  await criarProgressLogSienge(config.subdominio, config.usuario, pass, {
+                    buildingProjectId: parseInt(siengeId),
+                    date:             rdoData.toISOString().split("T")[0],
+                    percentageExecuted: avgPct,
+                    description: `RDO aprovado — ${atvsLinked.length} atividade(s)`,
+                  })
+                } catch { /* silent fire-and-forget */ }
+              })()
+            }
+          }
         } else {
           await ctx.db.$transaction(async (tx) => {
             await tx.rDO.update({ where: { id: input.rdoId }, data: { status: "RASCUNHO" } })

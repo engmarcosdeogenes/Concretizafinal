@@ -6,6 +6,7 @@ import { ChevronDown, ChevronRight, BarChart3, Settings, TrendingUp, TrendingDow
 import Link from "next/link"
 import { trpc } from "@/lib/trpc/client"
 import { cn } from "@/lib/utils"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 
@@ -196,6 +197,34 @@ export default function OrcamentoPage() {
           </div>
         </div>
       )}
+
+      {/* Gráfico por grupo */}
+      {data.length > 0 && (() => {
+        const gruposMap: Record<string, number> = {}
+        data.flatMap(d => d.itens).forEach(item => {
+          const g = item.group ?? "Geral"
+          gruposMap[g] = (gruposMap[g] ?? 0) + (item.totalPrice ?? 0)
+        })
+        const chartData = Object.entries(gruposMap)
+          .map(([grupo, orcado]) => ({ grupo: grupo.length > 16 ? grupo.slice(0, 16) + "…" : grupo, orcado }))
+          .sort((a, b) => b.orcado - a.orcado)
+          .slice(0, 10)
+        if (chartData.length <= 1) return null
+        return (
+          <div className="bg-white rounded-xl border border-border shadow-sm p-4">
+            <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">Orçamento por Grupo</p>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 60 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="grupo" tick={{ fontSize: 10 }} angle={-30} textAnchor="end" interval={0} />
+                <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `${((v as number) / 1000).toFixed(0)}k`} />
+                <Tooltip formatter={(v: number | undefined) => fmt(v ?? 0)} />
+                <Bar dataKey="orcado" name="Orçado" radius={[3, 3, 0, 0]} fill="#f97316" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )
+      })()}
 
       {/* Estimativas */}
       {data.length === 0 ? (

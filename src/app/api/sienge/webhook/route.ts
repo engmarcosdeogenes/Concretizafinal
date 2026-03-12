@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/server/db"
+import { notificarEmpresa } from "@/lib/push"
 
 // Sienge envia eventos como POST com body JSON
 // URL: /api/sienge/webhook?empresaId=<id>&secret=<token>
@@ -43,23 +44,44 @@ export async function POST(req: NextRequest) {
 async function processarEventoSienge(empresaId: string, event: string, data: Record<string, unknown>) {
   switch (event) {
     case "PURCHASE_ORDER_AUTHORIZED": {
-      // Registrar evento — pedido autorizado no Sienge
       await registrarSync(empresaId, "WEBHOOK_PEDIDO_AUTORIZADO", JSON.stringify(data))
+      const pedidoId = (data as { purchaseOrderId?: number }).purchaseOrderId
+      void notificarEmpresa(empresaId, {
+        title: "Pedido Autorizado no Sienge",
+        body: `Pedido #${pedidoId ?? "—"} foi autorizado.`,
+        url: "/suprimentos/pedidos",
+      })
       break
     }
 
     case "PURCHASE_ORDER_CREATED": {
       await registrarSync(empresaId, "WEBHOOK_PEDIDO_CRIADO", JSON.stringify(data))
+      void notificarEmpresa(empresaId, {
+        title: "Novo Pedido no Sienge",
+        body: "Um novo pedido de compra foi criado.",
+        url: "/suprimentos/pedidos",
+      })
       break
     }
 
     case "BILL_PAID": {
       await registrarSync(empresaId, "WEBHOOK_CONTA_PAGA", JSON.stringify(data))
+      const supplier = (data as { supplierName?: string }).supplierName
+      void notificarEmpresa(empresaId, {
+        title: "Conta Paga no Sienge",
+        body: `Pagamento para ${supplier ?? "fornecedor"} confirmado.`,
+        url: "/financeiro",
+      })
       break
     }
 
     case "CONTRACT_CREATED": {
       await registrarSync(empresaId, "WEBHOOK_CONTRATO_CRIADO", JSON.stringify(data))
+      void notificarEmpresa(empresaId, {
+        title: "Novo Contrato no Sienge",
+        body: "Um novo contrato foi registrado.",
+        url: "/financeiro",
+      })
       break
     }
 

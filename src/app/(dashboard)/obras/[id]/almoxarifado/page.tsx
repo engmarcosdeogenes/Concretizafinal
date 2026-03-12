@@ -293,67 +293,112 @@ export default function AlmoxarifadoPage({ params }: { params: Promise<{ id: str
 
       {/* ── Reservas Tab ── */}
       {tab === "reservas" && (
-        <div className="bg-white border border-border rounded-xl overflow-hidden">
-          {loadingReservas ? (
-            <div className="p-8 text-center text-sm text-[var(--text-muted)]">Carregando reservas...</div>
-          ) : reservas.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <ClipboardList size={32} className="text-slate-300 mb-3" />
-              <p className="text-sm font-semibold text-[var(--text-primary)]">Nenhuma reserva de estoque</p>
-              <p className="text-xs text-[var(--text-muted)] mt-1">Reservas de materiais para esta obra aparecerão aqui.</p>
-            </div>
-          ) : (
-            <div>
-              <div className="grid grid-cols-[2fr_80px_80px_80px_80px] gap-3 px-4 py-2.5 bg-muted border-b border-border text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">
-                <span>Material</span>
-                <span className="text-right">Reservado</span>
-                <span className="text-right">Atendido</span>
-                <span className="text-center">Status</span>
-                <span className="text-center">Ação</span>
+        <>
+          {/* KPI header */}
+          {!loadingReservas && reservas.length > 0 && (() => {
+            const pendentes = reservas.filter(r => r.status !== "ATENDIDA")
+            const atendidas = reservas.filter(r => r.status === "ATENDIDA")
+            const totalReservado = reservas.reduce((s, r) => s + (r.quantidade ?? 0), 0)
+            const totalAtendido  = reservas.reduce((s, r) => s + (r.quantidadeAtendida ?? 0), 0)
+            return (
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                  <p className="text-[10px] text-amber-600 font-semibold uppercase tracking-wide mb-0.5">Pendentes</p>
+                  <p className="text-2xl font-extrabold text-amber-700">{pendentes.length}</p>
+                </div>
+                <div className="bg-green-50 border border-green-200 rounded-xl p-3">
+                  <p className="text-[10px] text-green-600 font-semibold uppercase tracking-wide mb-0.5">Atendidas</p>
+                  <p className="text-2xl font-extrabold text-green-700">{atendidas.length}</p>
+                </div>
+                <div className="bg-white border border-border rounded-xl p-3">
+                  <p className="text-[10px] text-[var(--text-muted)] font-semibold uppercase tracking-wide mb-0.5">Atend. Geral</p>
+                  <p className="text-2xl font-extrabold text-[var(--text-primary)]">
+                    {totalReservado > 0 ? Math.round(totalAtendido / totalReservado * 100) : 0}%
+                  </p>
+                </div>
               </div>
-              <div className="divide-y divide-border">
-                {reservas.map(r => {
-                  const pct = r.quantidade ? Math.round((r.quantidadeAtendida ?? 0) / r.quantidade * 100) : 0
-                  return (
-                    <div key={r.id} className="grid grid-cols-[2fr_80px_80px_80px_80px] gap-3 px-4 py-3 items-center text-sm hover:bg-muted/30">
-                      <p className="font-medium text-[var(--text-primary)] truncate">{r.materialNome ?? "—"}</p>
-                      <p className="text-right text-xs font-semibold text-[var(--text-primary)]">{r.quantidade ?? "—"}</p>
-                      <p className="text-right text-xs text-[var(--text-muted)]">{r.quantidadeAtendida ?? 0} ({pct}%)</p>
-                      <div className="flex justify-center">
-                        <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-semibold",
-                          r.status === "ATENDIDA" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
-                        )}>{r.status ?? "Pendente"}</span>
-                      </div>
-                      <div className="flex justify-center">
-                        {atendendoId === r.id ? (
-                          <div className="flex items-center gap-1">
-                            <input type="number" value={qtdAtender} onChange={e => setQtdAtender(e.target.value)}
-                              className="w-14 px-2 py-1 border border-border rounded text-xs focus:outline-none focus:border-orange-400"
-                              placeholder="Qtd" min="0.01" step="0.01" />
-                            <button type="button"
-                              onClick={() => atenderMutation.mutate({ reservaId: r.id, quantidade: Number(qtdAtender) })}
-                              className="p-1 rounded bg-green-500 text-white hover:bg-green-600">
-                              <CheckCircle2 size={12} />
-                            </button>
-                            <button type="button" onClick={() => { setAtendendoId(null); setQtdAtender("") }}
-                              className="p-1 rounded bg-gray-200 text-gray-500 hover:bg-gray-300">
-                              <X size={12} />
-                            </button>
+            )
+          })()}
+
+          <div className="bg-white border border-border rounded-xl overflow-hidden">
+            {loadingReservas ? (
+              <div className="p-8 text-center text-sm text-[var(--text-muted)]">Carregando reservas...</div>
+            ) : reservas.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <ClipboardList size={32} className="text-slate-300 mb-3" />
+                <p className="text-sm font-semibold text-[var(--text-primary)]">Nenhuma reserva de estoque</p>
+                <p className="text-xs text-[var(--text-muted)] mt-1">Reservas de materiais para esta obra aparecerão aqui.</p>
+              </div>
+            ) : (
+              <div>
+                <div className="grid grid-cols-[2fr_80px_1fr_80px_80px] gap-3 px-4 py-2.5 bg-muted border-b border-border text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">
+                  <span>Material</span>
+                  <span className="text-right">Reservado</span>
+                  <span>Progresso</span>
+                  <span className="text-center">Status</span>
+                  <span className="text-center">Ação</span>
+                </div>
+                <div className="divide-y divide-border">
+                  {reservas.map(r => {
+                    const pct = r.quantidade ? Math.round((r.quantidadeAtendida ?? 0) / r.quantidade * 100) : 0
+                    const atendida = r.status === "ATENDIDA"
+                    return (
+                      <div key={r.id} className={cn(
+                        "grid grid-cols-[2fr_80px_1fr_80px_80px] gap-3 px-4 py-3 items-center text-sm hover:bg-muted/30",
+                        atendida ? "opacity-60" : ""
+                      )}>
+                        <p className="font-medium text-[var(--text-primary)] truncate">{r.materialNome ?? "—"}</p>
+                        <p className="text-right text-xs font-semibold text-[var(--text-primary)]">{r.quantidade ?? "—"}</p>
+                        <div>
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="text-[10px] text-[var(--text-muted)]">{r.quantidadeAtendida ?? 0} atend.</span>
+                            <span className="text-[10px] font-semibold text-[var(--text-primary)]">{pct}%</span>
                           </div>
-                        ) : (
-                          <button type="button" onClick={() => setAtendendoId(r.id)}
-                            className="px-2.5 py-1 rounded border border-border text-[10px] font-medium text-[var(--text-muted)] hover:border-orange-300 hover:text-orange-600 transition-all">
-                            Atender
-                          </button>
-                        )}
+                          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className={cn("h-full rounded-full transition-all", atendida ? "bg-green-500" : pct >= 80 ? "bg-amber-400" : "bg-orange-500")}
+                              style={{ width: `${Math.min(100, pct)}%` }}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex justify-center">
+                          <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-semibold",
+                            atendida ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+                          )}>{r.status ?? "Pendente"}</span>
+                        </div>
+                        <div className="flex justify-center">
+                          {atendida ? (
+                            <CheckCircle2 size={14} className="text-green-500" />
+                          ) : atendendoId === r.id ? (
+                            <div className="flex items-center gap-1">
+                              <input type="number" value={qtdAtender} onChange={e => setQtdAtender(e.target.value)}
+                                className="w-14 px-2 py-1 border border-border rounded text-xs focus:outline-none focus:border-orange-400"
+                                placeholder="Qtd" min="0.01" step="0.01" />
+                              <button type="button"
+                                onClick={() => atenderMutation.mutate({ reservaId: r.id, quantidade: Number(qtdAtender) })}
+                                className="p-1 rounded bg-green-500 text-white hover:bg-green-600">
+                                <CheckCircle2 size={12} />
+                              </button>
+                              <button type="button" onClick={() => { setAtendendoId(null); setQtdAtender("") }}
+                                className="p-1 rounded bg-gray-200 text-gray-500 hover:bg-gray-300">
+                                <X size={12} />
+                              </button>
+                            </div>
+                          ) : (
+                            <button type="button" onClick={() => setAtendendoId(r.id)}
+                              className="px-2.5 py-1 rounded border border-border text-[10px] font-medium text-[var(--text-muted)] hover:border-orange-300 hover:text-orange-600 transition-all">
+                              Atender
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )
-                })}
+                    )
+                  })}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        </>
       )}
 
       <p className="text-xs text-[var(--text-muted)] text-center">Dados fornecidos em tempo real pelo Sienge</p>
