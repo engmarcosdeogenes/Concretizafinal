@@ -6,28 +6,37 @@ import {
   BarChart3, Settings2, HardHat, AlertTriangle, ClipboardList,
   DollarSign, TrendingUp, TrendingDown, Package, Landmark,
   X, Eye, EyeOff, ArrowRight, Loader2, FileText, Warehouse,
+  Users, Clock, Building2,
 } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { formatDataCurta, formatMoeda } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell,
 } from "recharts"
 
 const STORAGE_KEY = "concretiza_paineis_visibilidade"
 
-type WidgetId = "kpis" | "obras-progresso" | "ocorrencias" | "contas-pagar" | "saldos" | "estoque-critico" | "comercial" | "patrimonio" | "tendencia"
+type WidgetId =
+  | "kpis" | "obras-progresso" | "ocorrencias" | "contas-pagar"
+  | "saldos" | "estoque-critico" | "comercial" | "patrimonio" | "tendencia"
+  | "custo-orcamento" | "fluxo-caixa" | "top-fornecedores" | "inadimplencia" | "contas-vencimento"
 
 const WIDGET_DEFS: { id: WidgetId; titulo: string; sienge: boolean }[] = [
-  { id: "kpis",           titulo: "KPIs Gerais",          sienge: false },
-  { id: "obras-progresso",titulo: "Avanço das Obras",     sienge: false },
-  { id: "ocorrencias",    titulo: "Ocorrências Abertas",  sienge: false },
-  { id: "tendencia",      titulo: "Tendência Financeira", sienge: false },
-  { id: "contas-pagar",   titulo: "Contas a Pagar",       sienge: true  },
-  { id: "saldos",         titulo: "Saldos Bancários",     sienge: true  },
-  { id: "estoque-critico",titulo: "Estoque Crítico",      sienge: true  },
-  { id: "comercial",      titulo: "Contratos de Venda",   sienge: true  },
-  { id: "patrimonio",     titulo: "Patrimônio",           sienge: true  },
+  { id: "kpis",              titulo: "KPIs Gerais",             sienge: false },
+  { id: "obras-progresso",   titulo: "Avanço das Obras",        sienge: false },
+  { id: "ocorrencias",       titulo: "Ocorrências Abertas",     sienge: false },
+  { id: "tendencia",         titulo: "Tendência Financeira",    sienge: false },
+  { id: "custo-orcamento",   titulo: "Custo vs Orçamento",      sienge: false },
+  { id: "contas-pagar",      titulo: "Contas a Pagar",          sienge: true  },
+  { id: "saldos",            titulo: "Saldos Bancários",        sienge: true  },
+  { id: "estoque-critico",   titulo: "Estoque Crítico",         sienge: true  },
+  { id: "fluxo-caixa",       titulo: "Fluxo de Caixa",          sienge: true  },
+  { id: "top-fornecedores",  titulo: "Top Fornecedores",        sienge: true  },
+  { id: "inadimplencia",     titulo: "Inadimplência",           sienge: true  },
+  { id: "contas-vencimento", titulo: "Vencimentos por Prazo",   sienge: true  },
+  { id: "comercial",         titulo: "Contratos de Venda",      sienge: true  },
+  { id: "patrimonio",        titulo: "Patrimônio",              sienge: true  },
 ]
 
 function useVisibilidade() {
@@ -411,6 +420,279 @@ function WidgetPatrimonio({ data, isLoading }: { data?: PatrimonioData; isLoadin
   )
 }
 
+// ── Novos Widgets BI (Fase 2D) ───────────────────────────────────────────────
+
+function WidgetCustoOrcamento({ obras }: { obras: Array<{ id: string; nome: string; orcamento: number | null; custoAtual: number | null; status: string }> | undefined }) {
+  if (!obras) return <SkeletonCard rows={4} />
+  const ativas = obras
+    .filter(o => o.status === "EM_ANDAMENTO" && (o.orcamento ?? 0) > 0)
+    .slice(0, 6)
+    .map(o => ({
+      nome: o.nome.length > 18 ? o.nome.slice(0, 18) + "…" : o.nome,
+      orcamento: o.orcamento ?? 0,
+      custo: o.custoAtual ?? 0,
+      excedido: (o.custoAtual ?? 0) > (o.orcamento ?? 0),
+    }))
+  return (
+    <div className="bg-white rounded-2xl border border-border shadow-sm">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+        <div className="flex items-center gap-2">
+          <Building2 size={15} className="text-blue-500" />
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">Custo vs Orçamento por Obra</h3>
+        </div>
+        <Link href="/obras" className="flex items-center gap-1 text-xs text-blue-600 hover:underline">
+          Ver obras <ArrowRight size={11} />
+        </Link>
+      </div>
+      {ativas.length === 0 ? (
+        <p className="px-5 py-4 text-sm text-[var(--text-muted)]">Nenhuma obra ativa com orçamento definido.</p>
+      ) : (
+        <div className="p-4">
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={ativas} margin={{ top: 5, right: 10, left: 0, bottom: 40 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+              <XAxis dataKey="nome" tick={{ fontSize: 9 }} angle={-30} textAnchor="end" interval={0} />
+              <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
+              <Tooltip formatter={(v: number | undefined) => formatMoeda(v ?? 0)} />
+              <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
+              <Bar dataKey="orcamento" name="Orçamento" fill="#93c5fd" radius={[3,3,0,0]} />
+              <Bar dataKey="custo" name="Custo Atual" radius={[3,3,0,0]}>
+                {ativas.map((entry, i) => (
+                  <Cell key={i} fill={entry.excedido ? "#ef4444" : "#f97316"} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+          {ativas.some(o => o.excedido) && (
+            <p className="text-[10px] text-red-500 mt-1 text-center font-semibold">⚠ Obras em vermelho excederam o orçamento</p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+type ContaReceber = { dueDate?: string; amount?: number; clientName?: string; status?: string }
+
+function WidgetFluxoCaixa({
+  contasPagar,
+  contasReceber,
+  isLoading,
+}: {
+  contasPagar: Array<{ dueDate?: string; amount?: number }> | undefined
+  contasReceber: ContaReceber[] | undefined
+  isLoading: boolean
+}) {
+  if (isLoading) return <SkeletonCard rows={5} />
+  if (!contasPagar && !contasReceber) {
+    return (
+      <div className="bg-white rounded-2xl border border-border shadow-sm p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <TrendingUp size={15} className="text-emerald-500" />
+          <p className="text-sm font-bold text-[var(--text-primary)]">Fluxo de Caixa</p>
+        </div>
+        <p className="text-xs text-[var(--text-muted)] py-6 text-center">Nenhum dado — configure o Sienge.</p>
+      </div>
+    )
+  }
+  const hoje = new Date()
+  const meses = Array.from({ length: 3 }, (_, i) => {
+    const d = new Date(hoje.getFullYear(), hoje.getMonth() + i, 1)
+    return {
+      key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+      label: d.toLocaleDateString("pt-BR", { month: "short", year: "2-digit" }),
+      pagar: 0,
+      receber: 0,
+    }
+  })
+  ;(contasPagar ?? []).forEach(c => {
+    if (!c.dueDate) return
+    const key = c.dueDate.slice(0, 7)
+    const m = meses.find(m => m.key === key)
+    if (m) m.pagar += c.amount ?? 0
+  })
+  ;(contasReceber ?? []).forEach(c => {
+    if (!c.dueDate) return
+    const key = c.dueDate.slice(0, 7)
+    const m = meses.find(m => m.key === key)
+    if (m) m.receber += c.amount ?? 0
+  })
+  const saldoTotal = meses.reduce((s, m) => s + m.receber - m.pagar, 0)
+  return (
+    <div className="bg-white rounded-2xl border border-border shadow-sm p-5">
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-2">
+          <TrendingUp size={15} className="text-emerald-500" />
+          <p className="text-sm font-bold text-[var(--text-primary)]">Fluxo de Caixa (3 meses)</p>
+        </div>
+        <Link href="/financeiro" className="text-[10px] text-orange-500 hover:underline flex items-center gap-0.5">
+          Ver <ArrowRight size={10} />
+        </Link>
+      </div>
+      <p className={cn("text-[11px] font-semibold mb-3", saldoTotal >= 0 ? "text-emerald-600" : "text-red-500")}>
+        Saldo projetado: {formatMoeda(saldoTotal)}
+      </p>
+      <ResponsiveContainer width="100%" height={150}>
+        <BarChart data={meses} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+          <XAxis dataKey="label" tick={{ fontSize: 10 }} />
+          <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
+          <Tooltip formatter={(v: number | undefined) => formatMoeda(v ?? 0)} />
+          <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
+          <Bar dataKey="receber" name="A Receber" fill="#22c55e" radius={[3,3,0,0]} />
+          <Bar dataKey="pagar" name="A Pagar" fill="#ef4444" radius={[3,3,0,0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  )
+}
+
+function WidgetTopFornecedores({ contasPagar }: { contasPagar: Array<{ supplierName?: string; amount?: number }> | undefined }) {
+  if (!contasPagar) return <SkeletonCard rows={4} />
+  const map: Record<string, number> = {}
+  contasPagar.forEach(c => {
+    const nome = c.supplierName ?? "Sem nome"
+    map[nome] = (map[nome] ?? 0) + (c.amount ?? 0)
+  })
+  const top = Object.entries(map)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 8)
+    .map(([nome, total]) => ({ nome: nome.length > 22 ? nome.slice(0, 22) + "…" : nome, total }))
+  return (
+    <div className="bg-white rounded-2xl border border-border shadow-sm">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+        <div className="flex items-center gap-2">
+          <Users size={15} className="text-violet-500" />
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">Top Fornecedores por Gasto</h3>
+        </div>
+        <Link href="/suprimentos/fornecedores" className="flex items-center gap-1 text-xs text-blue-600 hover:underline">
+          Ver todos <ArrowRight size={11} />
+        </Link>
+      </div>
+      {top.length === 0 ? (
+        <p className="px-5 py-4 text-sm text-[var(--text-muted)]">Nenhum dado de fornecedores.</p>
+      ) : (
+        <div className="p-4">
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={top} layout="vertical" margin={{ top: 0, right: 60, left: 10, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+              <XAxis type="number" tick={{ fontSize: 9 }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
+              <YAxis type="category" dataKey="nome" tick={{ fontSize: 9 }} width={110} />
+              <Tooltip formatter={(v: number | undefined) => formatMoeda(v ?? 0)} />
+              <Bar dataKey="total" name="Total" fill="#8b5cf6" radius={[0,3,3,0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+    </div>
+  )
+}
+
+type Inadimplente = { clientName?: string; amount?: number; dueDate?: string; installmentNumber?: number }
+
+function WidgetInadimplencia({ inadimplentes, isLoading }: { inadimplentes: Inadimplente[] | undefined; isLoading: boolean }) {
+  if (isLoading) return <SkeletonCard rows={4} />
+  if (!inadimplentes) {
+    return (
+      <div className="bg-white rounded-2xl border border-border shadow-sm p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <AlertTriangle size={15} className="text-red-500" />
+          <p className="text-sm font-bold text-[var(--text-primary)]">Inadimplência</p>
+        </div>
+        <p className="text-xs text-[var(--text-muted)] py-6 text-center">Nenhum dado — configure o Sienge.</p>
+      </div>
+    )
+  }
+  const totalValor = inadimplentes.reduce((s, i) => s + (i.amount ?? 0), 0)
+  const clientes = [...new Set(inadimplentes.map(i => i.clientName).filter(Boolean))].length
+  const hoje = new Date()
+  const lista = inadimplentes.slice(0, 5)
+  return (
+    <div className="bg-white rounded-2xl border border-border shadow-sm">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+        <div className="flex items-center gap-2">
+          <AlertTriangle size={15} className="text-red-500" />
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">Inadimplência</h3>
+        </div>
+        <Link href="/financeiro/recebimentos" className="flex items-center gap-1 text-xs text-blue-600 hover:underline">
+          Ver <ArrowRight size={11} />
+        </Link>
+      </div>
+      <div className="grid grid-cols-2 gap-3 px-5 py-3 border-b border-border">
+        <div className="bg-red-50 rounded-xl p-3">
+          <p className="text-[10px] text-red-500 font-semibold mb-0.5">Total em Atraso</p>
+          <p className="text-base font-extrabold text-red-600">{formatMoeda(totalValor)}</p>
+        </div>
+        <div className="bg-amber-50 rounded-xl p-3">
+          <p className="text-[10px] text-amber-600 font-semibold mb-0.5">Clientes</p>
+          <p className="text-base font-extrabold text-amber-700">{clientes}</p>
+        </div>
+      </div>
+      {lista.length === 0 ? (
+        <p className="px-5 py-4 text-sm text-emerald-600 font-medium">Nenhuma inadimplência.</p>
+      ) : (
+        <div className="divide-y divide-border">
+          {lista.map((item, i) => {
+            const dias = item.dueDate
+              ? Math.floor((hoje.getTime() - new Date(item.dueDate).getTime()) / 86400000)
+              : null
+            return (
+              <div key={i} className="flex items-center gap-3 px-5 py-2.5">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-[var(--text-primary)] truncate">{item.clientName ?? "—"}</p>
+                  {dias !== null && (
+                    <p className="text-[10px] text-red-400">{dias} dia{dias !== 1 ? "s" : ""} em atraso</p>
+                  )}
+                </div>
+                <span className="text-xs font-bold text-red-600">{formatMoeda(item.amount ?? 0)}</span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function WidgetContasVencimento({ contasPagar }: { contasPagar: Array<{ dueDate?: string; amount?: number }> | undefined }) {
+  if (!contasPagar) return <SkeletonCard rows={3} />
+  const hoje = new Date(); hoje.setHours(0,0,0,0)
+  const em7 = new Date(hoje); em7.setDate(hoje.getDate() + 7)
+  const em15 = new Date(hoje); em15.setDate(hoje.getDate() + 15)
+  const em30 = new Date(hoje); em30.setDate(hoje.getDate() + 30)
+  const pendentes = contasPagar.filter(c => c.dueDate && new Date(c.dueDate) >= hoje)
+  const faixas = [
+    { label: "Próx. 7 dias",  cor: "bg-red-50 border-red-100",    text: "text-red-600",    items: pendentes.filter(c => new Date(c.dueDate!) <= em7) },
+    { label: "Próx. 15 dias", cor: "bg-amber-50 border-amber-100", text: "text-amber-700",  items: pendentes.filter(c => new Date(c.dueDate!) <= em15) },
+    { label: "Próx. 30 dias", cor: "bg-blue-50 border-blue-100",   text: "text-blue-700",   items: pendentes.filter(c => new Date(c.dueDate!) <= em30) },
+  ]
+  return (
+    <div className="bg-white rounded-2xl border border-border shadow-sm">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+        <div className="flex items-center gap-2">
+          <Clock size={15} className="text-amber-500" />
+          <h3 className="text-sm font-semibold text-[var(--text-primary)]">Vencimentos por Prazo</h3>
+        </div>
+        <Link href="/financeiro/contas-pagar" className="flex items-center gap-1 text-xs text-blue-600 hover:underline">
+          Ver todos <ArrowRight size={11} />
+        </Link>
+      </div>
+      <div className="grid grid-cols-3 gap-3 p-4">
+        {faixas.map(({ label, cor, text, items }) => {
+          const total = items.reduce((s, c) => s + (c.amount ?? 0), 0)
+          return (
+            <div key={label} className={`rounded-xl border p-3 ${cor}`}>
+              <p className={`text-[10px] font-semibold mb-1 ${text}`}>{label}</p>
+              <p className={`text-sm font-extrabold ${text}`}>{formatMoeda(total)}</p>
+              <p className={`text-[10px] mt-0.5 opacity-70 ${text}`}>{items.length} título{items.length !== 1 ? "s" : ""}</p>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function SkeletonCard({ rows }: { rows: number }) {
   return (
     <div className="bg-white rounded-2xl border border-border shadow-sm p-5 space-y-3 animate-pulse">
@@ -435,6 +717,8 @@ export default function PaineisPage() {
   const { data: estoque, isLoading: loadingEstoque } = trpc.sienge.listarEstoque.useQuery({ obraId: undefined }, { retry: false })
   const { data: contratos, isLoading: loadingContratos } = trpc.sienge.listarContratosVenda.useQuery(undefined, { retry: false })
   const { data: patrimonio, isLoading: loadingPatrimonio } = trpc.sienge.listarPatrimonio.useQuery(undefined, { retry: false })
+  const { data: contasReceber, isLoading: loadingCR } = trpc.sienge.listarContasReceber.useQuery({}, { retry: false })
+  const { data: inadimplentes, isLoading: loadingInad } = trpc.sienge.listarInadimplentes.useQuery(undefined, { retry: false })
 
   const temSienge = !!(contasPagar || saldos || estoque)
 
@@ -478,6 +762,42 @@ export default function PaineisPage() {
 
         {vis.has("tendencia") && (
           <WidgetTendencia financeiroPorMes={analises?.financeiroPorMes} />
+        )}
+
+        {vis.has("custo-orcamento") && (
+          <WidgetCustoOrcamento obras={obras?.map(o => ({
+            id: o.id,
+            nome: o.nome,
+            orcamento: o.orcamento ?? null,
+            custoAtual: o.custoAtual ?? null,
+            status: o.status,
+          }))} />
+        )}
+
+        {(vis.has("fluxo-caixa") || vis.has("top-fornecedores")) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {vis.has("fluxo-caixa") && (
+              <WidgetFluxoCaixa
+                contasPagar={contasPagar as Array<{ dueDate?: string; amount?: number }> | undefined}
+                contasReceber={contasReceber as ContaReceber[] | undefined}
+                isLoading={loadingCP || loadingCR}
+              />
+            )}
+            {vis.has("top-fornecedores") && (
+              <WidgetTopFornecedores contasPagar={contasPagar as Array<{ supplierName?: string; amount?: number }> | undefined} />
+            )}
+          </div>
+        )}
+
+        {(vis.has("inadimplencia") || vis.has("contas-vencimento")) && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {vis.has("inadimplencia") && (
+              <WidgetInadimplencia inadimplentes={inadimplentes as Inadimplente[] | undefined} isLoading={loadingInad} />
+            )}
+            {vis.has("contas-vencimento") && (
+              <WidgetContasVencimento contasPagar={contasPagar as Array<{ dueDate?: string; amount?: number }> | undefined} />
+            )}
+          </div>
         )}
 
         {(vis.has("contas-pagar") || vis.has("saldos") || vis.has("estoque-critico")) && (
