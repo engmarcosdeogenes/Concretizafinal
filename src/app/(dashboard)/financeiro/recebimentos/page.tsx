@@ -6,6 +6,7 @@ import { ArrowLeft, TrendingUp, AlertCircle, ChevronDown, ChevronRight } from "l
 import { trpc } from "@/lib/trpc/client"
 import { cn } from "@/lib/utils"
 import { formatDataCurta, formatMoeda } from "@/lib/format"
+import ReceivableDetailDrawer from "./ReceivableDetailDrawer"
 
 const STATUS_COLORS: Record<string, string> = {
   ABERTO:    "bg-blue-100 text-blue-700",
@@ -20,6 +21,7 @@ export default function RecebimentosPage() {
   const [dataInicio, setDataInicio] = useState("")
   const [dataFim, setDataFim]     = useState("")
   const [expandido, setExpandido] = useState<string | null>(null)
+  const [selectedBillId, setSelectedBillId] = useState<number | null>(null)
 
   const { data: contas = [], isLoading: loadingContas } = trpc.sienge.listarContasReceber.useQuery(
     { status: status || undefined, dataInicio: dataInicio || undefined, dataFim: dataFim || undefined },
@@ -150,7 +152,7 @@ export default function RecebimentosPage() {
                 </div>
                 <div className="divide-y divide-border">
                   {contas.map((conta) => (
-                    <div key={conta.id} className="grid grid-cols-[1fr_1fr_80px_100px] gap-4 px-4 py-3 items-center hover:bg-slate-50 transition-colors">
+                    <button key={conta.id} type="button" onClick={() => setSelectedBillId(conta.id)} className="grid grid-cols-[1fr_1fr_80px_100px] gap-4 px-4 py-3 items-center hover:bg-orange-50/50 transition-colors w-full text-left cursor-pointer">
                       <div>
                         <p className="text-sm font-medium text-[var(--text-primary)]">{conta.titulo}</p>
                         <p className="text-xs text-[var(--text-muted)]">{conta.clienteNome}</p>
@@ -170,7 +172,7 @@ export default function RecebimentosPage() {
                           {conta.status}
                         </span>
                       </div>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -224,6 +226,11 @@ export default function RecebimentosPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {/* Detail Drawer */}
+      {selectedBillId !== null && (
+        <ReceivableDetailDrawer billId={selectedBillId} onClose={() => setSelectedBillId(null)} />
       )}
     </div>
   )

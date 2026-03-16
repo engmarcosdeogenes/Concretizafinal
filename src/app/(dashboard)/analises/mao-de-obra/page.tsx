@@ -136,7 +136,7 @@ export default function HistogramaMOPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(v: number | undefined) => (v ?? 0).toLocaleString("pt-BR")} />
+                <Tooltip formatter={(v) => Number(v ?? 0).toLocaleString("pt-BR")} />
                 <Legend />
                 <Area type="monotone" dataKey="presentes" name="Presentes" stroke="#22c55e" fill="url(#gPresentes)" strokeWidth={2} />
                 <Area type="monotone" dataKey="ausentes" name="Ausências" stroke="#f97316" fill="url(#gAusentes)" strokeWidth={2} />
@@ -157,7 +157,7 @@ export default function HistogramaMOPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 10 }} />
                   <YAxis type="category" dataKey="funcao" tick={{ fontSize: 10 }} width={90} />
-                  <Tooltip formatter={(v: number | undefined) => (v ?? 0).toLocaleString("pt-BR")} />
+                  <Tooltip formatter={(v) => Number(v ?? 0).toLocaleString("pt-BR")} />
                   <Legend />
                   <Bar dataKey="presentes" name="Presentes" stackId="a" fill="#22c55e" radius={[0,0,0,0]} />
                   <Bar dataKey="ausentes"  name="Ausências" stackId="a" fill="#f97316" radius={[0,3,3,0]} />
@@ -175,7 +175,7 @@ export default function HistogramaMOPage() {
                       <Cell key={i} fill={STATUS_CORES[s.status] ?? "#94a3b8"} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(v: number | undefined) => (v ?? 0).toLocaleString("pt-BR")} />
+                  <Tooltip formatter={(v) => Number(v ?? 0).toLocaleString("pt-BR")} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="space-y-1 mt-2">

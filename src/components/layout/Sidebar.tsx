@@ -9,7 +9,7 @@ import {
   Package, FileText, MessageSquare, Settings,
   ChevronDown, DollarSign, ArrowLeft,
   ClipboardList, AlertTriangle, Users, Box, MapPin,
-  TrendingUp, ListTodo, BarChart3, BarChart2, Tags, CheckSquare, Building2, Warehouse, Network,
+  TrendingUp, ListTodo, BarChart3, BarChart2, Tags, CheckSquare, Building2, Warehouse, Network, Bot,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -58,6 +58,7 @@ const globalNavItems = [
   { label: "Análises", href: "/analises", icon: TrendingUp },
   { label: "Relatórios", href: "/relatorios", icon: FileText },
   { label: "Chat", href: "/chat", icon: MessageSquare },
+  { label: "Assistente IA", href: "/assistente", icon: Bot },
   { label: "Configurações", href: "/configuracoes", icon: Settings },
 ]
 

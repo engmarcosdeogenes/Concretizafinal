@@ -4,7 +4,7 @@ import { createTRPCRouter, protectedProcedure } from "../trpc"
 import { logAudit } from "@/lib/audit"
 import { notificarEmpresa } from "@/lib/push"
 import { StatusPresencaMO } from "@prisma/client"
-import { criarRdoSienge, criarProgressLogSienge } from "@/lib/sienge/client"
+import { criarRdoSienge, criarProgressLogSienge, uploadAnexoRdoSienge, downloadAnexoRdoSienge } from "@/lib/sienge/client"
 import { decrypt, isEncrypted } from "@/lib/encrypt"
 
 const PODE_VERIFICAR_ENG  = ["ENGENHEIRO", "ADMIN", "DONO"] as const
@@ -503,6 +503,81 @@ export const rdoRouter = createTRPCRouter({
       }
 
       throw new TRPCError({ code: "BAD_REQUEST", message: "RDO não está em estado verificável" })
+    }),
+
+  // ─── Anexos (Sienge) ──────────────────────────────────────────────────────────
+
+  incluirAnexoSienge: protectedProcedure
+    .input(z.object({
+      rdoId:       z.string(),
+      fileBase64:  z.string().min(1),
+      fileName:    z.string().min(1),
+      description: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const rdo = await ctx.db.rDO.findFirst({
+        where: { id: input.rdoId, obra: { empresaId: ctx.session.empresaId } },
+        include: { obra: { select: { siengeId: true } } },
+      })
+      if (!rdo) throw new TRPCError({ code: "NOT_FOUND", message: "RDO não encontrado" })
+      if (!rdo.siengeReportId) throw new TRPCError({ code: "BAD_REQUEST", message: "RDO ainda não sincronizado com Sienge" })
+      if (!rdo.obra?.siengeId) throw new TRPCError({ code: "BAD_REQUEST", message: "Obra sem integração Sienge" })
+
+      const config = await ctx.db.integracaoConfig.findUnique({
+        where: { empresaId: ctx.session.empresaId },
+      })
+      if (!config?.ativo) throw new TRPCError({ code: "BAD_REQUEST", message: "Integração Sienge não configurada" })
+
+      const pass = isEncrypted(config.senha) ? decrypt(config.senha) : config.senha
+      const fileBuffer = Array.from(Buffer.from(input.fileBase64, "base64"))
+
+      const result = await uploadAnexoRdoSienge(
+        config.subdominio,
+        config.usuario,
+        pass,
+        parseInt(rdo.obra.siengeId),
+        parseInt(rdo.siengeReportId),
+        fileBuffer,
+        input.fileName,
+        input.description,
+      )
+      if (!result) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Falha ao enviar anexo ao Sienge" })
+
+      await logAudit(ctx, { entityType: "RDO", entityId: input.rdoId, obraId: rdo.obraId, acao: "anexou arquivo" })
+      return result
+    }),
+
+  downloadAnexoSienge: protectedProcedure
+    .input(z.object({
+      rdoId:        z.string(),
+      attachmentId: z.number(),
+    }))
+    .query(async ({ ctx, input }) => {
+      const rdo = await ctx.db.rDO.findFirst({
+        where: { id: input.rdoId, obra: { empresaId: ctx.session.empresaId } },
+        include: { obra: { select: { siengeId: true } } },
+      })
+      if (!rdo) throw new TRPCError({ code: "NOT_FOUND", message: "RDO não encontrado" })
+      if (!rdo.siengeReportId) throw new TRPCError({ code: "BAD_REQUEST", message: "RDO ainda não sincronizado com Sienge" })
+      if (!rdo.obra?.siengeId) throw new TRPCError({ code: "BAD_REQUEST", message: "Obra sem integração Sienge" })
+
+      const config = await ctx.db.integracaoConfig.findUnique({
+        where: { empresaId: ctx.session.empresaId },
+      })
+      if (!config?.ativo) throw new TRPCError({ code: "BAD_REQUEST", message: "Integração Sienge não configurada" })
+
+      const pass = isEncrypted(config.senha) ? decrypt(config.senha) : config.senha
+
+      const result = await downloadAnexoRdoSienge(
+        config.subdominio,
+        config.usuario,
+        pass,
+        parseInt(rdo.obra.siengeId),
+        parseInt(rdo.siengeReportId),
+        input.attachmentId,
+      )
+      if (!result) throw new TRPCError({ code: "NOT_FOUND", message: "Anexo não encontrado no Sienge" })
+      return result
     }),
 
   excluir: protectedProcedure

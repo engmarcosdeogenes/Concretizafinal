@@ -28,6 +28,8 @@ import { medicaoRouter } from "./medicao"
 import { checklistRouter } from "./checklist"
 import { modeloRelatorioRouter } from "./modeloRelatorio"
 import { tarefaObraRouter } from "./tarefaObra"
+import { assistenteRouter } from "./assistente"
+import { dashboardConfigRouter } from "./dashboardConfig"
 
 export const appRouter = createTRPCRouter({
   auditLog:       auditLogRouter,
@@ -59,6 +61,8 @@ export const appRouter = createTRPCRouter({
   checklist:      checklistRouter,
   modeloRelatorio: modeloRelatorioRouter,
   tarefaObra:     tarefaObraRouter,
+  assistente:     assistenteRouter,
+  dashboardConfig: dashboardConfigRouter,
 })
 
 export type AppRouter = typeof appRouter

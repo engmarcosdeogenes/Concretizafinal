@@ -1,12 +1,12 @@
 "use client"
 
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import {
   BarChart3, Settings2, HardHat, AlertTriangle, ClipboardList,
   DollarSign, TrendingUp, TrendingDown, Package, Landmark,
   X, Eye, EyeOff, ArrowRight, Loader2, FileText, Warehouse,
-  Users, Clock, Building2, ShoppingCart,
+  Users, Clock, Building2, ShoppingCart, GripVertical, RotateCcw,
 } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { formatDataCurta, formatMoeda } from "@/lib/format"
@@ -15,13 +15,13 @@ import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell,
 } from "recharts"
 
-const STORAGE_KEY = "concretiza_paineis_visibilidade"
-
 type WidgetId =
   | "kpis" | "obras-progresso" | "ocorrencias" | "contas-pagar"
   | "saldos" | "estoque-critico" | "comercial" | "patrimonio" | "tendencia"
   | "custo-orcamento" | "fluxo-caixa" | "top-fornecedores" | "inadimplencia" | "contas-vencimento"
   | "pedidos-recentes"
+
+type WidgetConfig = { id: WidgetId; visivel: boolean; ordem: number }
 
 const WIDGET_DEFS: { id: WidgetId; titulo: string; sienge: boolean }[] = [
   { id: "kpis",              titulo: "KPIs Gerais",             sienge: false },
@@ -41,25 +41,59 @@ const WIDGET_DEFS: { id: WidgetId; titulo: string; sienge: boolean }[] = [
   { id: "patrimonio",        titulo: "Patrimônio",              sienge: true  },
 ]
 
-function useVisibilidade() {
-  const [vis, setVis] = useState<Set<WidgetId>>(new Set(WIDGET_DEFS.map(w => w.id)))
+function defaultWidgets(): WidgetConfig[] {
+  return WIDGET_DEFS.map((w, i) => ({ id: w.id, visivel: true, ordem: i }))
+}
+
+function useDashboardConfig() {
+  const [widgets, setWidgets] = useState<WidgetConfig[]>(defaultWidgets)
   const [loaded, setLoaded] = useState(false)
+  const { data: serverConfig, isLoading } = trpc.dashboardConfig.buscar.useQuery()
+  const salvar = trpc.dashboardConfig.salvar.useMutation()
+
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY)
-      if (saved) setVis(new Set(JSON.parse(saved) as WidgetId[]))
-    } catch { /* ignore */ }
+    if (isLoading) return
+    if (serverConfig) {
+      const saved = serverConfig as WidgetConfig[]
+      const knownIds = new Set(saved.map(w => w.id))
+      const merged: WidgetConfig[] = [
+        ...saved,
+        ...WIDGET_DEFS.filter(w => !knownIds.has(w.id)).map((w, i) => ({
+          id: w.id,
+          visivel: true,
+          ordem: saved.length + i,
+        })),
+      ].sort((a, b) => a.ordem - b.ordem)
+      setWidgets(merged)
+    }
     setLoaded(true)
-  }, [])
+  }, [serverConfig, isLoading])
+
+  const persist = useCallback((next: WidgetConfig[]) => {
+    setWidgets(next)
+    salvar.mutate({ widgets: next })
+  }, [salvar])
+
   function toggle(id: WidgetId) {
-    setVis(prev => {
-      const next = new Set(prev)
-      next.has(id) ? next.delete(id) : next.add(id)
-      localStorage.setItem(STORAGE_KEY, JSON.stringify([...next]))
-      return next
-    })
+    const next = widgets.map(w => w.id === id ? { ...w, visivel: !w.visivel } : w)
+    persist(next)
   }
-  return { vis, toggle, loaded }
+
+  function reorder(fromIndex: number, toIndex: number) {
+    const next = [...widgets]
+    const [moved] = next.splice(fromIndex, 1)
+    next.splice(toIndex, 0, moved)
+    persist(next.map((w, i) => ({ ...w, ordem: i })))
+  }
+
+  function resetToDefault() {
+    persist(defaultWidgets())
+  }
+
+  const visibleIds = new Set(widgets.filter(w => w.visivel).map(w => w.id))
+  const orderedIds = widgets.filter(w => w.visivel).map(w => w.id)
+
+  return { widgets, visibleIds, orderedIds, toggle, reorder, resetToDefault, loaded }
 }
 
 // ── Widgets ──────────────────────────────────────────────────────────────────
@@ -305,7 +339,7 @@ function WidgetTendencia({ financeiroPorMes }: { financeiroPorMes?: Array<{ mes:
           <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
           <XAxis dataKey="mes" tick={{ fontSize: 10 }} />
           <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
-          <Tooltip formatter={(v: number | undefined) => formatMoeda(v ?? 0)} />
+          <Tooltip formatter={(v) => formatMoeda(Number(v ?? 0))} />
           <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
           <Area type="monotone" dataKey="receitas" name="Receitas" stroke="#22c55e" fill="url(#gRec)" strokeWidth={2} />
           <Area type="monotone" dataKey="despesas" name="Despesas" stroke="#ef4444" fill="url(#gDesp)" strokeWidth={2} />
@@ -455,7 +489,7 @@ function WidgetCustoOrcamento({ obras }: { obras: Array<{ id: string; nome: stri
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
               <XAxis dataKey="nome" tick={{ fontSize: 9 }} angle={-30} textAnchor="end" interval={0} />
               <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(v: number | undefined) => formatMoeda(v ?? 0)} />
+              <Tooltip formatter={(v) => formatMoeda(Number(v ?? 0))} />
               <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
               <Bar dataKey="orcamento" name="Orçamento" fill="#93c5fd" radius={[3,3,0,0]} />
               <Bar dataKey="custo" name="Custo Atual" radius={[3,3,0,0]}>
@@ -539,7 +573,7 @@ function WidgetFluxoCaixa({
           <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
           <XAxis dataKey="label" tick={{ fontSize: 10 }} />
           <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
-          <Tooltip formatter={(v: number | undefined) => formatMoeda(v ?? 0)} />
+          <Tooltip formatter={(v) => formatMoeda(Number(v ?? 0))} />
           <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
           <Bar dataKey="receber" name="A Receber" fill="#22c55e" radius={[3,3,0,0]} />
           <Bar dataKey="pagar" name="A Pagar" fill="#ef4444" radius={[3,3,0,0]} />
@@ -580,7 +614,7 @@ function WidgetTopFornecedores({ contasPagar }: { contasPagar: Array<{ supplierN
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
               <XAxis type="number" tick={{ fontSize: 9 }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
               <YAxis type="category" dataKey="nome" tick={{ fontSize: 9 }} width={110} />
-              <Tooltip formatter={(v: number | undefined) => formatMoeda(v ?? 0)} />
+              <Tooltip formatter={(v) => formatMoeda(Number(v ?? 0))} />
               <Bar dataKey="total" name="Total" fill="#8b5cf6" radius={[0,3,3,0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -766,11 +800,57 @@ function SkeletonCard({ rows }: { rows: number }) {
   )
 }
 
+// ── Render widget by ID ──────────────────────────────────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function RenderWidget({ id, data }: { id: WidgetId; data: Record<string, any> }) {
+  const { resumo, analises, obras, contasPagar, saldos, estoque, contratos, patrimonio, contasReceber, inadimplentes, pedidos, loadingCP, loadingSaldos, loadingEstoque, loadingContratos, loadingPatrimonio, loadingCR, loadingInad } = data
+
+  switch (id) {
+    case "kpis":
+      return <WidgetKPIs resumo={resumo} />
+    case "obras-progresso":
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return <WidgetObrasProgresso obras={obras?.map((o: any) => ({ ...o, progresso: o.progresso ?? 0 }))} />
+    case "ocorrencias":
+      return <WidgetOcorrencias ocorrencias={resumo?.ocorrenciasRecentes as Array<{ id: string; tipo: string; titulo: string; obraId: string; prioridade: number; data: Date }> | undefined} />
+    case "tendencia":
+      return <WidgetTendencia financeiroPorMes={analises?.financeiroPorMes} />
+    case "custo-orcamento":
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return <WidgetCustoOrcamento obras={obras?.map((o: any) => ({ id: o.id, nome: o.nome, orcamento: o.orcamento ?? null, custoAtual: o.custoAtual ?? null, status: o.status }))} />
+    case "pedidos-recentes":
+      return <WidgetPedidosRecentes pedidos={pedidos as PedidoItem[] | undefined} />
+    case "contas-pagar":
+      return <WidgetContasPagar contas={contasPagar as Array<{ dueDate?: string; amount?: number; supplierName?: string }> | undefined} isLoading={loadingCP} />
+    case "saldos":
+      return <WidgetSaldos saldos={saldos as Array<{ bankName?: string; bankCode?: string; balance?: number; accountType?: string }> | undefined} isLoading={loadingSaldos} />
+    case "estoque-critico":
+      return <WidgetEstoqueCritico estoque={estoque as Array<{ materialNome?: string; saldoAtual?: number; saldoMinimo?: number; unidade?: string }> | undefined} isLoading={loadingEstoque} />
+    case "fluxo-caixa":
+      return <WidgetFluxoCaixa contasPagar={contasPagar as Array<{ dueDate?: string; amount?: number }> | undefined} contasReceber={contasReceber as ContaReceber[] | undefined} isLoading={loadingCP || loadingCR} />
+    case "top-fornecedores":
+      return <WidgetTopFornecedores contasPagar={contasPagar as Array<{ supplierName?: string; amount?: number }> | undefined} />
+    case "inadimplencia":
+      return <WidgetInadimplencia inadimplentes={inadimplentes as Inadimplente[] | undefined} isLoading={loadingInad} />
+    case "contas-vencimento":
+      return <WidgetContasVencimento contasPagar={contasPagar as Array<{ dueDate?: string; amount?: number }> | undefined} />
+    case "comercial":
+      return <WidgetComercial contratos={contratos as ContratoVenda[] | undefined} isLoading={loadingContratos} />
+    case "patrimonio":
+      return <WidgetPatrimonio data={patrimonio as PatrimonioData | undefined} isLoading={loadingPatrimonio} />
+    default:
+      return null
+  }
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function PaineisPage() {
-  const { vis, toggle, loaded } = useVisibilidade()
+  const { widgets, visibleIds, orderedIds, toggle, reorder, resetToDefault, loaded } = useDashboardConfig()
   const [configOpen, setConfigOpen] = useState(false)
+  const [dragIdx, setDragIdx] = useState<number | null>(null)
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null)
 
   const { data: resumo } = trpc.painel.resumo.useQuery()
   const { data: analises } = trpc.analises.resumo.useQuery()
@@ -786,6 +866,8 @@ export default function PaineisPage() {
 
   const temSienge = !!(contasPagar || saldos || estoque)
 
+  const widgetData = { resumo, analises, obras, contasPagar, saldos, estoque, contratos, patrimonio, contasReceber, inadimplentes, pedidos, loadingCP, loadingSaldos, loadingEstoque, loadingContratos, loadingPatrimonio, loadingCR, loadingInad }
+
   if (!loaded) {
     return (
       <div className="flex items-center justify-center py-32">
@@ -800,7 +882,7 @@ export default function PaineisPage() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Painéis</h2>
-          <p className="text-muted-foreground text-sm mt-0.5">Visão consolidada de todas as suas obras e indicadores.</p>
+          <p className="text-muted-foreground text-sm mt-0.5">Visão consolidada de todas as suas obras e indicadores. Arraste para reordenar.</p>
         </div>
         <button
           onClick={() => setConfigOpen(true)}
@@ -811,126 +893,80 @@ export default function PaineisPage() {
         </button>
       </div>
 
-      {/* Widgets */}
+      {/* Widgets — rendered in user-defined order */}
       <div className="space-y-5">
-        {vis.has("kpis") && <WidgetKPIs resumo={resumo} />}
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {vis.has("obras-progresso") && (
-            <WidgetObrasProgresso obras={obras?.map(o => ({ ...o, progresso: o.progresso ?? 0 }))} />
-          )}
-          {vis.has("ocorrencias") && (
-            <WidgetOcorrencias ocorrencias={resumo?.ocorrenciasRecentes as Array<{ id: string; tipo: string; titulo: string; obraId: string; prioridade: number; data: Date }> | undefined} />
-          )}
-        </div>
-
-        {vis.has("tendencia") && (
-          <WidgetTendencia financeiroPorMes={analises?.financeiroPorMes} />
-        )}
-
-        {vis.has("custo-orcamento") && (
-          <WidgetCustoOrcamento obras={obras?.map(o => ({
-            id: o.id,
-            nome: o.nome,
-            orcamento: o.orcamento ?? null,
-            custoAtual: o.custoAtual ?? null,
-            status: o.status,
-          }))} />
-        )}
-
-        {vis.has("pedidos-recentes") && (
-          <WidgetPedidosRecentes pedidos={pedidos as PedidoItem[] | undefined} />
-        )}
-
-        {(vis.has("fluxo-caixa") || vis.has("top-fornecedores")) && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {vis.has("fluxo-caixa") && (
-              <WidgetFluxoCaixa
-                contasPagar={contasPagar as Array<{ dueDate?: string; amount?: number }> | undefined}
-                contasReceber={contasReceber as ContaReceber[] | undefined}
-                isLoading={loadingCP || loadingCR}
-              />
-            )}
-            {vis.has("top-fornecedores") && (
-              <WidgetTopFornecedores contasPagar={contasPagar as Array<{ supplierName?: string; amount?: number }> | undefined} />
-            )}
+        {orderedIds.map((wid) => (
+          <div key={wid}>
+            <RenderWidget id={wid} data={widgetData} />
           </div>
-        )}
-
-        {(vis.has("inadimplencia") || vis.has("contas-vencimento")) && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {vis.has("inadimplencia") && (
-              <WidgetInadimplencia inadimplentes={inadimplentes as Inadimplente[] | undefined} isLoading={loadingInad} />
-            )}
-            {vis.has("contas-vencimento") && (
-              <WidgetContasVencimento contasPagar={contasPagar as Array<{ dueDate?: string; amount?: number }> | undefined} />
-            )}
-          </div>
-        )}
-
-        {(vis.has("contas-pagar") || vis.has("saldos") || vis.has("estoque-critico")) && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-            {vis.has("contas-pagar") && (
-              <WidgetContasPagar contas={contasPagar as Array<{ dueDate?: string; amount?: number; supplierName?: string }> | undefined} isLoading={loadingCP} />
-            )}
-            {vis.has("saldos") && (
-              <WidgetSaldos saldos={saldos as Array<{ bankName?: string; bankCode?: string; balance?: number; accountType?: string }> | undefined} isLoading={loadingSaldos} />
-            )}
-            {vis.has("estoque-critico") && (
-              <WidgetEstoqueCritico estoque={estoque as Array<{ materialNome?: string; saldoAtual?: number; saldoMinimo?: number; unidade?: string }> | undefined} isLoading={loadingEstoque} />
-            )}
-          </div>
-        )}
-
-        {(vis.has("comercial") || vis.has("patrimonio")) && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {vis.has("comercial") && (
-              <WidgetComercial contratos={contratos as ContratoVenda[] | undefined} isLoading={loadingContratos} />
-            )}
-            {vis.has("patrimonio") && (
-              <WidgetPatrimonio data={patrimonio as PatrimonioData | undefined} isLoading={loadingPatrimonio} />
-            )}
-          </div>
-        )}
+        ))}
       </div>
 
-      {/* Painel de configuração */}
+      {/* Painel de configuração com drag-and-drop */}
       {configOpen && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl border border-border shadow-xl w-full max-w-sm">
-            <div className="flex items-center justify-between p-5 border-b border-border">
+          <div className="bg-white rounded-2xl border border-border shadow-xl w-full max-w-md max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between p-5 border-b border-border shrink-0">
               <div className="flex items-center gap-2">
                 <BarChart3 size={16} className="text-orange-500" />
                 <h3 className="font-bold text-[var(--text-primary)]">Configurar Widgets</h3>
               </div>
-              <button onClick={() => setConfigOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-lg border border-border hover:bg-muted transition-colors">
-                <X size={14} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={resetToDefault}
+                  title="Restaurar padrão"
+                  className="w-8 h-8 flex items-center justify-center rounded-lg border border-border hover:bg-muted transition-colors"
+                >
+                  <RotateCcw size={13} />
+                </button>
+                <button onClick={() => setConfigOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-lg border border-border hover:bg-muted transition-colors">
+                  <X size={14} />
+                </button>
+              </div>
             </div>
-            <div className="p-5 space-y-2">
-              {WIDGET_DEFS.filter(w => !w.sienge || temSienge).map(w => {
-                const ativo = vis.has(w.id)
+            <p className="text-[11px] text-[var(--text-muted)] px-5 pt-3">Arraste para reordenar. Clique no olho para mostrar/ocultar.</p>
+            <div className="p-5 pt-2 space-y-1.5 overflow-y-auto flex-1">
+              {widgets.filter(w => {
+                const def = WIDGET_DEFS.find(d => d.id === w.id)
+                return def && (!def.sienge || temSienge)
+              }).map((w, idx) => {
+                const def = WIDGET_DEFS.find(d => d.id === w.id)!
                 return (
-                  <button
+                  <div
                     key={w.id}
-                    onClick={() => toggle(w.id)}
+                    draggable
+                    onDragStart={() => setDragIdx(idx)}
+                    onDragOver={(e) => { e.preventDefault(); setDragOverIdx(idx) }}
+                    onDragEnd={() => {
+                      if (dragIdx !== null && dragOverIdx !== null && dragIdx !== dragOverIdx) {
+                        reorder(dragIdx, dragOverIdx)
+                      }
+                      setDragIdx(null)
+                      setDragOverIdx(null)
+                    }}
                     className={cn(
-                      "w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-colors text-sm",
-                      ativo ? "border-orange-200 bg-orange-50 text-[var(--text-primary)]" : "border-border text-[var(--text-muted)] hover:bg-muted"
+                      "flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-all text-sm select-none",
+                      w.visivel ? "border-orange-200 bg-orange-50/50" : "border-border bg-white text-[var(--text-muted)]",
+                      dragOverIdx === idx && "border-orange-400 shadow-md scale-[1.02]",
+                      dragIdx === idx && "opacity-40",
                     )}
                   >
-                    <span className="font-medium">{w.titulo}</span>
-                    <div className="flex items-center gap-2">
-                      {w.sienge && <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full font-semibold">Sienge</span>}
-                      {ativo ? <Eye size={14} className="text-orange-500" /> : <EyeOff size={14} />}
-                    </div>
-                  </button>
+                    <GripVertical size={14} className="text-[var(--text-muted)] cursor-grab shrink-0" />
+                    <span className="font-medium flex-1 truncate">{def.titulo}</span>
+                    {def.sienge && <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full font-semibold shrink-0">Sienge</span>}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggle(w.id) }}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/80 transition-colors shrink-0"
+                    >
+                      {w.visivel ? <Eye size={14} className="text-orange-500" /> : <EyeOff size={14} />}
+                    </button>
+                  </div>
                 )
               })}
             </div>
-            <div className="px-5 pb-5">
+            <div className="px-5 pb-5 shrink-0">
               <button onClick={() => setConfigOpen(false)} className="btn-orange w-full justify-center">
-                Salvar
+                Fechar
               </button>
             </div>
           </div>

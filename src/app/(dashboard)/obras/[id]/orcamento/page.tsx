@@ -156,12 +156,28 @@ export default function OrcamentoPage() {
   return (
     <div className="p-6 space-y-5">
       {/* Header */}
-      <div>
-        <h1 className="text-[var(--text-primary)] font-bold text-xl flex items-center gap-2">
-          <BarChart3 size={20} className="text-orange-500 flex-shrink-0" />
-          Orçamento
-        </h1>
-        <p className="text-[var(--text-muted)] text-sm mt-0.5">Estimativas do Sienge</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-[var(--text-primary)] font-bold text-xl flex items-center gap-2">
+            <BarChart3 size={20} className="text-orange-500 flex-shrink-0" />
+            Orçamento
+          </h1>
+          <p className="text-[var(--text-muted)] text-sm mt-0.5">Estimativas do Sienge</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link href={`/obras/${obraId}/orcamento/planilhas`} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-border rounded-lg hover:bg-muted/50 transition-colors text-[var(--text-primary)]">
+            <Settings size={14} />
+            Planilhas
+          </Link>
+          <Link href={`/obras/${obraId}/orcamento/insumos`} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-border rounded-lg hover:bg-muted/50 transition-colors text-[var(--text-primary)]">
+            <Settings size={14} />
+            Insumos
+          </Link>
+          <Link href={`/obras/${obraId}/orcamento/budget`} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-border rounded-lg hover:bg-muted/50 transition-colors text-[var(--text-primary)]">
+            <Settings size={14} />
+            Budget
+          </Link>
+        </div>
       </div>
 
       {/* Cards resumo */}
@@ -218,7 +234,7 @@ export default function OrcamentoPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis dataKey="grupo" tick={{ fontSize: 10 }} angle={-30} textAnchor="end" interval={0} />
                 <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `${((v as number) / 1000).toFixed(0)}k`} />
-                <Tooltip formatter={(v: number | undefined) => fmt(v ?? 0)} />
+                <Tooltip formatter={(v) => fmt(Number(v ?? 0))} />
                 <Bar dataKey="orcado" name="Orçado" radius={[3, 3, 0, 0]} fill="#f97316" />
               </BarChart>
             </ResponsiveContainer>

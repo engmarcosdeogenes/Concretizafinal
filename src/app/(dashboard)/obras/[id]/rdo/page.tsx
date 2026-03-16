@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ClipboardList, Plus, Sun, Cloud, CloudRain, Wind, CheckCircle2, Clock, AlertCircle, Users, Copy, Download, ChevronDown } from "lucide-react"
+import { ClipboardList, Plus, Sun, Cloud, CloudRain, Wind, CheckCircle2, Clock, AlertCircle, Users, Copy, Download, ChevronDown, BarChart3 } from "lucide-react"
 import { toast } from "sonner"
 import { trpc } from "@/lib/trpc/client"
 import { formatDataCurta, diaSemanaAbrev } from "@/lib/format"
@@ -93,6 +93,10 @@ export default function RdoPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Link href={`/obras/${id}/rdo/dashboard`} className="btn-ghost min-h-[44px] flex-shrink-0" title="Dashboard RDO">
+            <BarChart3 size={15} />
+            Dashboard
+          </Link>
           {rdos.length > 0 && (
             <>
               <button

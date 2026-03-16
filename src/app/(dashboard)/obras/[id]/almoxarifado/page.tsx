@@ -2,13 +2,13 @@
 
 import { use, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, Package, AlertTriangle, TrendingDown, ClipboardList, ArrowRightLeft, X, CheckCircle2, Zap, PackagePlus, Loader2 } from "lucide-react"
+import { ArrowLeft, Package, AlertTriangle, TrendingDown, ClipboardList, ArrowRightLeft, X, CheckCircle2, Zap, PackagePlus, Loader2, FileText, Receipt, ChevronDown, ChevronUp } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { cn } from "@/lib/utils"
-import { formatNumero } from "@/lib/format"
+import { formatNumero, formatMoeda } from "@/lib/format"
 import { toast } from "sonner"
 
-type Tab = "estoque" | "reservas"
+type Tab = "estoque" | "reservas" | "fiscal"
 
 export default function AlmoxarifadoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: obraId } = use(params)
@@ -25,6 +25,9 @@ export default function AlmoxarifadoPage({ params }: { params: Promise<{ id: str
   const [movData, setMovData]             = useState(new Date().toISOString().slice(0, 10))
   const [movObs, setMovObs]               = useState("")
 
+  // Fiscal
+  const [nfeDetalheId, setNfeDetalheId] = useState<number | null>(null)
+
   // Estoque
   const { data: estoque = [], isLoading, refetch: refetchEstoque } = trpc.sienge.listarEstoque.useQuery({ obraId })
   const { data: obra } = trpc.obra.buscarPorId.useQuery({ id: obraId })
@@ -35,6 +38,13 @@ export default function AlmoxarifadoPage({ params }: { params: Promise<{ id: str
   const atenderMutation = trpc.sienge.atenderReserva.useMutation({
     onSuccess: () => { setAtendendoId(null); setQtdAtender(""); refetchReservas() }
   })
+
+  // Notas Fiscais
+  const { data: nfes = [], isLoading: loadingNfes } = trpc.sienge.listarNFe.useQuery({ obraId }, { enabled: tab === "fiscal" })
+  const { data: nfeDetalhe, isLoading: loadingDetalhe } = trpc.sienge.buscarNFeDetalhe.useQuery(
+    { nfeId: nfeDetalheId! },
+    { enabled: nfeDetalheId !== null }
+  )
 
   // Sugestões de transferência
   const { data: pendentesTx = [] } = trpc.solicitacao.listarPendentesParaTransferencia.useQuery({ obraId })
@@ -95,9 +105,21 @@ export default function AlmoxarifadoPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
 
+      {/* Links de navegação */}
+      <div className="flex gap-2 flex-wrap">
+        <Link href={`/obras/${obraId}/almoxarifado/saldos`}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-white text-xs font-medium text-[var(--text-muted)] hover:border-blue-300 hover:text-blue-600 transition-all">
+          <TrendingDown size={14} /> Saldos por Material
+        </Link>
+        <Link href={`/obras/${obraId}/almoxarifado/inventario`}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-white text-xs font-medium text-[var(--text-muted)] hover:border-purple-300 hover:text-purple-600 transition-all">
+          <ClipboardList size={14} /> Inventário
+        </Link>
+      </div>
+
       {/* Tabs */}
       <div className="flex border-b border-border">
-        {([["estoque", "Estoque", Package], ["reservas", "Reservas", ClipboardList]] as const).map(([id, label, Icon]) => (
+        {([["estoque", "Estoque", Package], ["reservas", "Reservas", ClipboardList], ["fiscal", "Notas Fiscais", Receipt]] as const).map(([id, label, Icon]) => (
           <button key={id} type="button" onClick={() => setTab(id)}
             className={cn("flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium border-b-2 transition-all -mb-px",
               tab === id ? "border-orange-500 text-orange-600" : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
@@ -401,6 +423,120 @@ export default function AlmoxarifadoPage({ params }: { params: Promise<{ id: str
         </>
       )}
 
+      {/* ── Notas Fiscais Tab ── */}
+      {tab === "fiscal" && (
+        <>
+          {nfeDetalheId !== null && nfeDetalhe && (
+            <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={() => setNfeDetalheId(null)}>
+              <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[85vh] overflow-y-auto p-6 space-y-4" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-sm text-[var(--text-primary)] flex items-center gap-2">
+                    <Receipt size={16} className="text-violet-600" />
+                    NF-e {nfeDetalhe.numero}{nfeDetalhe.serie ? `/${nfeDetalhe.serie}` : ""} — Dados Fiscais
+                  </h3>
+                  <button type="button" onClick={() => setNfeDetalheId(null)} className="p-1 rounded hover:bg-muted"><X size={16} /></button>
+                </div>
+
+                {/* Header info */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                  <div><span className="text-[var(--text-muted)]">Fornecedor:</span> <span className="font-semibold">{nfeDetalhe.fornecedorNome}</span></div>
+                  <div><span className="text-[var(--text-muted)]">CNPJ:</span> <span className="font-mono">{nfeDetalhe.fornecedorCnpj}</span></div>
+                  <div><span className="text-[var(--text-muted)]">Emissão:</span> <span className="font-semibold">{nfeDetalhe.dataEmissao}</span></div>
+                  <div><span className="text-[var(--text-muted)]">Valor Total:</span> <span className="font-bold text-emerald-700">{formatMoeda(nfeDetalhe.valor)}</span></div>
+                </div>
+
+                {nfeDetalhe.naturezaOperacao && (
+                  <p className="text-xs text-[var(--text-muted)]">Natureza: <span className="font-medium text-[var(--text-primary)]">{nfeDetalhe.naturezaOperacao}</span></p>
+                )}
+
+                {/* Totais de tributos */}
+                <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+                  {[
+                    ["Base ICMS", nfeDetalhe.totalBaseIcms, "blue"],
+                    ["ICMS", nfeDetalhe.totalIcms, "blue"],
+                    ["IPI", nfeDetalhe.totalIpi, "purple"],
+                    ["PIS", nfeDetalhe.totalPis, "amber"],
+                    ["COFINS", nfeDetalhe.totalCofins, "amber"],
+                    ["ISSQN", nfeDetalhe.totalIssqn, "rose"],
+                  ].map(([label, val, color]) => (
+                    <div key={label as string} className={`bg-${color as string}-50 border border-${color as string}-200 rounded-lg p-2`}>
+                      <p className={`text-[10px] text-${color as string}-600 font-semibold uppercase tracking-wide`}>{label as string}</p>
+                      <p className={`text-sm font-bold text-${color as string}-700`}>{formatMoeda(val as number)}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Itens com tributos */}
+                <div className="border border-border rounded-xl overflow-hidden">
+                  <div className="bg-slate-50 border-b border-border px-4 py-2 text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">
+                    Itens — Tributos por Item
+                  </div>
+                  {nfeDetalhe.itens.length === 0 ? (
+                    <p className="p-6 text-center text-sm text-[var(--text-muted)]">Nenhum item encontrado</p>
+                  ) : (
+                    <div className="divide-y divide-border">
+                      {nfeDetalhe.itens.map((item) => (
+                        <NFeItemFiscal key={item.itemId} item={item} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-white border border-border rounded-xl overflow-hidden">
+            {loadingNfes ? (
+              <div className="p-8 text-center text-sm text-[var(--text-muted)]">Carregando notas fiscais...</div>
+            ) : nfes.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <FileText size={32} className="text-slate-300 mb-3" />
+                <p className="text-sm font-semibold text-[var(--text-primary)]">Nenhuma NF-e encontrada</p>
+                <p className="text-xs text-[var(--text-muted)] mt-1">Notas fiscais eletrônicas desta obra aparecerão aqui.</p>
+              </div>
+            ) : (
+              <div>
+                <div className="grid grid-cols-[1fr_100px_100px_100px_80px_80px] gap-3 px-4 py-2.5 bg-slate-50 border-b border-border text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">
+                  <span>Fornecedor</span>
+                  <span className="text-center">Número</span>
+                  <span className="text-center">Emissão</span>
+                  <span className="text-right">Valor</span>
+                  <span className="text-center">Status</span>
+                  <span className="text-center">Fiscal</span>
+                </div>
+                <div className="divide-y divide-border">
+                  {nfes.map((nf) => (
+                    <div key={nf.id} className="grid grid-cols-[1fr_100px_100px_100px_80px_80px] gap-3 px-4 py-3 items-center text-sm hover:bg-muted/30">
+                      <div>
+                        <p className="font-medium text-[var(--text-primary)] truncate">{nf.fornecedorNome}</p>
+                        <p className="text-xs text-[var(--text-muted)] font-mono">{nf.fornecedorCnpj}</p>
+                      </div>
+                      <p className="text-center text-xs font-semibold text-[var(--text-primary)]">{nf.numero}{nf.serie ? `/${nf.serie}` : ""}</p>
+                      <p className="text-center text-xs text-[var(--text-muted)]">{nf.dataEmissao}</p>
+                      <p className="text-right text-xs font-semibold text-emerald-700">{formatMoeda(nf.valor)}</p>
+                      <div className="flex justify-center">
+                        <span className={cn("px-1.5 py-0.5 rounded text-[10px] font-semibold",
+                          nf.status === "AUTORIZADA" ? "bg-green-100 text-green-700" :
+                          nf.status === "CANCELADA" ? "bg-red-100 text-red-700" :
+                          "bg-gray-100 text-gray-700"
+                        )}>{nf.status}</span>
+                      </div>
+                      <div className="flex justify-center">
+                        <button type="button"
+                          onClick={() => setNfeDetalheId(nf.id)}
+                          className="flex items-center gap-1 px-2 py-1 rounded border border-border text-[10px] font-medium text-[var(--text-muted)] hover:border-violet-300 hover:text-violet-600 transition-all">
+                          <Receipt size={11} /> Tributos
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
       <p className="text-xs text-[var(--text-muted)] text-center">Dados fornecidos em tempo real pelo Sienge</p>
 
       {/* Modal Nova Movimentação */}
@@ -564,6 +700,80 @@ export default function AlmoxarifadoPage({ params }: { params: Promise<{ id: str
               </button>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ── Componente de item fiscal com expand/collapse ── */
+function NFeItemFiscal({ item }: { item: { itemId: number; materialNome: string; ncm?: string; cfop?: string; quantidade: number; valorUnitario: number; valorTotal: number; unidade: string; icms?: { baseCalculo: number; aliquota: number; valor: number; cst?: string; origem?: string }; ipi?: { baseCalculo: number; aliquota: number; valor: number; cst?: string }; pis?: { baseCalculo: number; aliquota: number; valor: number; cst?: string }; cofins?: { baseCalculo: number; aliquota: number; valor: number; cst?: string }; issqn?: { baseCalculo: number; aliquota: number; valor: number; codigoServico?: string } } }) {
+  const [open, setOpen] = useState(false)
+  const hasTributos = item.icms || item.ipi || item.pis || item.cofins || item.issqn
+
+  return (
+    <div>
+      <button type="button" onClick={() => setOpen(!open)}
+        className="w-full grid grid-cols-[1fr_60px_80px_80px_28px] gap-3 px-4 py-3 items-center text-sm hover:bg-muted/30 text-left">
+        <div>
+          <p className="font-medium text-[var(--text-primary)] truncate">{item.materialNome}</p>
+          <div className="flex gap-2 text-[10px] text-[var(--text-muted)]">
+            {item.ncm && <span>NCM: {item.ncm}</span>}
+            {item.cfop && <span>CFOP: {item.cfop}</span>}
+          </div>
+        </div>
+        <p className="text-right text-xs text-[var(--text-muted)]">{formatNumero(item.quantidade)} {item.unidade}</p>
+        <p className="text-right text-xs text-[var(--text-muted)]">{formatMoeda(item.valorUnitario)}</p>
+        <p className="text-right text-xs font-semibold text-[var(--text-primary)]">{formatMoeda(item.valorTotal)}</p>
+        <div className="flex justify-center text-[var(--text-muted)]">
+          {hasTributos ? (open ? <ChevronUp size={14} /> : <ChevronDown size={14} />) : <span className="text-[10px]">—</span>}
+        </div>
+      </button>
+
+      {open && hasTributos && (
+        <div className="px-4 pb-3 grid grid-cols-2 md:grid-cols-5 gap-2">
+          {item.icms && (
+            <div className="bg-blue-50 rounded-lg p-2 text-xs">
+              <p className="font-semibold text-blue-700 mb-1">ICMS {item.icms.cst ? `(CST ${item.icms.cst})` : ""}</p>
+              <p className="text-blue-600">Base: {formatMoeda(item.icms.baseCalculo)}</p>
+              <p className="text-blue-600">Alíq: {formatNumero(item.icms.aliquota)}%</p>
+              <p className="font-bold text-blue-800">Valor: {formatMoeda(item.icms.valor)}</p>
+              {item.icms.origem && <p className="text-blue-500 text-[10px]">Origem: {item.icms.origem}</p>}
+            </div>
+          )}
+          {item.ipi && (
+            <div className="bg-purple-50 rounded-lg p-2 text-xs">
+              <p className="font-semibold text-purple-700 mb-1">IPI {item.ipi.cst ? `(CST ${item.ipi.cst})` : ""}</p>
+              <p className="text-purple-600">Base: {formatMoeda(item.ipi.baseCalculo)}</p>
+              <p className="text-purple-600">Alíq: {formatNumero(item.ipi.aliquota)}%</p>
+              <p className="font-bold text-purple-800">Valor: {formatMoeda(item.ipi.valor)}</p>
+            </div>
+          )}
+          {item.pis && (
+            <div className="bg-amber-50 rounded-lg p-2 text-xs">
+              <p className="font-semibold text-amber-700 mb-1">PIS {item.pis.cst ? `(CST ${item.pis.cst})` : ""}</p>
+              <p className="text-amber-600">Base: {formatMoeda(item.pis.baseCalculo)}</p>
+              <p className="text-amber-600">Alíq: {formatNumero(item.pis.aliquota)}%</p>
+              <p className="font-bold text-amber-800">Valor: {formatMoeda(item.pis.valor)}</p>
+            </div>
+          )}
+          {item.cofins && (
+            <div className="bg-amber-50 rounded-lg p-2 text-xs">
+              <p className="font-semibold text-amber-700 mb-1">COFINS {item.cofins.cst ? `(CST ${item.cofins.cst})` : ""}</p>
+              <p className="text-amber-600">Base: {formatMoeda(item.cofins.baseCalculo)}</p>
+              <p className="text-amber-600">Alíq: {formatNumero(item.cofins.aliquota)}%</p>
+              <p className="font-bold text-amber-800">Valor: {formatMoeda(item.cofins.valor)}</p>
+            </div>
+          )}
+          {item.issqn && (
+            <div className="bg-rose-50 rounded-lg p-2 text-xs">
+              <p className="font-semibold text-rose-700 mb-1">ISSQN</p>
+              <p className="text-rose-600">Base: {formatMoeda(item.issqn.baseCalculo)}</p>
+              <p className="text-rose-600">Alíq: {formatNumero(item.issqn.aliquota)}%</p>
+              <p className="font-bold text-rose-800">Valor: {formatMoeda(item.issqn.valor)}</p>
+              {item.issqn.codigoServico && <p className="text-rose-500 text-[10px]">Serviço: {item.issqn.codigoServico}</p>}
+            </div>
+          )}
         </div>
       )}
     </div>

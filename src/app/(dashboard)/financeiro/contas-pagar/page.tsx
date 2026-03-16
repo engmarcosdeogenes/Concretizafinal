@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react"
 import Link from "next/link"
-import { TrendingDown, Settings, AlertTriangle, Clock, CheckCircle2, Filter, Plus, X } from "lucide-react"
+import { TrendingDown, Settings, AlertTriangle, Clock, CheckCircle2, Filter, Plus, X, FileText } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { formatMoeda } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -33,8 +33,11 @@ export default function ContasPagarPage() {
   const [dataInicio, setDataInicio] = useState("")
   const [dataFim,    setDataFim]    = useState("")
   const [showNovoTitulo, setShowNovoTitulo] = useState(false)
-  const [novoForm, setNovoForm] = useState({ creditorId: "", documentNumber: "", dueDate: "", amount: "", description: "", obraId: "" })
+  const [showNfModal, setShowNfModal] = useState(false)
+  const [novoForm, setNovoForm] = useState({ creditorId: "", documentNumber: "", dueDate: "", amount: "", description: "", obraId: "", categoria: "" })
+  const [nfForm, setNfForm] = useState({ accessKey: "", obraId: "", creditorId: "" })
   const [novoMsg, setNovoMsg] = useState("")
+  const [nfMsg, setNfMsg] = useState("")
 
   const utils = trpc.useUtils()
   const { data: contas = [], isLoading } = trpc.sienge.listarContasPagar.useQuery()
@@ -43,14 +46,24 @@ export default function ContasPagarPage() {
   const { data: obras = [] } = trpc.obra.listar.useQuery()
   const obrasComSienge = obras.filter(o => o.siengeId)
 
-  const criarContaPagar = trpc.sienge.criarContaPagar.useMutation({
+  const lancarDespesa = trpc.sienge.lancarDespesa.useMutation({
     onSuccess: (data) => {
-      setNovoMsg(`Título #${data.id} criado no Sienge!`)
+      setNovoMsg(`Despesa #${data.id} lançada no Sienge!`)
       utils.sienge.listarContasPagar.invalidate()
-      setNovoForm({ creditorId: "", documentNumber: "", dueDate: "", amount: "", description: "", obraId: "" })
+      setNovoForm({ creditorId: "", documentNumber: "", dueDate: "", amount: "", description: "", obraId: "", categoria: "" })
       setTimeout(() => { setShowNovoTitulo(false); setNovoMsg("") }, 2000)
     },
     onError: (e) => setNovoMsg(`Erro: ${e.message}`),
+  })
+
+  const lancarDespesaNf = trpc.sienge.lancarDespesaNf.useMutation({
+    onSuccess: (data) => {
+      setNfMsg(`Título #${data?.id ?? 0} criado via NF-e!`)
+      utils.sienge.listarContasPagar.invalidate()
+      setNfForm({ accessKey: "", obraId: "", creditorId: "" })
+      setTimeout(() => { setShowNfModal(false); setNfMsg("") }, 2000)
+    },
+    onError: (e) => setNfMsg(`Erro: ${e.message}`),
   })
 
   const hoje = new Date()
@@ -108,13 +121,22 @@ export default function ContasPagarPage() {
             Títulos a pagar via integração
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowNovoTitulo(true)}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition-colors"
-        >
-          <Plus size={15} /> Novo Título
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowNfModal(true)}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-orange-300 bg-white hover:bg-orange-50 text-orange-600 text-sm font-semibold transition-colors"
+          >
+            <FileText size={15} /> Importar NF-e
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowNovoTitulo(true)}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition-colors"
+          >
+            <Plus size={15} /> Lançar Despesa
+          </button>
+        </div>
       </div>
 
       {/* Modal Novo Título */}
@@ -194,6 +216,16 @@ export default function ContasPagarPage() {
                 />
               </div>
               <div>
+                <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">Categoria</label>
+                <input
+                  type="text"
+                  value={novoForm.categoria}
+                  onChange={e => setNovoForm(p => ({ ...p, categoria: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:border-orange-400"
+                  placeholder="Ex: Material, Mão de obra, Serviços..."
+                />
+              </div>
+              <div>
                 <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">Obra (opcional)</label>
                 <select
                   value={novoForm.obraId}
@@ -213,18 +245,98 @@ export default function ContasPagarPage() {
               </button>
               <button
                 type="button"
-                disabled={!novoForm.creditorId || !novoForm.dueDate || !novoForm.amount || criarContaPagar.isPending}
-                onClick={() => criarContaPagar.mutate({
+                disabled={!novoForm.creditorId || !novoForm.dueDate || !novoForm.amount || lancarDespesa.isPending}
+                onClick={() => lancarDespesa.mutate({
                   creditorId:     Number(novoForm.creditorId),
                   documentNumber: novoForm.documentNumber || undefined,
                   dueDate:        novoForm.dueDate,
                   amount:         Number(novoForm.amount),
                   description:    novoForm.description || undefined,
                   obraId:         novoForm.obraId || undefined,
+                  categoria:      novoForm.categoria || undefined,
                 })}
                 className="px-4 py-2 rounded-lg bg-orange-500 text-white text-xs font-semibold hover:bg-orange-600 disabled:opacity-50 flex items-center gap-2"
               >
-                {criarContaPagar.isPending ? "Criando..." : "Criar no Sienge"}
+                {lancarDespesa.isPending ? "Lançando..." : "Lançar Despesa"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Importar NF-e */}
+      {showNfModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-sm text-[var(--text-primary)] flex items-center gap-2">
+                <FileText size={16} className="text-orange-500" /> Lançar Despesa via NF-e
+              </h3>
+              <button type="button" onClick={() => { setShowNfModal(false); setNfMsg("") }} className="p-1 rounded hover:bg-muted">
+                <X size={16} />
+              </button>
+            </div>
+
+            {nfMsg && (
+              <p className={cn("text-xs font-semibold px-3 py-2 rounded-lg", nfMsg.startsWith("Erro") ? "bg-red-50 text-red-600" : "bg-green-50 text-green-700")}>
+                {nfMsg}
+              </p>
+            )}
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">Chave de Acesso NF-e <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={nfForm.accessKey}
+                  onChange={e => setNfForm(p => ({ ...p, accessKey: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:border-orange-400 font-mono"
+                  placeholder="44 dígitos da chave de acesso"
+                  maxLength={44}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">Fornecedor (Sienge)</label>
+                <select
+                  value={nfForm.creditorId}
+                  onChange={e => setNfForm(p => ({ ...p, creditorId: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:border-orange-400"
+                >
+                  <option value="">Detectar da NF-e</option>
+                  {fornecedoresComSienge.map(f => (
+                    <option key={f.id} value={String(f.siengeCreditorId)}>{f.nome}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">Obra (opcional)</label>
+                <select
+                  value={nfForm.obraId}
+                  onChange={e => setNfForm(p => ({ ...p, obraId: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:border-orange-400"
+                >
+                  <option value="">Nenhuma obra</option>
+                  {obrasComSienge.map(o => <option key={o.id} value={o.id}>{o.nome}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-2">
+              <button type="button" onClick={() => { setShowNfModal(false); setNfMsg("") }}
+                className="px-4 py-2 rounded-lg border border-border text-xs font-medium text-[var(--text-muted)]">
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={!nfForm.accessKey || nfForm.accessKey.length < 44 || lancarDespesaNf.isPending}
+                onClick={() => lancarDespesaNf.mutate({
+                  accessKey:  nfForm.accessKey,
+                  creditorId: nfForm.creditorId ? Number(nfForm.creditorId) : undefined,
+                  obraId:     nfForm.obraId || undefined,
+                })}
+                className="px-4 py-2 rounded-lg bg-orange-500 text-white text-xs font-semibold hover:bg-orange-600 disabled:opacity-50 flex items-center gap-2"
+              >
+                {lancarDespesaNf.isPending ? "Importando..." : "Importar NF-e"}
               </button>
             </div>
           </div>
