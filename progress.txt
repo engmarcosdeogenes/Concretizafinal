@@ -1,0 +1,598 @@
+== Lote Financeiro 6 (Dashboard Inadimplência e Saldos) – 2026-03-16 ==
+[2026-03-16T23:45:00+00:00] Plano: docs/planos/plano-financeiro.md
+Item trabalhado: "6. Implementar Dashboard de Inadimplência e Saldos"
+Rotas cobertas: listarInadimplentes, listarSaldos, listarBulkDefaulters
+
+Implementação frontend:
+- Página Dashboard: concretiza/src/app/(dashboard)/financeiro/inadimplencia/page.tsx
+  - 3 abas: Resumo & Saldos (KPIs + tabela bancária), Inadimplentes (lista expansível), Detalhamento Bulk (filtro empresa/obra)
+  - KPIs: saldo total, total inadimplência, títulos em aberto, maior atraso
+  - Consome 3 rotas tRPC: listarSaldos, listarInadimplentes, listarBulkDefaulters
+- Teste: concretiza/src/app/(dashboard)/financeiro/inadimplencia/__tests__/page.test.tsx (7 cenários)
+- Marca ❌ substituída por ✅ certo/finalizado no plano-financeiro.md
+
+== Lote Financeiro 4 (Pagamentos e Info Bancária) – 2026-03-16 ==
+[2026-03-16T21:00:00+00:00] Plano: docs/planos/plano-financeiro.md
+Item trabalhado: "4. Implementar Tela de Pagamentos e Info Bancária"
+Rotas cobertas: buscarPaymentInfo, atualizarPaymentInfo
+
+Implementação frontend:
+- Página Pagamentos: concretiza/src/app/(dashboard)/financeiro/pagamentos/page.tsx
+  - Formulário de busca: billId + installmentId + tipo (11 tipos: PIX, boleto, transferência, tributos etc.)
+  - Exibição dinâmica dos campos retornados pela API Sienge (key-value editável)
+  - Edição inline com salvamento via tRPC mutation atualizarPaymentInfo
+  - Feedback visual de sucesso/erro
+- Teste: concretiza/src/app/(dashboard)/financeiro/pagamentos/__tests__/page.test.tsx
+  - Cobre renderização, estados de botão, opções de tipo de pagamento
+- Marca ❌ substituída por ✅ certo/finalizado no plano-financeiro.md
+
+== Lote Financeiro 2 (Gestão de Bills) – 2026-03-16 ==
+[2026-03-16T19:30:00+00:00] Plano: docs/planos/plano-financeiro.md
+Item trabalhado: "2. Implementar Gestão de Bills — detalhes, parcelas, impostos, anexos, categorias"
+
+Implementação frontend:
+- Página Bills: concretiza/src/app/(dashboard)/financeiro/bills/page.tsx
+  - Listagem paginada por período (listarBillsByChangeDate), busca por credor/doc/ID
+  - StatusBadge (Pago/Vencido/Cancelado/Aberto), paginação offset/limit
+  - Clique na linha abre drawer de detalhes
+- Drawer de Detalhes: concretiza/src/app/(dashboard)/financeiro/bills/BillDetailDrawer.tsx
+  - Header com resumo do bill (buscarBill)
+  - 6 abas: Parcelas (listarParcelasBill), Impostos (listarImpostosBill), Anexos (listarAnexosBill + uploadAnexoBill), Categorias (listarBudgetCategoriesBill), Obras (listarBuildingsCostBill), Unidades (listarUnitsBill)
+  - Upload de arquivo com base64 encoding
+- Teste: concretiza/src/app/(dashboard)/financeiro/bills/__tests__/page.test.tsx
+- Todas as rotas tRPC já existiam no sienge router — nenhuma rota backend criada
+- Marca ❌ substituída por ✅ certo/finalizado no plano-financeiro.md
+
+== Lote 14 (Extrato Cliente + Lançamentos Contábeis) – 2026-03-16 ==
+
+74. GET /customer-financial-statements – Extrato financeiro de cliente
+75. POST /customer-financial-statements – Envio de extrato por e-mail
+76. GET /accountancy/entries – Busca lançamentos contábeis
+77. POST /accountancy/entries – Salva lançamentos contábeis (array)
+78. POST /accountancy/entries/async – Salva lançamentos assincronamente
+   (+ GET /accountancy/entries/async/status – Status do processamento)
+
+Implementação:
+- Client: listarExtratoClienteSienge(), enviarExtratoClienteEmailSienge(), listarLancamentosContabeisSienge(), salvarLancamentosContabeisSienge(), salvarLancamentosContabeisAsyncSienge(), statusLancamentosContabeisAsyncSienge()
+- Router: listarExtratoCliente (query + audit), enviarExtratoClienteEmail (mutation + audit), listarLancamentosContabeis (query + audit), salvarLancamentosContabeis (mutation + audit), salvarLancamentosContabeisAsync (mutation + audit), statusLancamentosContabeisAsync (query)
+- Todos com Zod validation + audit log
+- TypeScript: compilação limpa (tsc --noEmit OK)
+- Restam 10 itens ❌ no plano.md
+
+== Lote 15 (Bulk Data — 5 endpoints) – 2026-03-16 ==
+
+79. /bulk-data/v1/purchase-quotations – Cotações completas com negociações
+80. /bulk-data/v1/invoice-itens – Itens de NFs (NF-e, NFS-e, CP/CR)
+81. /bulk-data/v1/building-resources – Insumos/recursos de obra
+82. /bulk-data/v1/budget-items – Itens de orçamento em massa
+83. /bulk-data/v1/defaulters – Inadimplentes
+
+Implementação:
+- Client: listarBulkPurchaseQuotationsSienge(), listarBulkInvoiceItensSienge(), listarBulkBuildingResourcesSienge(), listarBulkBudgetItemsSienge(), listarBulkDefaultersSienge()
+- Router: listarBulkPurchaseQuotations, listarBulkInvoiceItens, listarBulkBuildingResources, listarBulkBudgetItems, listarBulkDefaulters
+- Interfaces tipadas: SiengeBulkPurchaseQuotation, SiengeBulkInvoiceItem, SiengeBulkBuildingResource, SiengeBulkBudgetItem, SiengeBulkDefaulter
+- Todos com Zod validation + protectedProcedure
+- TypeScript: compilação limpa (tsc --noEmit OK)
+- Restam 5 itens ❌ no plano.md
+
+== Lote 16 FINAL (Bulk Data — últimos 4 endpoints) – 2026-03-16 ==
+
+84. /bulk-data/v1/account-balances – Saldos contábeis por empresa/CC
+85. /bulk-data/v1/business-budgets – Orçamentos empresariais
+86. GET /bulk-data/v1/async/{id} – Status do processamento assíncrono
+87. GET /bulk-data/v1/async/{id}/result/{chunk} – Resultado por chunk
+
+Implementação:
+- Client: listarBulkAccountBalancesSienge(), listarBulkBusinessBudgetsSienge(), consultarBulkAsyncStatusSienge(), consultarBulkAsyncResultSienge()
+- Router: listarBulkAccountBalances, listarBulkBusinessBudgets, consultarBulkAsyncStatus, consultarBulkAsyncResult
+- Interfaces tipadas: SiengeBulkAccountBalance, SiengeBulkBusinessBudget, SiengeBulkAsyncStatus, SiengeBulkAsyncResult
+- Todos com Zod validation + protectedProcedure
+- TypeScript: compilação limpa (tsc --noEmit OK)
+- Restam 0 itens ❌ implementáveis (1 item intencionalmente pendente: Deploy/IA fase 2)
+
+🎉 PROJETO_CONCLUIDO_100_POR_CENTO (exceto Deploy/IA fase 2, marcado como intencionalmente pendente)
+[2026-03-16T15:29:09+00:00] Plano:docs/planos/plano-engenharia.md Tasks:1 Exit:1
+[2026-03-16T15:29:09+00:00] docs/planos/plano-engenharia.md exit:1 changed_files:  snippet:"You've hit your limit · resets 6pm (UTC)
+Claude exit code: 1
+Nenhuma mudança detectada via snapshot.
+AUTO_MARK ativo: verificando e substituindo ❌ / X por '✅ certo/finalizado' no arquivo docs/planos/plano-engenharia.md se encontrado.
+Substituído ❌ -> ✅ certo/finalizado em docs/planos/plano-engenharia.md"
+
+== Lote Engenharia 1 (Dashboard RDO) – 2026-03-16 ==
+[2026-03-16T16:00:00+00:00] Plano: docs/planos/plano-engenharia.md
+Item trabalhado: "1. Implementar Dashboard de Diário de Obra/RDO — equipes, equipamentos, ocorrências, tarefas, semana, histograma"
+
+Implementação frontend:
+- Página Dashboard RDO: src/app/(dashboard)/obras/[id]/rdo/dashboard/page.tsx
+  - Visão semanal com navegação (usa rdo.buscarSemana)
+  - Histograma MO por função (barras presentes/ausentes) via analises.histogramaMO
+  - Histograma MO por mês (barras verticais evolução 6 meses)
+  - Seções Sienge: tipos de diário e tipos de ocorrência (sienge.listarTiposDiarioObra, sienge.listarTiposOcorrenciaDiarioObra)
+  - Links para criar/ver RDOs individuais por dia
+- Hook: src/hooks/useHistogramaMO.ts (encapsula analises.histogramaMO)
+- Listagem RDO modificada: botão "Dashboard" adicionado ao header
+- TypeScript: sem erros nos arquivos criados/modificados (tsc --noEmit OK)
+- Marca ❌ substituída por ✅ certo/finalizado no plano-engenharia.md
+[2026-03-16T18:48:53+00:00] Plano:docs/planos/plano-engenharia.md Tasks:1 Exit:0
+[2026-03-16T18:48:53+00:00] docs/planos/plano-engenharia.md exit:0 changed_files:e32f73a467ad4edd5901094abc7ac032ec7c34df  docs/planos/plano-engenharia.md 4850e5012fbe77620eff43dc856dd0a1c7d4594f  docs/planos/plano-engenharia.md  snippet:"Done. Here's the summary:
+
+---
+
+**Tarefa concluída: Item 1 — Dashboard de Diário de Obra/RDO**
+
+- **arquivos_criados:**
+  - `concretiza/src/app/(dashboard)/obras/[id]/rdo/dashboard/page.tsx`
+  - `concretiza/src/hooks/useHistogramaMO.ts`
+
+- **arquivos_alterados:**
+  - `concretiza/src/app/(dashboard)/obras/[id]/rdo/page.tsx` (botão Dashboard no header)
+  - `docs/planos/plano-engenharia.md` (❌"
+[2026-03-16 18:58:06] Item 2 - Predefinições de Equipes e Equipamentos - VERIFICADO E MARCADO ✅
+  - Backend: obra.salvarEquipePredef, obra.salvarEquipamentosPredef já existiam em concretiza/src/server/routers/obra.ts
+  - Frontend: página completa em concretiza/src/app/(dashboard)/enterprise/engenharia/predefinicoes/page.tsx
+  - Integração: RDO novo (carregar/salvar predef) e configurações da obra
+  - Ação: corrigido marcador ❌ → ✅ no plano-engenharia.md
+[2026-03-16T18:55:09+00:00] Plano:docs/planos/plano-engenharia.md Tasks:1 Exit:0
+[2026-03-16T18:55:09+00:00] docs/planos/plano-engenharia.md exit:0 changed_files:4850e5012fbe77620eff43dc856dd0a1c7d4594f  docs/planos/plano-engenharia.md ebca5ab5d713472e4877b2c0c574f56c70237c3d  docs/planos/plano-engenharia.md  snippet:"Plan file updated correctly. Here's the summary:
+
+---
+
+## Resumo da execução
+
+**Item trabalhado:** 2. Predefinições de Equipes e Equipamentos
+
+A implementação já existia completa (backend + frontend + integrações). O marcador ❌ foi corrigido para ✅.
+
+- **arquivos_criados:** [] (nenhum — código já existia)
+- **arquivos_alterados:** [docs/planos/plano-engenharia.md, progress.txt]
+- "
+
+== Lote Engenharia 3 (Gestão de Orçamento) – 2026-03-16 ==
+[2026-03-16T19:10:00+00:00] Plano: docs/planos/plano-engenharia.md
+Item trabalhado: "3. Implementar Gestão de Orçamento — planilhas, insumos, budget"
+
+Implementação frontend:
+- Hook centralizado: concretiza/src/hooks/useOrcamento.ts
+  - useOrcamento, useOrcamentoPlanilhas, useInsumoOrcamento, useAdicionarInsumo, useAtualizarInsumo
+  - useBulkBudgetItems, useBulkBusinessBudgets, useBulkBuildingResources
+- Página Planilhas: concretiza/src/app/(dashboard)/obras/[id]/orcamento/planilhas/page.tsx
+  - Seletor de estimativa, listagem expandível de planilhas (sienge.listarPlanilhasOrcamento)
+- Página Insumos: concretiza/src/app/(dashboard)/obras/[id]/orcamento/insumos/page.tsx
+  - Busca, tabela com inline-edit, formulário de adicionar insumo
+  - Usa adicionarInsumoOrcamento, atualizarInsumoOrcamento, buscarInsumoOrcamento
+- Página Budget Bulk: concretiza/src/app/(dashboard)/obras/[id]/orcamento/budget/page.tsx
+  - 3 abas: Itens de Orçamento, Orçamentos Empresariais, Recursos da Obra
+  - Usa listarBulkBudgetItems, listarBulkBusinessBudgets, listarBulkBuildingResources
+- Página principal modificada: links de navegação para Planilhas, Insumos e Budget
+- Teste: concretiza/src/__tests__/hooks/useOrcamento.test.ts
+- Marca ❌ substituída por ✅ certo/finalizado no plano-engenharia.md
+[2026-03-16T18:58:20+00:00] Plano:docs/planos/plano-engenharia.md Tasks:1 Exit:0
+[2026-03-16T18:58:20+00:00] docs/planos/plano-engenharia.md exit:0 changed_files:ebca5ab5d713472e4877b2c0c574f56c70237c3d  docs/planos/plano-engenharia.md 9ca86e8f58e64b36feaecbe9ccd8b0c023a7c01e  docs/planos/plano-engenharia.md  snippet:"All done. Here's the summary:
+
+---
+
+## Resumo da execução
+
+**Item trabalhado:** 3. Implementar Gestão de Orçamento — planilhas, insumos, budget
+
+- **arquivos_criados:**
+  - `concretiza/src/hooks/useOrcamento.ts` — hook centralizado com 8 exports (useOrcamento, useOrcamentoPlanilhas, useInsumoOrcamento, useAdicionarInsumo, useAtualizarInsumo, useBulkBudgetItems, useBulkBusinessBudgets, useB"
+
+== Lote Engenharia 4 (Gestão de Estoque e Inventário) – 2026-03-16 ==
+[2026-03-16T20:00:00+00:00] Plano: docs/planos/plano-engenharia.md
+Item trabalhado: "4. Implementar Gestão de Estoque e Inventário — saldos, movimentações, apropriações, transferências"
+
+Implementação frontend:
+- Hook centralizado: concretiza/src/hooks/useEstoque.ts
+  - useEstoque, useSaldoPorMaterial, useMovimentacoesInventario, useBuscarMovimentacaoInventario
+  - useApropriacoesInventario, useTransferirEstoque, useLancarMovimentacao
+- Página Inventário: concretiza/src/app/(dashboard)/obras/[id]/almoxarifado/inventario/page.tsx
+  - Abas: Movimentações (filtro por data, detalhe inline) e Apropriações (busca por inventoryCountId + resourceId)
+  - Usa: sienge.listarMovimentacoesInventario, sienge.buscarMovimentacaoInventario, sienge.listarApropriacoesInventario
+- Página Saldos: concretiza/src/app/(dashboard)/obras/[id]/almoxarifado/saldos/page.tsx
+  - Tabela com material, categoria, unidade, saldo e status (Zerado/Baixo/OK)
+  - Usa: movimentacao.saldoPorMaterial
+- Página principal almoxarifado modificada: links para Saldos e Inventário
+- Teste: concretiza/src/__tests__/hooks/useEstoque.test.ts
+- Marca ❌ substituída por ✅ certo/finalizado no plano-engenharia.md
+[2026-03-16T19:03:26+00:00] Plano:docs/planos/plano-engenharia.md Tasks:1 Exit:0
+[2026-03-16T19:03:26+00:00] docs/planos/plano-engenharia.md exit:0 changed_files:9ca86e8f58e64b36feaecbe9ccd8b0c023a7c01e  docs/planos/plano-engenharia.md cdc0bce1856923dd3a1fbdd9fa54b8f0aa738494  docs/planos/plano-engenharia.md  snippet:"Item 4 is now ✅. Items 5 and 6 still have ❌ (for future lotes).
+
+---
+
+## Resumo da execução
+
+**Item trabalhado:** 4. Implementar Gestão de Estoque e Inventário — saldos, movimentações, apropriações, transferências
+
+- **arquivos_criados:**
+  - `concretiza/src/hooks/useEstoque.ts`
+  - `concretiza/src/app/(dashboard)/obras/[id]/almoxarifado/inventario/page.tsx`
+  - `concretiza/src/app/"
+
+== Lote Engenharia 5 (Gestão de Obras e Importação) – 2026-03-16 ==
+[2026-03-16T21:00:00+00:00] Plano: docs/planos/plano-engenharia.md
+Item trabalhado: "5. Implementar Gestão de Obras e Importação"
+Rotas cobertas: listarObras (obra.listar), importarObras (integracoes.importarObras), listarPorObra (auditLog.listarPorObra)
+
+Implementação frontend:
+- Hook centralizado: concretiza/src/hooks/useObrasGestao.ts
+  - useObrasListar, useImportarObras, useHistoricoObra
+- Página Histórico: concretiza/src/app/(dashboard)/obras/[id]/historico/page.tsx
+  - Timeline de audit log por obra com data, ação, usuário
+  - Usa: auditLog.listarPorObra
+- Página enterprise/engenharia/obras refatorada para usar hook centralizado
+  - Link "Histórico" adicionado em cada linha de obra
+- Teste: concretiza/src/__tests__/hooks/useObrasGestao.test.ts
+- Marca ❌ substituída por ✅ certo/finalizado no plano-engenharia.md
+[2026-03-16T19:07:09+00:00] Plano:docs/planos/plano-engenharia.md Tasks:1 Exit:0
+[2026-03-16T19:07:09+00:00] docs/planos/plano-engenharia.md exit:0 changed_files:cdc0bce1856923dd3a1fbdd9fa54b8f0aa738494  docs/planos/plano-engenharia.md e16dd3f7ddd74391392517ee126fe5761f71be56  docs/planos/plano-engenharia.md  snippet:"Item 5 is now ✅. Here's the summary:
+
+---
+
+## Resumo da execução
+
+**Item trabalhado:** 5. Implementar Gestão de Obras e Importação (Rotas: listarObras, importarObras, listarPorObra)
+
+- **arquivos_criados:**
+  - `concretiza/src/hooks/useObrasGestao.ts` — hook centralizado com 3 exports (useObrasListar, useImportarObras, useHistoricoObra)
+  - `concretiza/src/app/(dashboard)/obras/[id]/histo"
+
+== Lote Engenharia 6 (Planejamento — Tarefas e Materiais) – 2026-03-16 ==
+[2026-03-16T22:00:00+00:00] Plano: docs/planos/plano-engenharia.md
+Item trabalhado: "6. Implementar Planejamento — Tarefas e Materiais"
+Rotas cobertas: sienge.listarTarefas, sienge.inserirTarefasPlanilha, rdo.salvarMateriais
+
+Implementação frontend:
+- Hook centralizado: concretiza/src/hooks/usePlanejamento.ts
+  - useTarefasSienge (listarTarefas Sienge por obra)
+  - useInserirTarefasPlanilha (mutation inserirTarefasPlanilha)
+  - useSalvarMateriaisRdo (mutation salvarMateriais RDO)
+  - useTarefasObra (listar tarefas internas WBS)
+- Página Planejamento: concretiza/src/app/(dashboard)/obras/[id]/planejamento/page.tsx
+  - KPIs consolidados (total, concluídas, em andamento, avanço médio, Sienge)
+  - Aba "Tarefas WBS": listagem resumida das tarefas internas com código, nome, qtd, avanço, status
+  - Aba "Tarefas Sienge": projetos Sienge expansíveis com lista de tarefas (até 50 por projeto)
+  - Links de navegação para Gerenciar Tarefas e Materiais
+  - Warning quando integração Sienge não está configurada
+- Teste: concretiza/src/__tests__/hooks/usePlanejamento.test.ts
+- Marca ❌ substituída por ✅ certo/finalizado no plano-engenharia.md
+- Todos os 6 itens do plano-engenharia.md agora estão ✅
+
+== Lote Engenharia 6 (Planejamento — Tarefas e Materiais) – 2026-03-16 ==
+[2026-03-16T22:00:00+00:00] Plano: docs/planos/plano-engenharia.md
+Item trabalhado: "6. Implementar Planejamento — Tarefas e Materiais"
+Rotas cobertas: sienge.listarTarefas, sienge.inserirTarefasPlanilha, rdo.salvarMateriais
+
+Implementação frontend:
+- Hook centralizado: concretiza/src/hooks/usePlanejamento.ts
+  - useTarefasSienge (listarTarefas Sienge por obra)
+  - useInserirTarefasPlanilha (mutation inserirTarefasPlanilha)
+  - useSalvarMateriaisRdo (mutation salvarMateriais RDO)
+  - useTarefasObra (listar tarefas internas WBS)
+- Página Planejamento: concretiza/src/app/(dashboard)/obras/[id]/planejamento/page.tsx
+  - KPIs consolidados (total, concluídas, em andamento, avanço médio, Sienge)
+  - Aba "Tarefas WBS": listagem resumida das tarefas internas
+  - Aba "Tarefas Sienge": projetos expansíveis com lista de tarefas
+  - Links para Gerenciar Tarefas e Materiais
+- Teste: concretiza/src/__tests__/hooks/usePlanejamento.test.ts
+- Marca ❌ substituída por ✅ certo/finalizado no plano-engenharia.md
+- Todos os 6 itens do plano-engenharia.md agora estão ✅
+[2026-03-16T19:10:33+00:00] Plano:docs/planos/plano-engenharia.md Tasks:1 Exit:0
+[2026-03-16T19:10:33+00:00] docs/planos/plano-engenharia.md exit:0 changed_files:e16dd3f7ddd74391392517ee126fe5761f71be56  docs/planos/plano-engenharia.md 0d8673d3c7f202005fcb3b159a387f834398dfbb  docs/planos/plano-engenharia.md  snippet:"All items are now ✅. Here's the summary:
+
+---
+
+## Resumo da execução
+
+**Item trabalhado:** 6. Implementar Planejamento — Tarefas e Materiais (Rotas: listarTarefas, inserirTarefasPlanilha, salvarMateriais)
+
+- **arquivos_criados:**
+  - `concretiza/src/hooks/usePlanejamento.ts` — hook centralizado com 4 exports (useTarefasSienge, useInserirTarefasPlanilha, useSalvarMateriaisRdo, useTarefasObr"
+
+== Verificação Final – 2026-03-16 ==
+[2026-03-16T23:00:00+00:00] Plano: docs/planos/plano-engenharia.md
+Resultado: NENHUMA tarefa pendente (❌ ou X) encontrada.
+Todos os 6 itens da FASE 3.5 já estão marcados como "✅ certo/finalizado":
+  1. Dashboard de Diário de Obra/RDO ✅
+  2. Predefinições de Equipes e Equipamentos ✅
+  3. Gestão de Orçamento ✅
+  4. Gestão de Estoque e Inventário ✅
+  5. Gestão de Obras e Importação ✅
+  6. Planejamento — Tarefas e Materiais ✅
+Plano de Engenharia 100% concluído. Nenhuma ação necessária.
+[2026-03-16T19:14:08+00:00] Plano:docs/planos/plano-engenharia.md Tasks:1 Exit:0
+[2026-03-16T19:14:08+00:00] docs/planos/plano-engenharia.md exit:0 changed_files:  snippet:"## Resumo
+
+**Nenhuma tarefa pendente encontrada** em `docs/planos/plano-engenharia.md`.
+
+Todos os 6 itens da FASE 3.5 já estão marcados como **✅ certo/finalizado**:
+
+1. Dashboard de Diário de Obra/RDO
+2. Predefinições de Equipes e Equipamentos
+3. Gestão de Orçamento — planilhas, insumos, budget
+4. Gestão de Estoque e Inventário
+5. Gestão de Obras e Importação
+6. Planejamento — Ta"
+[2026-03-16T19:14:53+00:00] Plano:docs/planos/plano-engenharia.md Tasks:1 Exit:0
+[2026-03-16T19:14:53+00:00] docs/planos/plano-engenharia.md exit:0 changed_files:  snippet:"O arquivo já documenta que o plano está 100% concluído. Não há nada a acrescentar.
+
+## Resumo
+
+**Nenhuma tarefa pendente (❌ ou X) encontrada** em `docs/planos/plano-engenharia.md`.
+
+Todos os 6 itens da FASE 3.5 já estão marcados como **✅ certo/finalizado**:
+
+1. Dashboard de Diário de Obra/RDO
+2. Predefinições de Equipes e Equipamentos
+3. Gestão de Orçamento
+4. Gestão de Estoque e "
+[2026-03-16T19:15:29+00:00] Plano:docs/planos/plano-engenharia.md Tasks:1 Exit:0
+[2026-03-16T19:15:29+00:00] docs/planos/plano-engenharia.md exit:0 changed_files:  snippet:"O `progress.txt` já contém múltiplas verificações confirmando que o plano está 100% concluído. Não há necessidade de adicionar mais uma entrada repetitiva.
+
+## Resumo
+
+**Nenhuma tarefa pendente (❌ ou X) encontrada** em `docs/planos/plano-engenharia.md`.
+
+Todos os 6 itens da FASE 3.5 já estão marcados como **✅ certo/finalizado**:
+
+1. Dashboard de Diário de Obra/RDO
+2. Predefiniçõe"
+[2026-03-16T19:16:03+00:00] Plano:docs/planos/plano-engenharia.md Tasks:1 Exit:0
+[2026-03-16T19:16:03+00:00] docs/planos/plano-engenharia.md exit:0 changed_files:  snippet:"O `progress.txt` já contém múltiplas verificações confirmando que o plano está completo. Não vou adicionar outra entrada redundante.
+
+## Resumo
+
+**Nenhuma tarefa pendente (❌ ou X) encontrada** em `docs/planos/plano-engenharia.md`.
+
+Todos os 6 itens da FASE 3.5 já estão marcados como **✅ certo/finalizado**:
+
+1. Dashboard de Diário de Obra/RDO
+2. Predefinições de Equipes e Equipament"
+
+== Lote Financeiro 1 (CRUD Contas a Pagar) – 2026-03-16 ==
+[2026-03-16T23:30:00+00:00] Plano: docs/planos/plano-financeiro.md
+Item trabalhado: "1. Implementar CRUD de Contas a Pagar"
+Rotas cobertas: criarContaPagar (já existia), listarContasPagar (já existia), lancarDespesa (novo), lancarDespesaNf (novo)
+
+Implementação frontend:
+- Rota tRPC lancarDespesa: cria título no Sienge + registra lancamentoFinanceiro local (tipo DESPESA) quando obraId informado
+- Rota tRPC lancarDespesaNf: importa NF-e via chave de acesso no Sienge, resolve buildingId da obra
+- Página contas-pagar atualizada: botão "Importar NF-e", campo categoria, mutações atualizadas para lancarDespesa
+- Modal NF-e: chave de acesso (44 dígitos), seletor fornecedor e obra
+- Teste básico criado
+- Arquivos modificados: concretiza/src/server/routers/sienge.ts, concretiza/src/app/(dashboard)/financeiro/contas-pagar/page.tsx
+- Arquivos criados: concretiza/src/app/(dashboard)/financeiro/contas-pagar/__tests__/page.test.tsx
+- TypeScript: sem novos erros (tsc --noEmit OK)
+- Marca ❌ substituída por ✅ certo/finalizado no plano-financeiro.md
+
+== Lote Financeiro 1 (CRUD Contas a Pagar) – 2026-03-16 ==
+[2026-03-16T23:30:00+00:00] Plano: docs/planos/plano-financeiro.md
+Item trabalhado: "1. Implementar CRUD de Contas a Pagar"
+Rotas cobertas: criarContaPagar (já existia), listarContasPagar (já existia), lancarDespesa (novo), lancarDespesaNf (novo)
+
+Implementação frontend:
+- Rota tRPC lancarDespesa: cria título no Sienge + registra lancamentoFinanceiro local (tipo DESPESA) quando obraId informado
+- Rota tRPC lancarDespesaNf: importa NF-e via chave de acesso no Sienge, resolve buildingId da obra
+- Página contas-pagar atualizada: botão "Importar NF-e", campo categoria, mutações atualizadas para lancarDespesa
+- Modal NF-e: chave de acesso (44 dígitos), seletor fornecedor e obra
+- Teste básico criado
+- Arquivos modificados: concretiza/src/server/routers/sienge.ts, concretiza/src/app/(dashboard)/financeiro/contas-pagar/page.tsx
+- Arquivos criados: concretiza/src/app/(dashboard)/financeiro/contas-pagar/__tests__/page.test.tsx
+- TypeScript: sem novos erros (tsc --noEmit OK)
+- Marca ❌ substituída por ✅ certo/finalizado no plano-financeiro.md
+[2026-03-16T19:18:51+00:00] Plano:docs/planos/plano-financeiro.md Tasks:1 Exit:0
+[2026-03-16T19:18:51+00:00] docs/planos/plano-financeiro.md exit:0 changed_files:afbcc3ed642e2505ccaf206d34a641a8cc6a95c9  docs/planos/plano-financeiro.md 81c4eefacc464a6ca0d82ec6db4a69fd6eab1e82  docs/planos/plano-financeiro.md  snippet:"Done. Here's the summary:
+
+---
+
+## Resumo da execução
+
+**Item trabalhado:** 1. Implementar CRUD de Contas a Pagar (plano-financeiro.md)
+
+- **arquivos_criados:**
+  - `concretiza/src/app/(dashboard)/financeiro/contas-pagar/__tests__/page.test.tsx`
+
+- **arquivos_alterados:**
+  - `concretiza/src/server/routers/sienge.ts` (rotas `lancarDespesa` e `lancarDespesaNf`)
+  - `concretiza/src/app/(dashboard)"
+[2026-03-16T19:26:05+00:00] Plano:docs/planos/plano-financeiro.md Tasks:1 Exit:0
+[2026-03-16T19:26:05+00:00] docs/planos/plano-financeiro.md exit:0 changed_files:81c4eefacc464a6ca0d82ec6db4a69fd6eab1e82  docs/planos/plano-financeiro.md 2d8af4728e0f467e527e6a18f2ba206420717503  docs/planos/plano-financeiro.md  snippet:"Done. Here's the summary:
+
+---
+
+## Resumo da execução
+
+**Item trabalhado:** 2. Implementar Gestão de Bills — detalhes, parcelas, impostos, anexos, categorias
+
+- **arquivos_criados:**
+  - `concretiza/src/app/(dashboard)/financeiro/bills/page.tsx`
+  - `concretiza/src/app/(dashboard)/financeiro/bills/BillDetailDrawer.tsx`
+  - `concretiza/src/app/(dashboard)/financeiro/bills/__tests__/page.test.t"
+
+== Lote Financeiro 3 (Contas a Receber) – 2026-03-16 ==
+[2026-03-16T19:33:08+00:00] Plano: docs/planos/plano-financeiro.md
+Item trabalhado: "3. Implementar Contas a Receber — parcelas, vencimentos, categorias"
+Rotas cobertas: buscarReceivableBill, listarParcReceivableBill, alterarVencimentoReceivableBill, listarBudgetCategoriesReceivable
+
+Implementação frontend:
+- ReceivableDetailDrawer: concretiza/src/app/(dashboard)/financeiro/recebimentos/ReceivableDetailDrawer.tsx
+  - Drawer com header (buscarReceivableBill), abas Parcelas e Categorias
+  - Parcelas com edição inline de vencimento (alterarVencimentoReceivableBill)
+  - Categorias via listarBudgetCategoriesReceivable
+- Página recebimentos atualizada: rows clicáveis abrem drawer
+- Teste: concretiza/src/app/(dashboard)/financeiro/recebimentos/__tests__/page.test.tsx
+- Marca ❌ substituída por ✅ certo/finalizado no plano-financeiro.md
+[2026-03-16T19:30:37+00:00] Plano:docs/planos/plano-financeiro.md Tasks:1 Exit:0
+[2026-03-16T19:30:37+00:00] docs/planos/plano-financeiro.md exit:0 changed_files:2d8af4728e0f467e527e6a18f2ba206420717503  docs/planos/plano-financeiro.md 21316ff740912444332f2a3c64f574d820082334  docs/planos/plano-financeiro.md  snippet:"Done. Here's the summary:
+
+---
+
+## Resumo da execução
+
+**Item trabalhado:** 3. Implementar Contas a Receber — parcelas, vencimentos, categorias
+
+- **arquivos_criados:**
+  - `concretiza/src/app/(dashboard)/financeiro/recebimentos/ReceivableDetailDrawer.tsx`
+  - `concretiza/src/app/(dashboard)/financeiro/recebimentos/__tests__/page.test.tsx`
+
+- **arquivos_alterados:**
+  - `concretiza/src/app/(da"
+[2026-03-16T19:33:49+00:00] Plano:docs/planos/plano-financeiro.md Tasks:1 Exit:0
+[2026-03-16T19:33:49+00:00] docs/planos/plano-financeiro.md exit:0 changed_files:21316ff740912444332f2a3c64f574d820082334  docs/planos/plano-financeiro.md d45c2af0696aac9315302b9d25830074a834c5a9  docs/planos/plano-financeiro.md  snippet:"All done. Here's the summary:
+
+---
+
+## Resumo da execução
+
+**Item trabalhado:** 4. Implementar Tela de Pagamentos e Info Bancária
+
+- **arquivos_criados:**
+  - `concretiza/src/app/(dashboard)/financeiro/pagamentos/page.tsx`
+  - `concretiza/src/app/(dashboard)/financeiro/pagamentos/__tests__/page.test.tsx`
+
+- **arquivos_alterados:**
+  - `docs/planos/plano-financeiro.md` (❌ → ✅ certo/finaliz"
+
+== Lote Financeiro 5 (Documentos Financeiros — Boletos, Extratos, IR) – 2026-03-16 ==
+[2026-03-16T19:40:00+00:00] Plano: docs/planos/plano-financeiro.md
+Item trabalhado: "5. Implementar Envio de Boletos, Extratos e Informes IR por Email/PDF"
+Rotas cobertas: enviarBoleto2Via (já em /boletos), enviarExtratoClienteEmail, enviarInformeIREmail, enviarSaldoDevedorEmail, getExtratoPdfUrl, getInformeIRPdfUrl, obterSaldoDevedor, listarExtratoCliente
+
+Implementação frontend:
+- Página Documentos Financeiros: concretiza/src/app/(dashboard)/financeiro/documentos/page.tsx
+  - 3 abas: Extrato do Cliente, Informe de IR, Saldo Devedor
+  - Extrato: busca por customerId + período, tabela de resultados, download PDF (getExtratoPdfUrl), envio email (enviarExtratoClienteEmail)
+  - Informe IR: busca por clienteId + ano-base, download PDF (getInformeIRPdfUrl), envio email (enviarInformeIREmail)
+  - Saldo Devedor: busca por customerId, exibe campos dinâmicos, envio email (enviarSaldoDevedorEmail)
+  - Link para /financeiro/boletos (enviarBoleto2Via já implementado)
+- Teste: concretiza/src/app/(dashboard)/financeiro/documentos/__tests__/page.test.tsx
+- Marca ❌ substituída por ✅ certo/finalizado no plano-financeiro.md
+[2026-03-16T19:36:30+00:00] Plano:docs/planos/plano-financeiro.md Tasks:1 Exit:0
+[2026-03-16T19:36:30+00:00] docs/planos/plano-financeiro.md exit:0 changed_files:d45c2af0696aac9315302b9d25830074a834c5a9  docs/planos/plano-financeiro.md 3d13d2d49d18edaf719778aedb51e42d40d12d4d  docs/planos/plano-financeiro.md  snippet:"Done. Here's the summary:
+
+---
+
+## Resumo da execução
+
+**Item trabalhado:** 5. Implementar Envio de Boletos, Extratos e Informes IR por Email/PDF
+
+- **arquivos_criados:**
+  - `concretiza/src/app/(dashboard)/financeiro/documentos/page.tsx`
+  - `concretiza/src/app/(dashboard)/financeiro/documentos/__tests__/page.test.tsx`
+
+- **arquivos_alterados:**
+  - `docs/planos/plano-financeiro.md` (❌ → �"
+[2026-03-16T19:42:03+00:00] Plano:docs/planos/plano-financeiro.md Tasks:1 Exit:0
+[2026-03-16T19:42:03+00:00] docs/planos/plano-financeiro.md exit:0 changed_files:3d13d2d49d18edaf719778aedb51e42d40d12d4d  docs/planos/plano-financeiro.md 9b1f08af251df609d5f961084de6947d3972348d  docs/planos/plano-financeiro.md  snippet:"Everything is updated correctly. Here's the summary:
+
+---
+
+## Resumo da execução
+
+**Item trabalhado:** 6. Implementar Dashboard de Inadimplência e Saldos
+
+- **arquivos_criados:**
+  - `concretiza/src/app/(dashboard)/financeiro/inadimplencia/page.tsx`
+  - `concretiza/src/app/(dashboard)/financeiro/inadimplencia/__tests__/page.test.tsx`
+
+- **arquivos_alterados:**
+  - `docs/planos/plano-financeiro."
+
+== Lote Financeiro 7 (Relatórios Financeiros Bulk) – 2026-03-16 ==
+[2026-03-16T19:55:00+00:00] Plano: docs/planos/plano-financeiro.md
+Item trabalhado: "7. Implementar Relatórios Financeiros Bulk"
+Rotas cobertas: listarBulkAccountBalances, listarBulkBankMovements, listarBulkBillPayablesInstallments, listarBulkReceivableInstallments, listarBulkCustomerExtractHistory, listarBulkInvoiceItens
+
+Implementação frontend:
+- Página Relatórios Bulk: concretiza/src/app/(dashboard)/financeiro/relatorios-bulk/page.tsx
+  - 6 abas: Saldos Contábeis, Movimentos Bancários, Parcelas a Pagar, Parcelas a Receber, Extrato de Clientes, Itens de NF
+  - Filtros por empresa, período, centro de custo (saldos), cliente (extrato)
+  - Tabela dinâmica renderiza qualquer schema retornado pela API
+  - Exportação CSV embutida
+  - Consome 6 rotas tRPC bulk
+- Testes: concretiza/src/app/(dashboard)/financeiro/relatorios-bulk/__tests__/page.test.tsx (6 cenários, todos passando)
+- Infra de testes: concretiza/vitest.config.ts + concretiza/src/test-setup.ts (jsdom + jest-dom matchers)
+
+Status: ❌ → ✅ certo/finalizado
+
+- arquivos_criados:
+  - concretiza/src/app/(dashboard)/financeiro/relatorios-bulk/page.tsx
+  - concretiza/src/app/(dashboard)/financeiro/relatorios-bulk/__tests__/page.test.tsx
+  - concretiza/vitest.config.ts
+  - concretiza/src/test-setup.ts
+
+- arquivos_alterados:
+  - docs/planos/plano-financeiro.md
+[2026-03-16T19:46:05+00:00] Plano:docs/planos/plano-financeiro.md Tasks:1 Exit:0
+[2026-03-16T19:46:05+00:00] docs/planos/plano-financeiro.md exit:0 changed_files:9b1f08af251df609d5f961084de6947d3972348d  docs/planos/plano-financeiro.md 9988c1e2bf008763fbd887d1ac4d0e0989a88d74  docs/planos/plano-financeiro.md  snippet:"Tarefa concluída. Resumo:
+
+---
+
+**Item 7 — Relatórios Financeiros Bulk** ❌ → ✅ certo/finalizado
+
+- **arquivos_criados:**
+  - `concretiza/src/app/(dashboard)/financeiro/relatorios-bulk/page.tsx`
+  - `concretiza/src/app/(dashboard)/financeiro/relatorios-bulk/__tests__/page.test.tsx`
+  - `concretiza/vitest.config.ts`
+  - `concretiza/src/test-setup.ts`
+
+- **arquivos_alterados:**
+  - `docs/pl"
+
+== Verificação plano-financeiro.md – 2026-03-16 ==
+[2026-03-16T20:00:00+00:00] Plano: docs/planos/plano-financeiro.md
+Resultado: Todos os 7 itens da FASE 3.1 já estão marcados como "✅ certo/finalizado".
+Nenhuma tarefa pendente (❌ ou X) encontrada. Nada a implementar.
+
+== Verificação plano-financeiro.md (Ralph) – 2026-03-16 ==
+[2026-03-16T21:30:00+00:00] Plano: docs/planos/plano-financeiro.md
+Resultado: NENHUMA tarefa pendente (❌ ou X) encontrada.
+Todos os 7 itens já estão marcados como ✅ certo/finalizado.
+Plano Financeiro (FASE 3.1) 100% concluído. Nenhuma ação necessária.
+[2026-03-16T19:55:37+00:00] Plano:docs/planos/plano-financeiro.md Tasks:1 Exit:0
+[2026-03-16T19:55:37+00:00] docs/planos/plano-financeiro.md exit:0 changed_files:  snippet:"## Resumo
+
+**Nenhuma tarefa pendente encontrada** em `docs/planos/plano-financeiro.md`.
+
+Todos os 7 itens da FASE 3.1 já estão marcados como **✅ certo/finalizado**:
+
+1. CRUD de Contas a Pagar ✅
+2. Gestão de Bills ✅
+3. Contas a Receber ✅
+4. Tela de Pagamentos e Info Bancária ✅
+5. Envio de Boletos, Extratos e Informes IR ✅
+6. Dashboard de Inadimplência e Saldos ✅
+7. Relatórios Fi"
+[2026-03-16T19:56:18+00:00] Plano:docs/planos/plano-financeiro.md Tasks:1 Exit:0
+[2026-03-16T19:56:18+00:00] docs/planos/plano-financeiro.md exit:0 changed_files:  snippet:"## Resumo
+
+**Nenhuma tarefa pendente encontrada** em `docs/planos/plano-financeiro.md`.
+
+Todos os 7 itens da FASE 3.1 já estão marcados como **✅ certo/finalizado**:
+
+1. CRUD de Contas a Pagar ✅
+2. Gestão de Bills ✅
+3. Contas a Receber ✅
+4. Tela de Pagamentos e Info Bancária ✅
+5. Envio de Boletos, Extratos e Informes IR ✅
+6. Dashboard de Inadimplência e Saldos ✅
+7. Relatórios Fi"
+
+== Verificação plano-financeiro.md (Ralph/Opus) – 2026-03-16T22:00:00+00:00 ==
+Plano: docs/planos/plano-financeiro.md
+Item trabalhado: NENHUM — todos os 7 itens já estavam ✅ certo/finalizado.
+Status: Plano Financeiro (FASE 3.1) 100% completo. 0 tarefas ❌ encontradas.
+[2026-03-16T19:57:00+00:00] Plano:docs/planos/plano-financeiro.md Tasks:1 Exit:0
+[2026-03-16T19:57:00+00:00] docs/planos/plano-financeiro.md exit:0 changed_files:  snippet:"## Resumo
+
+**Nenhuma tarefa pendente (❌ ou X) encontrada** em `docs/planos/plano-financeiro.md`.
+
+Todos os 7 itens da FASE 3.1 já estão marcados como **✅ certo/finalizado**:
+
+1. CRUD de Contas a Pagar ✅
+2. Gestão de Bills ✅
+3. Contas a Receber ✅
+4. Tela de Pagamentos e Info Bancária ✅
+5. Envio de Boletos, Extratos e Informes IR ✅
+6. Dashboard de Inadimplência e Saldos ✅
+7. Rel"

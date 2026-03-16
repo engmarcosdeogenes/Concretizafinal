@@ -1,0 +1,214 @@
+Aqui está a raspagem completa de todo o conteúdo acessível do site Inmeta (app.inmeta.com.br) para o usuário Thalles Santos, na seção Configurações > Cadastros > Modelos de inspeções:
+📋 INMETA — Raspagem Completa de Modelos de Inspeções
+
+🔒 SEGURANÇA
+Aba: Equipamentos (11 modelos)
+CódigoDescriçãoPeriodicidadeItensINMETA - FVE 01BetoneiraNenhum12INMETA - FVE 02Furadeira de impactoNenhum4INMETA - FVE 03Furadeira de mandrilNenhum5INMETA - FVE 04Elevador de carga e passageirosNenhum10INMETA - FVE 05Guincho de colunaNenhum8INMETA - FVE 06JaúNenhum1INMETA - FVE 07Martelete rompedorNenhum4INMETA - FVE 08Mini GruaNenhum7INMETA - FVE 09Motor de VibradorNenhum6INMETA - FVE 10Serra circular de bancadaNenhum7INMETA - FVE 11Serra circular manual e esmerilhadeiraNenhum5
+Detalhes dos Itens de Inspeção por Modelo:
+FVE 01 – Betoneira
+
+Lubrificar mancais e rolamentos
+Inspecionar Folga dos parafusos
+Inspecionar Correias
+Inspecionar o funcionamento Chave elétrica
+Inspecionar Desgaste do pião
+Inspecionar Desgaste do bojo
+Inspecionar Desgaste da engrenagem
+Inspecionar Desgaste do Volante
+Inspecionar o Aterramento
+Verificar o cabo de aço
+Verificar a lona de freio
+Inspecionar a chave elétrica de bloqueio
+FVE 02 – Furadeira de impacto
+Inspecionar o cabo elétrico
+Verificar a lubrificação das peças
+Inspecionar o desgaste do carvão
+Verificar a folga das peças
+FVE 03 – Furadeira de mandril
+Verificar o mandril
+Inspecionar o desgaste do carvão
+Verificar as folgas das peças
+Verificar a lubrificação das peças
+Inspecionar o cabo elétrico
+FVE 04 – Elevador de carga e passageiros
+Inspecionar cabo de aço
+Inspecionar Lona de freio/embalagem
+Lubrificar roldanas, engrenagens, eixos e mancais
+Inspecionar Fixação das peças
+Inspecionar correias/correntes
+Inspecionar chave de fim de curso
+Inspecionar o painel de identificação de andares
+Inspecionar a chave geral elétrica
+Inspecionar a chave elétrica de bloqueio
+Inspecionar aterramento do motor
+FVE 05 – Guincho de coluna
+Verificar correia
+Lubrificação dos mancais e partes giratórias do guincho
+Inspecionar o Travamento do guincho
+Verificar lona de freio
+Verificar pião de engrenagem
+Inspecionar o aterramento
+Inspecionar a chave elétrica de bloqueio
+Verificar o cabo de aço
+FVE 06 – Jaú
+Fixação dos grampos nos cabos de aço
+FVE 07 – Martelete rompedor
+Inspecionar o acionamento
+Inspecionar a Fixação das peças e parafusos
+Inspecionar a Fixação e lubrificação do ponteiro
+Inspecionar o cabo elétrico
+FVE 08 – Mini Grua
+Verificar desgaste das correias
+Lubrificação das peças
+Inspecionar o Travamento da mini grua
+Inspecionar chave de fim de curso
+Inspecionar o aterramento
+Inspecionar a chave elétrica de bloqueio
+Verificar o cabo de aço
+FVE 09 – Motor de Vibrador
+Inspecionar a proteção elétrica do motor
+Inspecionar o ajunte da castanha
+Inspecionar a lubrificação da castanha
+Inspecionar a chaveta de segurança do mangote
+Inspecionar a chave elétrica
+Inspecionar o aterramento
+FVE 10 – Serra circular de bancada
+Inspecionar a lâmina
+Inspecionar o motor
+Inspecionar o alinhamento do trilho guia
+Inspecionar a regulagem da placa de base
+Verificar bom funcionamento do protetor da lâmina
+Inspecionar o aterramento
+Inspecionar a chave elétrica de bloqueio
+FVE 11 – Serra circular manual e esmerilhadeira
+Inspecionar o cabo elétrico
+Verificar a lubrificação das peças
+Inspecionar o desgaste do carvão
+Verificar o desgaste do disco de corte
+Verificar a proteção do disco de corte
+
+Aba: Treinamentos de segurança
+→ Nenhum modelo encontrado.
+Aba: Registros de segurança
+→ Nenhum modelo encontrado.
+✅ QUALIDADE
+Aba: Pré-obra (5 modelos)
+INMETA - 1. Estrutura Para Iniciação De Empreendimento (14 itens)
+
+ESTUDO PRELIMINAR POTENCIAL DO TERRENO:
+
+Possui matrícula? Está atualizada?
+Possui consulta Prévia?
+As medidas do terreno foram verificadas in loco?
+Foi elaborado o estudo arquitetônico?
+
+
+ESTUDO DE PARÂMETROS:
+
+Foi realizada análise Ambiental?
+Foi realizada a análise jurídica?
+Foi realizada a sondagem do terreno (furo teste)?
+Foi realizado o levantamento planialtimétrico?
+Foi feita a licença prévia?
+
+
+NEGOCIAÇÃO DE COMPRA DO TERRENO:
+
+Houve negociação?
+Existe contrato de compra e venda?
+O registro do imóvel já está em pose da construtora?
+Foi feita a regularização do terreno?
+Já possui o alvará de construção?
+INMETA - 2. Projetos (24 itens)
+
+
+GESTÃO DE PROJETOS: Foi realizada a contratação do arquiteto; Foi feita a elaboração do anteprojeto; Orçamentação/contratação dos projetos complementares; Reunião de diretrizes; Análise de entrada do projeto arquitetônico (elaboração e aprovação); Saída de projeto do arquitetônico aprovada; Projeto arquitetônico para aprovação da prefeitura; Análise de entrada do projeto preventivo; Aprovação do preventivo; Saída do projeto preventivo; Projeto preventivo aprovado pela prefeitura; Análise do projeto hidrossanitário (entrada, aprovação, saída, prefeitura); Análise do projeto elétrico (entrada, aprovação, saída, prefeitura); Termo de viabilidade de esgoto; Termo de viabilidade de elétrica; Correção do projeto arquitetônico; Correção dos projetos complementares
+INMETA - 3. SIOPI (21 itens)
+(ANÁLISE DEFINITIVA) – Documentos encaminhados: Ficha resumo do empreendimento; Matrícula do imóvel; Levantamento planialtimétrico cadastral; Projeto de rota acessível; Layout das unidades padrão e adaptada; Quadros I a VII da NBR 12.721; Minuta ou memorial de incorporação; Parecer geotécnico; Estudos preliminares de infraestruturas; Memoriais descritivos (modelo CAIXA); Código de práticas CAIXA; Orçamentos e cronograma (modelos CAIXA); Projeto, memorial, orçamento e fonte de recursos das obras não incidentes
+3.2 (CONTRATAÇÃO) – Documentos encaminhados: Projetos de implantação e arquitetônico aprovados pela prefeitura; Memorial de incorporação registrado; Alvará ou licença de construção; Manifestação do órgão ambiental; Certidão de registro da construtora no CREA/CAU; Certificado de qualificação da construtora no PBQP-H; ART/RRT de execução da obra; ART/RRT dos projetos de arquitetura/acessibilidade
+INMETA - 4. Preparação Para Início De Obra (10 itens)
+Possui licença de instalação; Foi feito o orçamento da obra; Foi feita a incorporação da obra; A análise de engenharia CEF foi feita; A análise financeira CEF foi feita; A análise jurídica CEF foi feita; A análise Brasília CEF foi feita; Pedido de ligação de água; Pedido de ligação de energia; Sondagem do terreno
+INMETA - 5. Serviços Preliminares (5 itens)
+Limpeza do terreno; Supressão do terreno; Terraplanagem; Instalações provisórias; Tapumes
+
+
+Aba: Diário simplificado (2 modelos)
+Diário de Obra - Urb (6 itens)
+
+Data do preenchimento (automático) — Data e hora
+Condição climática — Seleção múltipla
+Serviços — Tabela
+Registro fotográfico das frentes de serviço — Evidência
+Ocorrências — Seleção múltipla
+Assinatura do Engenheiro — Assinatura
+Diário de obra (7 itens)
+Data do preenchimento (automático) — Data e hora
+Condição climática — Classificação do tempo
+Serviços — Tabela
+Registro fotográfico das frentes de serviço — Evidência
+Ocorrências — Seleção múltipla
+Assinatura do Engenheiro — Assinatura
+Efetivo — Mão de Obra
+
+
+Aba: Materiais (83 modelos)
+FP (3 modelos):
+
+FP-SGQ-019 - Concreto (Revisão 04 – 10/12/2024) — 6 itens
+FP-SGQ-019 - Rastreabilidade de Concreto — 8 itens
+FP-SGQ-023 - Rastreabilidade de Revestimento Cerâmico — 2 itens
+FVM (64 modelos – Revisão 2 – 16/05/2017):
+Luminárias, Tijolo de vidro, Arame de aço, Areia, Argamassa usinada, Aço (barra reta), Aço (cortado e dobrado), Banheira, Barras e fios de cobre, Bloco cerâmico/Tijolo cerâmico, Bloco de gesso, Bloco e canaleta de concreto, Bloco refratário, Brita, Chapa de madeira compensada, Contramarco de alumínio, Cuba de aço inox, Eletroduto flexível, Eletroduto rígido - PVC e metálico, Ensacados - Cimento, Ensacados - Argamassa, Ensacados - Cal hidratada, Ensacados - Gesso em pó, Ensacados - Graute, Ensacados - Rejunte, Escantilhão, Escoramento de madeira, Escoramentos metálicos, Esquadrias - Aço, PVC e alumínio, Exaustor mecânico, Extintores, Ferragens - Fechaduras e dobradiças, Formas - Metálicas e plásticas, Forro PVC, Gabaritos metálicos, Gesso em placa - Placa acartonada, Gradil/Guarda corpo, Impermeabilização - Mantas/emulsões/argamassas poliméricas, Kit porta pronta madeira, Ladrilho hidráulico, Laje pré-moldada com lajota, Louças, Madeira serrada, Mangueira de incêndio, Massa PVA ou acrílica, Material elétrico, Material hidrossanitário, Material para pintura, Metais sanitários, Pedra natural - Granito e mármore, Perfil metálico, Piso emborrachado, Piso intertravado, Placa pré-moldada de concreto, Porta corta fogo, Portas e portais de madeira, Primer, Revestimento cerâmico - Piso/parede/pastilhas, Sprinkler, Tela de PVC, Telas de aço para reboco e alvenaria, Telha cerâmica, Telha de fibrocimento, Telha isotérmica, Telha metálica, Tubos - Aços/cobre/ferro/PVC, Vidro
+INMETA - FVM (16 modelos novos):
+FVM 01 - Areia, FVM 02 - Aço, FVM 03 - Bloco cerâmico, FVM 04 - Chapas de gesso e gesso acartonado, FVM 05 - Madeiras e chapas compensadas, FVM 06 - Material elétrico (fios, cabos, tomadas, interruptores, disjuntores, eletrodutos, luminárias, etc.), FVM 07 - Material hidráulico (tubos, conexões, eletrodutos rígidos, etc.), FVM 08 - Brita, FVM 09 - Concreto, FVM 10 - Cimento, FVM 11 - Cal e argamassa industrializada, FVM 12 - Esquadrias e contramarco de alumínio, FVM 13 - Esquadrias de madeira (porta pronta), FVM 14 - Revestimento cerâmico, FVM 15 - Telhas cerâmicas e de fibrocimento, FVM 16 - Vidro
+
+
+Aba: Treinamentos (3 modelos)
+DescriçãoPeriodicidadeVínculosItensDSS - Diálogo semanal de segurançaSemanal0 locais5IntegraçãoNenhum0 locais4NR-18Bienal0 locais4
+
+Aba: Registros (3 modelos)
+DescriçãoCriado porDataItens4º - Check List Unidades - CRCLetícia Aparecida Taveira e Silva19/12/2025163Acompanhamento Obra——35FP-SGQ-55 - Plano de Ação——14
+
+Aba: Empreendimentos (21 modelos)
+4º - Check List Unidades - CRC (163 itens, 0 obras); 4º - Check List Unidades - CRC (1 itens); Auditoria (1 itens, 2 obras); Auditoria SGQ (25 itens, 20 obras); Auditoria SGQ (Restaurado) (1 itens); Auditoria Urb (1 itens, 1 obra); Check List Unidades - CRC (163 itens); Checklist A. Comum - SGQ (0 itens); INMETA - Aspectos gerais do canteiro de obra (Mensal, 12 itens); INMETA - Atividades - avaliação de 5 serviços (Mensal, 5 itens); INMETA - Controle tecnológico (Mensal, 7 itens); INMETA - Diário de obra (Mensal, 3 itens); INMETA - Documentação (Mensal, 10 itens); INMETA - Equipamentos (Mensal, 8 itens); INMETA - Instrumentos calibrados (Mensal, 2 itens); INMETA - Materiais - avaliação de 5 materiais (Mensal, 5 itens); INMETA - Projetos (Mensal, 4 itens); INMETA - Treinamentos - 5% dos funcionários (Mensal, 8 itens); MODELO OPUS (Mensal, Revisão 00, 9 itens); Modelo Auditoria Novo (221 itens); (4 mais)
+Aba: Administrativo (11 modelos)
+DescriçãoPeriodicidadeDataItensINMETA - ComercialMensal—5INMETA - ComprasMensal—6INMETA - Manutenção técnicaMensal—6INMETA - Recursos humanosMensal—9SiAC - 10 MelhoriaNenhum25/03/20249SiAC - 4 Contexto da empresa construtoraNenhum25/03/202421SiAC - 5 LiderançaNenhum25/03/20245SiAC - 6 PlanejamentoNenhum25/03/202422SiAC - 7 ApoioNenhum25/03/202420SiAC - 8.1 Planejamento e controle operacionais da obraNenhum25/03/202416SiAC - 9 Avaliação de desempenhoNenhum25/03/202420
+
+🔧 SERVIÇO (134 modelos — lista completa)
+PEIS 001: FVP - Locação de obra, FVP - Terraplanagem, FVS - Locação de obra, FVS - Terraplanagem, FVS - Terraplanagem Urb
+PEIS 002: FVP - Contenção de solos; FVS - Cravação de perfil metálico, Execução da escavação, Execução das estacas escavadas, Instalação das placas pré moldadas, Instalação de manta drenante, Tirantes; FVS urb - Boca de Lobo GAP, Chaminé GAP, Poços de Visita GAP, Rede Coletoras GAP, Rede Ramais GAP
+PEIS 003: FVP - Bloco de Fundação/Coroamento, Viga de Coroamento; FVS - Preparo/Fôrma e armação/Concretagem do bloco de Fundação, Preparo/Concretagem/Fôrma Viga de Coroamento, Estaca hélice contínua CON/FUN, Sapata PER/TOR; FVS urb - Rede de Esgoto (Poço de Visita), Rede de Água (Dispositivos/Sistema Individual), Rede Água e Esgoto Misto
+PEIS 004: FVP - Estrutura de concreto armado PER/TOR; FVS - Cimbramento PER/TOR, Concretagem de peça estrutural PER/TOR, Confecção de fôrma PER/TOR, Montagem de armadura de pilar PER/TOR, Montagem de armadura de viga e laje PER/TOR, Montagem de forma PER/TOR, Passagens hidráulicas PER/TOR; FVS urb - Rede Elétrica Lançamento de dutos, Subterrânea (Caixas)
+PEIS 005: FVP - Alvenaria de vedação em bloco cerâmico; FVS - Elevação de Alvenaria, Encunhamento, Marcação de alvenaria, Taliscamento; FVS urb - Muro Fundação em Bloco de Concreto, Muro Instalação Placas
+PEIS 006: FVS - Instalação de gás; FVS urb - Base, Capa Asfáltica, Sub-base, Subleito
+PEIS 007: FVP - Contrapiso aderido e/ou acústico; FVS - Aplicação de manta acústica, Execução de contrapiso acústico flutuante, Execução de contrapiso aderido, Taliscamento para execução de contrapiso; FVS urb - Meio fio
+PEIS 008: FVP - Contramarco de alumínio; FVS - Contramarco de alumínio; FVS urb - Estaca hélice contínua
+PEIS 009: FVP - Instalações de esgoto e água pluvial; FVS - Fechamento aéreo, Prolongamento, Prumadas
+PEIS 010: FVP - Instalações de água fria
+PEIS 011: FVP - Instalações de água quente; FVS - Isométrico, Passagens hidráulicas em peças estruturais
+PEIS 012: FVS - Instalações elétricas finais (miolos e quadros), Instalações elétricas iniciais (condutores e arame guiado), Instalações elétricas iniciais (quadros, caixas e eletrodutos)
+PEIS 013: FVP - Revestimento interno em argamassa cimentícia; FVS - Execução do revestimento interno, Taliscamento para definição do plano de revestimento
+PEIS 014: FVP - Forro de gesso acartonado estruturado; FVS - Chapeamento e alçapão, Estruturação do forro
+PEIS 015: FVP - Revestimento externo em argamassa cimentícia; FVS - Aplicação da argamassa, Preparo das bases
+PEIS 016: FVP - Impermeabilização em argamassa polimérica; FVS - Preparo da base + aplicação
+PEIS 017: FVP - Revestimento cerâmico de parede e piso; FVS - Assentamento de revestimento cerâmico de parede, Assentamento de revestimento cerâmico de piso, Rejuntamento de peças cerâmicas
+PEIS 018: FVS - Instalação de bancada em pedra natural
+PEIS 019: FVS - Emassamento + 1ª demão, Pintura final
+PEIS 020: FVP - Esquadrias em guarda corpo, Esquadrias com contramarco (portas e janelas); FVS - Esquadrias com contramarco
+PEIS 021: FVS - Instalação de esquadria de madeira - Kit porta pronta
+PEIS 022: FVS - Produção de argamassa de concreto
+PEIS 026: FVP - Piso em concreto Subsolo; FVS - Armação/junta de encontro e construção, Concretagem de piso de subsolo, Instalações de esgoto Subsolo, Preparo da sub-base, Preparo do subleito, SPDA
+PEIS 027: FVP - Divisórias de gesso acartonado; FVS - Chapeamento, Instalação dos montantes, Marcação e fixação das guias
+PEIS 028: FVP/FVS - Instalação de louças
+PEIS 029: FVS - Instalação de metais
+PEIS 031: FVP/FVS - Impermeabilização
+PEIS 032: FVP/FVS - Instalação de gás com tubulação multicamadas
+PEIS 033: FVS - Instalação de rede frigorígena
+PEIS 034: FVS - Monitoramento de deslocamento vertical
+PEIS 035: FVS - Instalação de Piso de Borracha Playground
+PEIS 036: FVS - Intalação do guarda-corpo, Pintura de guarda-corpo
+PEIS 038: FVS - Desengrosso, Limpeza final
+PEIS 039: FVS - Revestimento em textura
+PEIS 040: FVS - Estrutura Metálica (fabricação e montagem)
+🏁 FINAL DE OBRA (28 modelos)
+1 (814 itens); 1º - Check List Unidades - PSN (48 itens, 10 obras); 2º - Check List Unidades - OBRA (23 itens, 2 obras); 2º - Check List Unidades - TEL - Obra (0 itens); 2º - Check List Unidades GO2 - OBRA (22 itens); 2º - Check List Unidades GRP - OBRA (20 itens); 2º - Check List Unidades OBD - OBRA (17 itens); 2º - Check List Unidades PTO - OBRA (21 itens); 2º - Check List Unidades SLN - OBRA (23 itens); 3º - Check List Unidades - SGQ (Revisão 2, 814 itens, 9 obras); 3º - Check List Unidades - SGQ - COM (841 itens); 3º - Check List Unidades - SGQ - SLN (814 itens); 3º - Check List Unidades PTO - SGQ (132 itens); 4º - Check List Unidades - CRC (163 itens, 7 obras); 4º - Check List Unidades SUN - CRC (807 itens); 5º - Check List A. Comum - SGQ (1 itens, 2 obras); 5º - Check List A. Comum PTO - SGQ (221 itens, 1 obra); 6º - Check List SUN - Aprovação - SGQ (19 itens, 1 obra); Cercon - Torre (16 itens); Cercon - Área comum/Fachada (108 itens); Check List Área Comum (1 itens); Check list Cercon - Área comum/Ático/Fachada (104 itens); Ckecklist fotográfico (3 itens); FP-SGQ-028 - Check list - Vistoria final - Telure (792 itens); TESTE - BOMBEIRO (3 itens); Vistoria da Qualidade TLR A - F01 (79 itens); check list Cercon - Torre (464 itens); teste checklist (817 itens)

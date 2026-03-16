@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Concretiza — O canteiro ainda precisa de você</title>
+<style>
+  :root {
+    --bg: #0a0e27;
+    --card: #111827;
+    --border: #1e2d45;
+    --orange: #f97316;
+    --green: #22c55e;
+    --blue: #60a5fa;
+    --muted: #94a3b8;
+    --text: #f1f5f9;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  /* SECTIONS */
+  .screen {
+    min-height: 100vh;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 80px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .container { max-width: 960px; margin: 0 auto; padding: 0 32px; }
+
+  /* TYPOGRAPHY */
+  .tag {
+    display: inline-block;
+    border: 1px solid rgba(249,115,22,0.4);
+    background: rgba(249,115,22,0.08);
+    color: var(--orange);
+    font-size: 0.72rem; font-weight: 700;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    padding: 5px 14px; border-radius: 20px;
+    margin-bottom: 24px;
+  }
+  h1 { font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 900; letter-spacing: -1px; line-height: 1.1; }
+  h2 { font-size: clamp(1.6rem, 4vw, 2.4rem); font-weight: 800; letter-spacing: -0.5px; line-height: 1.2; }
+  .lead { font-size: 1.15rem; color: var(--muted); margin-top: 16px; max-width: 580px; }
+  .orange { color: var(--orange); }
+  .green { color: var(--green); }
+  .blue { color: var(--blue); }
+
+  /* HERO */
+  .hero { background: radial-gradient(ellipse 800px 500px at 50% 30%, rgba(249,115,22,0.07), transparent); }
+  .hero-kicker {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 32px;
+  }
+  .sienge-pill {
+    background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+    color: var(--muted); font-size: 0.8rem; padding: 4px 12px; border-radius: 6px;
+  }
+  .arrow { color: var(--orange); font-size: 1.2rem; }
+  .concretiza-pill {
+    background: rgba(249,115,22,0.12); border: 1px solid rgba(249,115,22,0.35);
+    color: var(--orange); font-size: 0.8rem; font-weight: 700; padding: 4px 12px; border-radius: 6px;
+  }
+
+  /* DIVISION */
+  .split {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 32px;
+    margin-top: 48px;
+  }
+  .zone {
+    border: 1px solid var(--border); border-radius: 14px; padding: 28px;
+    background: var(--card);
+  }
+  .zone-label {
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+  .zone-ok { border-color: rgba(100,116,139,0.3); }
+  .zone-ok .zone-label { color: var(--muted); }
+  .zone-need { border-color: rgba(249,115,22,0.4); background: rgba(249,115,22,0.04); }
+  .zone-need .zone-label { color: var(--orange); }
+
+  .item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 0.92rem;
+  }
+  .item:last-child { border-bottom: none; }
+  .item .ic { font-size: 1.1rem; width: 24px; text-align: center; flex-shrink: 0; }
+  .item-muted { color: var(--muted); }
+
+  /* HIGHLIGHT BLOCK */
+  .highlight-block {
+    margin: 48px 0 0;
+    padding: 32px;
+    background: linear-gradient(135deg, rgba(249,115,22,0.1), rgba(249,115,22,0.03));
+    border: 1px solid rgba(249,115,22,0.3);
+    border-radius: 14px;
+    display: flex; align-items: center; gap: 32px; flex-wrap: wrap;
+  }
+  .highlight-block .big-num { font-size: 3.5rem; font-weight: 900; color: var(--orange); line-height: 1; }
+  .highlight-block p { color: var(--muted); font-size: 0.95rem; margin-top: 6px; }
+
+  /* FIELD VIEW */
+  .field-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 40px; }
+  .field-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 24px 20px; text-align: center;
+  }
+  .field-card .emoji { font-size: 2rem; margin-bottom: 12px; display: block; }
+  .field-card .title { font-size: 0.95rem; font-weight: 700; margin-bottom: 6px; }
+  .field-card .desc { font-size: 0.8rem; color: var(--muted); }
+  .field-card.highlight-card {
+    border-color: rgba(249,115,22,0.4);
+    background: rgba(249,115,22,0.05);
+  }
+
+  /* AI SECTION */
+  .ai-section { background: radial-gradient(ellipse 600px 400px at 50% 50%, rgba(96,165,250,0.06), transparent); }
+  .ai-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 40px; align-items: center; }
+  .ai-feature {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 16px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .ai-feature:last-child { border-bottom: none; }
+  .ai-feature .ic { font-size: 1.3rem; flex-shrink: 0; margin-top: 2px; }
+  .ai-feature .content strong { display: block; font-size: 0.92rem; margin-bottom: 2px; }
+  .ai-feature .content span { font-size: 0.82rem; color: var(--muted); }
+
+  .claude-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(96,165,250,0.1); border: 1px solid rgba(96,165,250,0.3);
+    border-radius: 8px; padding: 12px 20px;
+    font-size: 0.85rem; color: var(--blue); font-weight: 600;
+    margin-top: 24px;
+  }
+
+  /* PRICING */
+  .price-section { text-align: center; }
+  .price-card {
+    display: inline-block;
+    background: var(--card); border: 2px solid var(--orange);
+    border-radius: 20px; padding: 48px 64px;
+    margin-top: 40px; position: relative;
+  }
+  .price-badge {
+    position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+    background: var(--orange); color: #fff;
+    font-size: 0.72rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
+    padding: 5px 16px; border-radius: 20px; white-space: nowrap;
+  }
+  .price-amount { font-size: 4.5rem; font-weight: 900; color: var(--orange); line-height: 1; }
+  .price-period { font-size: 1rem; color: var(--muted); margin-bottom: 24px; }
+  .price-items { list-style: none; text-align: left; margin: 24px 0; }
+  .price-items li {
+    padding: 8px 0; border-bottom: 1px solid var(--border);
+    font-size: 0.9rem; display: flex; align-items: center; gap: 10px;
+  }
+  .price-items li:last-child { border: none; }
+  .price-items .ck { color: var(--green); }
+  .price-note { font-size: 0.8rem; color: var(--muted); margin-top: 16px; }
+
+  .price-comparison {
+    display: flex; justify-content: center; gap: 24px; margin-top: 40px; flex-wrap: wrap;
+  }
+  .price-alt {
+    text-align: center; padding: 20px 28px;
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    opacity: 0.6;
+  }
+  .price-alt .name { font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+  .price-alt .val { font-size: 1.4rem; font-weight: 700; }
+  .price-alt .desc { font-size: 0.75rem; color: var(--muted); margin-top: 4px; }
+
+  /* CTA */
+  .cta-screen {
+    background: linear-gradient(135deg, rgba(249,115,22,0.12), rgba(249,115,22,0.03));
+    text-align: center; padding: 100px 32px;
+  }
+  .cta-screen h2 { font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 900; margin-bottom: 16px; }
+  .cta-screen p { color: var(--muted); font-size: 1.05rem; margin-bottom: 40px; }
+  .btn {
+    display: inline-block;
+    background: var(--orange); color: #fff;
+    font-size: 1rem; font-weight: 700; padding: 16px 48px; border-radius: 10px;
+    text-decoration: none; transition: opacity .2s, transform .2s;
+  }
+  .btn:hover { opacity: .9; transform: translateY(-2px); }
+  .btn-outline {
+    display: inline-block;
+    border: 2px solid var(--orange); color: var(--orange);
+    font-size: 1rem; font-weight: 700; padding: 14px 40px; border-radius: 10px;
+    text-decoration: none; margin-left: 16px; transition: background .2s;
+  }
+  .btn-outline:hover { background: rgba(249,115,22,0.1); }
+
+  /* NAV DOTS */
+  .nav-dots {
+    position: fixed; right: 24px; top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 8px; z-index: 100;
+  }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--border); cursor: pointer; transition: background .2s, transform .2s;
+  }
+  .dot.active { background: var(--orange); transform: scale(1.4); }
+
+  @media (max-width: 680px) {
+    .split, .ai-grid, .field-cards { grid-template-columns: 1fr; }
+    .price-card { padding: 40px 28px; }
+    .price-comparison { flex-direction: column; align-items: center; }
+    .nav-dots { display: none; }
+  }
+
+  @media print {
+    .nav-dots { display: none; }
+    .screen { page-break-inside: avoid; min-height: auto; padding: 48px 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV DOTS -->
+<nav class="nav-dots" id="navDots">
+  <div class="dot" data-target="s1" title="Contexto"></div>
+  <div class="dot" data-target="s2" title="O gap"></div>
+  <div class="dot" data-target="s3" title="IA"></div>
+  <div class="dot" data-target="s4" title="Preço"></div>
+  <div class="dot" data-target="s5" title="Próximo passo"></div>
+</nav>
+
+<!-- ① CONTEXTO -->
+<section class="screen hero" id="s1">
+  <div class="container">
+    <div class="tag">Para quem já usa Sienge</div>
+    <div class="hero-kicker">
+      <span class="sienge-pill">Sienge — escritório ✓</span>
+      <span class="arrow">+</span>
+      <span class="concretiza-pill">Concretiza — canteiro</span>
+    </div>
+    <h1>O Sienge cuida<br>do seu escritório.<br><span class="orange">E o canteiro?</span></h1>
+    <p class="lead">Financeiro, suprimentos e ERP: cobertos. O que acontece dentro da obra — RDO, inspeções, ocorrências, equipe no campo — ainda depende de papel, WhatsApp e memória.</p>
+
+    <div class="split">
+      <div class="zone zone-ok">
+        <div class="zone-label">✓ Sienge já resolve</div>
+        <div class="item item-muted"><span class="ic">💰</span> Financeiro corporativo</div>
+        <div class="item item-muted"><span class="ic">📦</span> Suprimentos e compras</div>
+        <div class="item item-muted"><span class="ic">🏢</span> Gestão de contratos</div>
+        <div class="item item-muted"><span class="ic">📊</span> Relatórios gerenciais</div>
+        <div class="item item-muted"><span class="ic">🔗</span> Integrações ERP</div>
+      </div>
+      <div class="zone zone-need">
+        <div class="zone-label">⚠ O que ainda falta no campo</div>
+        <div class="item"><span class="ic">📋</span> RDO rápido no celular do canteiro</div>
+        <div class="item"><span class="ic">✅</span> FVS — inspeção de serviços</div>
+        <div class="item"><span class="ic">🔍</span> FVM — conferência de materiais</div>
+        <div class="item"><span class="ic">📍</span> Ocorrências com mapa visual</div>
+        <div class="item"><span class="ic">💬</span> Chat interno por obra</div>
+      </div>
+    </div>
+
+    <div class="highlight-block">
+      <div>
+        <div class="big-num">95%</div>
+      </div>
+      <div>
+        <strong style="font-size:1.1rem;">das obras brasileiras entregam com atraso.</strong>
+        <p>A causa principal não é falta de dinheiro ou contrato.<br>É falta de controle do que acontece dia a dia no canteiro.</p>
+        <p style="margin-top:8px; font-size:0.78rem; opacity:.5;">Fonte: IBEDEC</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ② O GAP -->
+<section class="screen" id="s2">
+  <div class="container">
+    <div class="tag">O que o Concretiza faz</div>
+    <h2>Campo + escritório<br><span class="orange">integrados de verdade.</span></h2>
+    <p class="lead">Sienge já conectado nativamente. O engenheiro registra no canteiro, o gestor aprova no computador. Zero papel, zero WhatsApp de obra.</p>
+
+    <div class="field-cards">
+      <div class="field-card highlight-card">
+        <span class="emoji">📋</span>
+        <div class="title">RDO em 3 minutos</div>
+        <div class="desc">Clima automático, equipe salva, atividades do dia anterior reutilizáveis. Engenheiro faz do celular no canteiro.</div>
+      </div>
+      <div class="field-card highlight-card">
+        <span class="emoji">✅</span>
+        <div class="title">FVS — Inspeção de Serviço</div>
+        <div class="desc">Checklist fotográfico com aprovação/rejeição por item. Workflow: pendente → inspeção → aprovado/retrabalho.</div>
+      </div>
+      <div class="field-card highlight-card">
+        <span class="emoji">📍</span>
+        <div class="title">Mapa Visual de Ocorrências</div>
+        <div class="desc">Planta da obra com pinos interativos. Arrasta, faz zoom, registra onde o problema está — não só o que é.</div>
+      </div>
+      <div class="field-card">
+        <span class="emoji">💬</span>
+        <div class="title">Chat por Obra</div>
+        <div class="desc">Mensagens em tempo real separadas por obra. Sem misturar com WhatsApp pessoal ou grupos desorganizados.</div>
+      </div>
+      <div class="field-card">
+        <span class="emoji">👷</span>
+        <div class="title">Controle de Equipe</div>
+        <div class="desc">Quem entrou, quem saiu, função, CPF, empresa terceirizada. Tudo rastreado por obra.</div>
+      </div>
+      <div class="field-card">
+        <span class="emoji">🔗</span>
+        <div class="title">Integrado ao Sienge</div>
+        <div class="desc">Importa obras e fornecedores direto do Sienge. Dados do campo alimentam o ERP — não sobrepõe.</div>
+      </div>
+    </div>
+
+    <div style="margin-top:32px; padding:24px; background:var(--card); border:1px solid var(--border); border-radius:12px; display:flex; align-items:center; gap:24px; flex-wrap:wrap;">
+      <div style="font-size:2rem;">📱</div>
+      <div>
+        <strong>PWA instalável no celular — sem App Store, sem Play Store.</strong>
+        <p style="color:var(--muted); font-size:0.88rem; margin-top:4px;">O mestre de obra adiciona na tela inicial e usa como app nativo. Funciona com sinal fraco. Feito para tela com luva na mão.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ③ IA -->
+<section class="screen ai-section" id="s3">
+  <div class="container">
+    <div class="tag">Fase 2 — já em desenvolvimento</div>
+    <h2>Você já usa Claude.<br><span class="blue">Logo suas obras também vão.</span></h2>
+    <p class="lead">A fase 2 do Concretiza integra Claude API diretamente nas obras — os mesmos modelos que você já usa nas suas automações.</p>
+
+    <div class="ai-grid">
+      <div>
+        <div class="ai-feature">
+          <span class="ic">🤖</span>
+          <div class="content">
+            <strong>RDO preenchido automaticamente</strong>
+            <span>Com base no histórico e no clima do dia, o sistema sugere o relatório. Engenheiro só confirma.</span>
+          </div>
+        </div>
+        <div class="ai-feature">
+          <span class="ic">⚠️</span>
+          <div class="content">
+            <strong>Alerta de atraso antes de acontecer</strong>
+            <span>"Obra X está 15% abaixo do ritmo histórico. Risco de atraso em 3 semanas."</span>
+          </div>
+        </div>
+        <div class="ai-feature">
+          <span class="ic">📝</span>
+          <div class="content">
+            <strong>Resumo semanal automático</strong>
+            <span>O gestor recebe um resumo de cada obra toda segunda-feira. Sem precisar abrir o sistema.</span>
+          </div>
+        </div>
+        <div class="ai-feature">
+          <span class="ic">🔍</span>
+          <div class="content">
+            <strong>Anomalias em pedidos de compra</strong>
+            <span>"Este fornecedor cobrou 28% acima da média histórica para este material."</span>
+          </div>
+        </div>
+        <div class="ai-feature">
+          <span class="ic">📊</span>
+          <div class="content">
+            <strong>Previsão de custo final</strong>
+            <span>Projeção do custo de conclusão com base no ritmo atual de despesas vs orçamento.</span>
+          </div>
+        </div>
+
+        <div class="claude-badge">
+          <span>⚡</span>
+          Powered by Claude API · Anthropic
+        </div>
+      </div>
+
+      <div style="background:var(--card); border:1px solid rgba(96,165,250,0.2); border-radius:14px; padding:28px; display:flex; flex-direction:column; justify-content:center;">
+        <div style="font-size:0.75rem; color:var(--blue); text-transform:uppercase; letter-spacing:1px; margin-bottom:16px;">Nenhum concorrente tem isso</div>
+        <p style="font-size:1.1rem; font-weight:600; line-height:1.6;">Diário de Obras: sem IA.<br>Sienge: sem IA no campo.<br><span style="color:var(--blue);">Concretiza: Claude integrado direto nas obras.</span></p>
+        <p style="color:var(--muted); font-size:0.88rem; margin-top:16px;">Quem entrar no Plano Fundador tem acesso antecipado à IA quando lançar — sem custo adicional na fase beta.</p>
+        <div style="margin-top:24px; padding:16px; background:rgba(96,165,250,0.06); border:1px solid rgba(96,165,250,0.15); border-radius:8px;">
+          <div style="font-size:0.8rem; color:var(--blue); margin-bottom:4px;">Para quem já usa Claude nas automações:</div>
+          <div style="font-size:0.9rem;">Os dados das suas obras ficam disponíveis para as suas próprias automações via API. Conecta com o que você já construiu.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ④ PREÇO -->
+<section class="screen" id="s4" style="text-align:center;">
+  <div class="container">
+    <div class="tag">Plano Fundador</div>
+    <h2>O menor custo possível<br><span class="orange">para a maior vantagem.</span></h2>
+    <p class="lead" style="margin: 0 auto;">10 vagas. Preço travado para sempre. Você seria o primeiro.</p>
+
+    <div style="display:flex; justify-content:center;">
+      <div class="price-card">
+        <span class="price-badge">Plano Fundador — Só 10 vagas</span>
+        <div class="price-amount">R$ 150</div>
+        <div class="price-period">por mês · fixo para sempre · nunca sobe</div>
+        <ul class="price-items">
+          <li><span class="ck">✓</span> 5 obras simultâneas</li>
+          <li><span class="ck">✓</span> Usuários ilimitados (mestre, encarregado, engenheiro)</li>
+          <li><span class="ck">✓</span> Todos os módulos: RDO, FVS, FVM, Mapa, Chat</li>
+          <li><span class="ck">✓</span> Integração Sienge já ativa</li>
+          <li><span class="ck">✓</span> Suporte direto via WhatsApp</li>
+          <li><span class="ck">✓</span> Acesso antecipado à IA (Claude API)</li>
+          <li><span class="ck">✓</span> Influência no roadmap do produto</li>
+        </ul>
+        <div class="price-note">14 dias grátis · Sem cartão de crédito · Cancela quando quiser</div>
+      </div>
+    </div>
+
+    <div class="price-comparison">
+      <div class="price-alt">
+        <div class="name">Diário de Obras</div>
+        <div class="val">R$ 160<span style="font-size:0.75rem; color:var(--muted);">/mês</span></div>
+        <div class="desc">Só RDO · sem integração</div>
+      </div>
+      <div style="display:flex; align-items:center; font-size:1.5rem; color:var(--orange); font-weight:900;">→</div>
+      <div class="price-alt" style="opacity:1; border-color:rgba(249,115,22,0.4); background:rgba(249,115,22,0.05);">
+        <div class="name" style="color:var(--orange);">Concretiza Fundador</div>
+        <div class="val" style="color:var(--orange);">R$ 150<span style="font-size:0.75rem; color:var(--muted);">/mês</span></div>
+        <div class="desc" style="color:var(--text);">Tudo + IA + Sienge</div>
+      </div>
+      <div style="display:flex; align-items:center; font-size:1.5rem; color:var(--muted);">ou</div>
+      <div class="price-alt">
+        <div class="name">Sienge (campo)</div>
+        <div class="val">R$ 399+<span style="font-size:0.75rem; color:var(--muted);">/mês</span></div>
+        <div class="desc">ERP desktop · longo onboard</div>
+      </div>
+    </div>
+
+    <p style="color:var(--muted); font-size:0.85rem; margin-top:32px;">Você já paga mais que isso por café expresso no mês. <strong style="color:var(--text);">R$ 150 é o menor risco possível.</strong></p>
+  </div>
+</section>
+
+<!-- ⑤ CTA -->
+<section class="cta-screen" id="s5">
+  <div class="container">
+    <div class="tag" style="margin-bottom:20px;">Próximo passo</div>
+    <h2>15 minutos.<br>Uma obra real.<br><span class="orange">Você decide.</span></h2>
+    <p>Sem apresentação genérica. Crio uma obra com o nome e os dados da sua<br>empresa ao vivo — você vê o RDO, o FVS e o mapa funcionando com sua realidade.</p>
+    <div style="margin:40px 0;">
+      <a class="btn" href="#">Quero ver uma demo ao vivo</a>
+      <a class="btn-outline" href="#">Testar 14 dias grátis</a>
+    </div>
+    <div style="display:flex; justify-content:center; gap:48px; flex-wrap:wrap; margin-top:48px; padding-top:32px; border-top:1px solid var(--border);">
+      <div style="text-align:center;">
+        <div style="font-size:1.6rem; font-weight:800; color:var(--orange);">Hoje</div>
+        <div style="color:var(--muted); font-size:0.82rem;">Você começa a usar</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:1.6rem; font-weight:800; color:var(--green);">Semana 1</div>
+        <div style="color:var(--muted); font-size:0.82rem;">Equipe no campo registrando</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:1.6rem; font-weight:800; color:var(--blue);">Mês 1</div>
+        <div style="color:var(--muted); font-size:0.82rem;">Sienge + Concretiza integrados</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:1.6rem; font-weight:800;">Fase 2</div>
+        <div style="color:var(--muted); font-size:0.82rem;">IA analisando suas obras</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  // NAV DOTS
+  const sections = ['s1','s2','s3','s4','s5'];
+  const dots = document.querySelectorAll('.dot');
+
+  dots.forEach(dot => {
+    dot.addEventListener('click', () => {
+      document.getElementById(dot.dataset.target).scrollIntoView({ behavior: 'smooth' });
+    });
+  });
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const idx = sections.indexOf(e.target.id);
+        dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+      }
+    });
+  }, { threshold: 0.5 });
+
+  sections.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) observer.observe(el);
+  });
+</script>
+</body>
+</html>

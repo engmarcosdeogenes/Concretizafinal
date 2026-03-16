@@ -3,6 +3,7 @@
 # dependencies
 /node_modules
 /.pnp
+.pnpm-store/
 .pnp.*
 .yarn/*
 !.yarn/patches
@@ -22,13 +23,17 @@
 
 # misc
 .DS_Store
+Thumbs.db
 *.pem
+*.key
 
 # debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+logs/
+*.log
 
 # env files (can opt-in for committing if needed)
 .env*
@@ -42,8 +47,12 @@ next-env.d.ts
 
 /src/generated/prisma
 
+# Arquivos temporários
+temp_*.txt
+
+# VAPID keys
+VAPID KEY
+
 # skill_manager (pasta interna — não sobe para o GitHub)
 /concretiza/
 /SKILLS/
-
-.vercel

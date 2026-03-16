@@ -1,0 +1,16 @@
+Quero que você aja como analista de código focado em integração Sienge.
+
+Objetivo:
+- Ler o arquivo plano.md (na raiz) e as pastas de código (src/, src/server/, src/server/api/, src/server/api/routers/, src/app/, src/lib/).
+- Para cada endpoint do Sienge listado no plano.md (/api/v1/...), decidir se ele já está implementado/uso real no código ou não.
+- Marcar como pendentes os que NÃO têm implementação, adicionando o emoji ❌ no início da linha no plano.md.
+
+Passos:
+1) Leia o plano.md e localize as seções onde os endpoints do Sienge estão listados.
+2) Para cada linha de endpoint (ex: GET /api/v1/unidades-organizacionais):
+   - Procure no código por chamadas HTTP reais, clients Sienge, routers tRPC, páginas ou serviços que usem esse endpoint.
+   - Se encontrar uso/implementação clara → IMPLEMENTADO (não altere a linha).
+   - Se não encontrar nenhum uso real → NÃO IMPLEMENTADO.
+3) Atualize o plano.md adicionando ❌ no início de cada linha NÃO IMPLEMENTADA.
+4) Só considere IMPLEMENTADO se encontrar código real. TODO/comentário = NÃO IMPLEMENTADO.
+5) Ao terminar, imprima: total de endpoints encontrados, quantos receberam ❌, 3 exemplos implementados (com caminho do arquivo) e 3 exemplos pendentes.

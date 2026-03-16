@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Concretiza — Por que agora é o momento certo</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg:       #0a0e27;
+    --surface:  #111827;
+    --card:     #1a2035;
+    --border:   #1f2d4a;
+    --orange:   #f97316;
+    --orange2:  #fb923c;
+    --blue:     #3b82f6;
+    --green:    #22c55e;
+    --red:      #ef4444;
+    --yellow:   #eab308;
+    --text:     #f1f5f9;
+    --muted:    #94a3b8;
+    --radius:   12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  /* NAV */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(10,14,39,0.95);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 40px;
+    display: flex; align-items: center; gap: 32px; height: 60px;
+  }
+  .nav-logo { font-size: 1.2rem; font-weight: 700; color: var(--orange); letter-spacing: -0.5px; }
+  .nav-links { display: flex; gap: 24px; flex: 1; }
+  .nav-links a {
+    color: var(--muted); text-decoration: none; font-size: 0.85rem;
+    transition: color .2s;
+  }
+  .nav-links a:hover { color: var(--text); }
+  .nav-badge {
+    background: var(--orange); color: #fff;
+    font-size: 0.75rem; font-weight: 700;
+    padding: 4px 12px; border-radius: 20px;
+    margin-left: auto;
+  }
+
+  /* LAYOUT */
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+  section { padding: 80px 0; }
+  section:not(:last-child) { border-bottom: 1px solid var(--border); }
+
+  /* HERO */
+  .hero {
+    background: linear-gradient(135deg, var(--bg) 0%, #0f1a3a 50%, #0a0e27 100%);
+    padding: 100px 0 80px;
+    text-align: center;
+    position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 600px 400px at 50% 50%, rgba(249,115,22,0.08), transparent);
+  }
+  .hero-eyebrow {
+    display: inline-block;
+    background: rgba(249,115,22,0.15);
+    color: var(--orange);
+    border: 1px solid rgba(249,115,22,0.3);
+    padding: 6px 16px; border-radius: 20px;
+    font-size: 0.8rem; font-weight: 600; letter-spacing: 1px;
+    text-transform: uppercase; margin-bottom: 24px;
+  }
+  .hero h1 {
+    font-size: 3rem; font-weight: 800; line-height: 1.1;
+    letter-spacing: -1px; margin-bottom: 20px;
+  }
+  .hero h1 span { color: var(--orange); }
+  .hero p {
+    font-size: 1.15rem; color: var(--muted);
+    max-width: 640px; margin: 0 auto 40px;
+  }
+  .hero-stats {
+    display: flex; justify-content: center; gap: 40px;
+    flex-wrap: wrap; margin-top: 60px;
+  }
+  .hero-stat { text-align: center; }
+  .hero-stat .num { font-size: 2.2rem; font-weight: 800; color: var(--orange); }
+  .hero-stat .label { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* SECTION TITLES */
+  .section-tag {
+    display: inline-block;
+    background: rgba(249,115,22,0.1);
+    color: var(--orange);
+    border: 1px solid rgba(249,115,22,0.25);
+    padding: 4px 12px; border-radius: 20px;
+    font-size: 0.75rem; font-weight: 600; letter-spacing: 1px;
+    text-transform: uppercase; margin-bottom: 12px;
+  }
+  .section-title { font-size: 2rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 10px; }
+  .section-sub { color: var(--muted); font-size: 1rem; margin-bottom: 48px; max-width: 600px; }
+
+  /* CARDS GRID */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+  }
+  .card-orange { border-color: rgba(249,115,22,0.3); background: rgba(249,115,22,0.05); }
+  .card-blue { border-color: rgba(59,130,246,0.3); background: rgba(59,130,246,0.05); }
+  .card-green { border-color: rgba(34,197,94,0.3); background: rgba(34,197,94,0.05); }
+  .card-red { border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.05); }
+
+  .metric-card { text-align: center; padding: 32px 20px; }
+  .metric-card .icon { font-size: 2rem; margin-bottom: 12px; }
+  .metric-card .value { font-size: 2.4rem; font-weight: 800; margin-bottom: 6px; }
+  .metric-card .label { color: var(--muted); font-size: 0.85rem; }
+  .metric-card .source { color: var(--muted); font-size: 0.7rem; margin-top: 8px; opacity: 0.6; }
+
+  /* CHART CONTAINERS */
+  .chart-wrap { position: relative; height: 320px; padding: 16px 0; }
+  .chart-wrap-sm { position: relative; height: 260px; }
+  .chart-wrap-lg { position: relative; height: 380px; }
+
+  /* HIGHLIGHT BOX */
+  .highlight {
+    background: linear-gradient(135deg, rgba(249,115,22,0.1), rgba(249,115,22,0.05));
+    border: 1px solid rgba(249,115,22,0.3);
+    border-radius: var(--radius);
+    padding: 32px; margin: 32px 0;
+  }
+  .highlight .big { font-size: 3rem; font-weight: 900; color: var(--orange); }
+  .highlight p { color: var(--muted); margin-top: 8px; }
+
+  /* COMPARISON TABLE */
+  .compare-table { width: 100%; border-collapse: collapse; margin-top: 24px; }
+  .compare-table th {
+    padding: 16px; text-align: center;
+    font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    border-bottom: 2px solid var(--border);
+  }
+  .compare-table th.winner { color: var(--orange); }
+  .compare-table td {
+    padding: 14px 16px; text-align: center;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.9rem; color: var(--muted);
+  }
+  .compare-table td:first-child { text-align: left; color: var(--text); font-weight: 500; }
+  .compare-table td.winner-col { color: var(--text); }
+  .compare-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .check { color: var(--green); font-size: 1.1rem; }
+  .cross { color: var(--red); font-size: 1.1rem; }
+  .partial { color: var(--yellow); }
+
+  .badge-winner {
+    display: inline-block;
+    background: var(--orange); color: #fff;
+    font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 10px;
+    text-transform: uppercase; letter-spacing: 0.5px; margin-left: 6px;
+  }
+
+  /* PROGRESS BARS */
+  .prog-item { margin-bottom: 20px; }
+  .prog-label { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.85rem; }
+  .prog-track { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .prog-fill { height: 100%; border-radius: 4px; transition: width 1s ease; }
+
+  /* GOIANIA SECTION */
+  .goi-card { padding: 24px; text-align: center; }
+  .goi-card .arrow-up { color: var(--green); font-size: 1.5rem; }
+  .goi-card .arrow-down { color: var(--red); font-size: 1.5rem; }
+  .goi-num { font-size: 2.8rem; font-weight: 900; }
+  .goi-label { color: var(--muted); font-size: 0.82rem; margin-top: 4px; }
+
+  /* CTA */
+  .cta-section {
+    background: linear-gradient(135deg, rgba(249,115,22,0.15), rgba(249,115,22,0.05));
+    border: 1px solid rgba(249,115,22,0.3);
+    border-radius: 16px; padding: 60px; text-align: center;
+    margin: 40px 0;
+  }
+  .cta-section h2 { font-size: 2.2rem; font-weight: 800; margin-bottom: 16px; }
+  .cta-section p { color: var(--muted); font-size: 1.05rem; margin-bottom: 32px; }
+  .cta-btn {
+    display: inline-block;
+    background: var(--orange); color: #fff;
+    padding: 16px 40px; border-radius: 8px;
+    font-weight: 700; font-size: 1rem; text-decoration: none;
+    transition: background .2s, transform .2s;
+  }
+  .cta-btn:hover { background: var(--orange2); transform: translateY(-2px); }
+
+  /* DIVIDER */
+  .divider { height: 1px; background: var(--border); margin: 40px 0; }
+
+  /* SOURCE */
+  .source-tag {
+    display: inline-block; background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border); border-radius: 4px;
+    font-size: 0.7rem; color: var(--muted);
+    padding: 2px 8px; margin-top: 8px;
+  }
+
+  /* PRINT */
+  @media print {
+    nav { display: none; }
+    body { background: #fff; color: #111; }
+    .card { border: 1px solid #ddd; background: #f9f9f9; }
+    section { page-break-inside: avoid; }
+  }
+
+  @media (max-width: 768px) {
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr 1fr; }
+    .hero h1 { font-size: 2rem; }
+    nav { padding: 0 16px; }
+    .nav-links { display: none; }
+    .hero-stats { gap: 20px; }
+  }
+  @media (max-width: 480px) {
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">Concretiza</div>
+  <div class="nav-links">
+    <a href="#mercado">Mercado</a>
+    <a href="#problema">O Problema</a>
+    <a href="#digitalizacao">Digitalização</a>
+    <a href="#goiania">Goiânia</a>
+    <a href="#roi">ROI</a>
+    <a href="#comparativo">Comparativo</a>
+  </div>
+  <span class="nav-badge">Março 2026</span>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="container">
+    <div class="hero-eyebrow">Dados de mercado · Jun 2024 – Mar 2026</div>
+    <h1>A construção civil está crescendo.<br><span>A gestão ainda não acompanhou.</span></h1>
+    <p>Dados reais do setor mostram um mercado em expansão, mas com perdas bilionárias por falta de controle digital. Quem digitalizar primeiro ganha vantagem competitiva definitiva.</p>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="num">R$ 359,5bi</div>
+        <div class="label">PIB construção 2024</div>
+      </div>
+      <div class="hero-stat">
+        <div class="num">+4,3%</div>
+        <div class="label">Crescimento acima do PIB geral</div>
+      </div>
+      <div class="hero-stat">
+        <div class="num">3 mi</div>
+        <div class="label">Trabalhadores formais (2025)</div>
+      </div>
+      <div class="hero-stat">
+        <div class="num">R$ 59,1bi</div>
+        <div class="label">Perdas por atrasos (2023–25)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SEÇÃO 1: MERCADO -->
+<section id="mercado">
+  <div class="container">
+    <div class="section-tag">Oportunidade</div>
+    <h2 class="section-title">O mercado que não para de crescer</h2>
+    <p class="section-sub">Construção civil superou o PIB geral do Brasil pelo 3° ano consecutivo e vai quase dobrar até 2034.</p>
+
+    <div class="grid-2" style="gap:32px; align-items:start;">
+      <div>
+        <div class="card">
+          <h3 style="margin-bottom:20px; font-size:1rem; color:var(--muted); text-transform:uppercase; letter-spacing:.5px;">Crescimento do PIB — Construção Civil</h3>
+          <div class="chart-wrap">
+            <canvas id="chartPIB"></canvas>
+          </div>
+          <p class="source-tag">Fonte: IBGE / CBIC 2024–2025</p>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <div class="card card-orange">
+          <div style="font-size:0.8rem; color:var(--orange); text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px;">Ranking INTEC 2024</div>
+          <div style="font-size:2.2rem; font-weight:800;">R$ 82,6bi</div>
+          <div style="color:var(--muted); font-size:0.85rem;">Faturamento das 100 maiores construtoras<br>+10,88% vs 2023</div>
+        </div>
+        <div class="card card-blue">
+          <div style="font-size:0.8rem; color:var(--blue); text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px;">Mercado 2034</div>
+          <div style="font-size:2.2rem; font-weight:800;">USD 254bi</div>
+          <div style="color:var(--muted); font-size:0.85rem;">Projeção de mercado do Brasil<br>CAGR de 6,3% ao ano</div>
+        </div>
+        <div class="card card-green">
+          <div style="font-size:0.8rem; color:var(--green); text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px;">Empregos 2025</div>
+          <div style="font-size:2.2rem; font-weight:800;">+3.000.000</div>
+          <div style="color:var(--muted); font-size:0.85rem;">Primeiro marco histórico de 3 mi<br>trabalhadores formais no setor</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:24px;" class="grid-4">
+      <div class="card metric-card card-orange">
+        <div class="icon">🏗️</div>
+        <div class="value" style="color:var(--orange);">165.800</div>
+        <div class="label">Empresas de construção ativas</div>
+        <div class="source">IBGE / PAIC</div>
+      </div>
+      <div class="card metric-card">
+        <div class="icon">📦</div>
+        <div class="value">64,5 mi</div>
+        <div class="label">Ton. de cimento vendidas (2024)</div>
+        <div class="source">+4% vs 2023</div>
+      </div>
+      <div class="card metric-card">
+        <div class="icon">🏢</div>
+        <div class="value">292 mil</div>
+        <div class="label">Aptos novos vendidos (jan–set/24)</div>
+        <div class="source">+20% vs 2023</div>
+      </div>
+      <div class="card metric-card card-blue">
+        <div class="icon">📈</div>
+        <div class="value" style="color:var(--blue);">3°</div>
+        <div class="label">Setor que mais cresceu no PIB 2024</div>
+        <div class="source">IBGE 2024</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SEÇÃO 2: O PROBLEMA -->
+<section id="problema">
+  <div class="container">
+    <div class="section-tag">O Problema</div>
+    <h2 class="section-title">O setor cresce. As obras atrasam.</h2>
+    <p class="section-sub">Enquanto o mercado expande, a má gestão corrói margens e reputação das construtoras.</p>
+
+    <div class="highlight" style="text-align:center;">
+      <div class="big">95%</div>
+      <p>das obras no Brasil são entregues com algum grau de atraso</p>
+      <p class="source-tag">Fonte: IBEDEC — Instituto Brasileiro de Estudo e Defesa das Relações de Consumo</p>
+    </div>
+
+    <div class="grid-2" style="gap:32px; align-items:start; margin-top:32px;">
+      <div class="card">
+        <h3 style="margin-bottom:20px; font-size:1rem; color:var(--muted); text-transform:uppercase; letter-spacing:.5px;">Causas dos Atrasos em Obras</h3>
+        <div class="chart-wrap-lg">
+          <canvas id="chartCausas"></canvas>
+        </div>
+        <p class="source-tag">Fontes: Constructin, Engenharia360, CBIC 2024</p>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:20px;">
+        <div class="card card-red">
+          <div style="font-size:0.8rem; color:var(--red); text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px;">FIESP + Deloitte (2023 — 40 maiores)</div>
+          <div style="font-size:2.5rem; font-weight:900; color:var(--red);">R$ 59,1bi</div>
+          <div style="color:var(--muted); font-size:0.88rem; margin-top:6px;">em perdas causadas por atrasos e burocracia entre 2023 e 2025 — equivalente a 8% de todos os investimentos do setor</div>
+        </div>
+        <div class="card">
+          <div style="font-size:0.85rem; color:var(--muted); margin-bottom:16px; text-transform:uppercase; letter-spacing:.5px;">Obras Públicas Paradas (2025)</div>
+          <div style="display:flex; align-items:center; gap:16px;">
+            <div style="flex:1;">
+              <div class="prog-item">
+                <div class="prog-label"><span style="color:var(--red);">Paradas</span><span>50,7%</span></div>
+                <div class="prog-track"><div class="prog-fill" style="width:50.7%; background:var(--red);"></div></div>
+              </div>
+              <div class="prog-item">
+                <div class="prog-label"><span style="color:var(--green);">Em execução</span><span>49,3%</span></div>
+                <div class="prog-track"><div class="prog-fill" style="width:49.3%; background:var(--green);"></div></div>
+              </div>
+            </div>
+          </div>
+          <div style="font-size:0.8rem; color:var(--muted); margin-top:8px;">11.469 obras paradas de 22.621 monitoradas</div>
+          <p class="source-tag">Governo Federal — abr/2025</p>
+        </div>
+        <div class="card card-orange">
+          <div style="font-size:0.8rem; color:var(--orange); text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px;">Custo do Retrabalho — UnB</div>
+          <div style="font-size:2.2rem; font-weight:800; color:var(--orange);">+42%</div>
+          <div style="color:var(--muted); font-size:0.85rem;">aumento no custo total da obra por retrabalho evitável</div>
+          <p class="source-tag">Universidade de Brasília — pesquisa de campo</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ESTOURO DE PRAZO -->
+    <div style="margin-top:32px;" class="grid-3">
+      <div class="card metric-card card-red">
+        <div class="icon">⏱️</div>
+        <div class="value" style="color:var(--red);">+48,94%</div>
+        <div class="label">Prazo médio excedido em obras públicas</div>
+        <div class="source">TCU / 1.369 obras auditadas</div>
+      </div>
+      <div class="card metric-card">
+        <div class="icon">💸</div>
+        <div class="value">28%</div>
+        <div class="label">do tempo de projeto desperdiçado com retrabalho</div>
+        <div class="source">Procore — Future State Report</div>
+      </div>
+      <div class="card metric-card card-red">
+        <div class="icon">📊</div>
+        <div class="value" style="color:var(--red);">21,7%</div>
+        <div class="label">Desvio médio entre orçado e custo real</div>
+        <div class="source">Deloitte — estudo setorial</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SEÇÃO 3: DIGITALIZAÇÃO -->
+<section id="digitalizacao">
+  <div class="container">
+    <div class="section-tag">Diagnóstico</div>
+    <h2 class="section-title">A construção civil é o setor menos digitalizado do Brasil</h2>
+    <p class="section-sub">Pesquisa com 4.000+ profissionais mostra que a maioria ainda usa papel, WhatsApp e planilha Excel no dia a dia das obras.</p>
+
+    <div class="grid-2" style="gap:32px;">
+      <div class="card">
+        <h3 style="margin-bottom:20px; font-size:1rem; color:var(--muted); text-transform:uppercase; letter-spacing:.5px;">Adoção de Ferramentas Digitais (2024)</h3>
+        <div class="chart-wrap">
+          <canvas id="chartDigital"></canvas>
+        </div>
+        <p class="source-tag">Fonte: 2ª Pesquisa Digitalização nas Engenharias — ABDI / BIM Fórum / CONFEA · dez/2024 · n=4.000+</p>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <div class="card" style="background:rgba(239,68,68,0.07); border-color:rgba(239,68,68,0.3);">
+          <div style="font-size:0.8rem; color:var(--red); text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px;">IDC + Autodesk — Brasil vs Mundo (835 profissionais)</div>
+          <div style="font-size:1.8rem; font-weight:800;">Brasil =<br>último lugar</div>
+          <div style="color:var(--muted); font-size:0.85rem; margin-top:6px;">no ranking de maturidade digital na construção civil, entre os 12 países avaliados</div>
+        </div>
+        <div class="card">
+          <div style="margin-bottom:16px; font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:.5px;">Barreiras à digitalização</div>
+          <div class="prog-item">
+            <div class="prog-label"><span>Falta de capacitação</span><span style="color:var(--orange);">71%</span></div>
+            <div class="prog-track"><div class="prog-fill" style="width:71%; background:var(--orange);"></div></div>
+          </div>
+          <div class="prog-item">
+            <div class="prog-label"><span>Custo percebido</span><span style="color:var(--orange);">58%</span></div>
+            <div class="prog-track"><div class="prog-fill" style="width:58%; background:var(--orange);"></div></div>
+          </div>
+          <div class="prog-item">
+            <div class="prog-label"><span>Resistência cultural</span><span style="color:var(--orange);">52%</span></div>
+            <div class="prog-track"><div class="prog-fill" style="width:52%; background:var(--orange);"></div></div>
+          </div>
+          <div class="prog-item">
+            <div class="prog-label"><span>Falta de produto acessível</span><span style="color:var(--orange);">44%</span></div>
+            <div class="prog-track"><div class="prog-fill" style="width:44%; background:var(--orange);"></div></div>
+          </div>
+          <p class="source-tag">CBIC / ABDI — Digitalização nas Engenharias 2024</p>
+        </div>
+        <div class="card card-blue">
+          <div style="font-size:0.8rem; color:var(--blue); text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px;">Próximos 3 anos — Intenção de investir</div>
+          <div style="font-size:2rem; font-weight:800; color:var(--blue);">77%</div>
+          <div style="color:var(--muted); font-size:0.85rem;">dos profissionais pretendem investir em<br>software de gestão de projetos</div>
+          <p class="source-tag">CBIC — pesquisa digitalização 2024</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="highlight" style="margin-top:32px; display:flex; align-items:center; gap:32px; flex-wrap:wrap;">
+      <div style="flex:1; min-width:200px;">
+        <div style="font-size:1rem; color:var(--orange); text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px;">McKinsey — Potencial não explorado</div>
+        <div style="font-size:3.5rem; font-weight:900; color:var(--orange);">50–60%</div>
+        <p style="color:var(--muted);">de aumento de produtividade possível com digitalização da construção civil</p>
+        <p class="source-tag">McKinsey Global Institute — Reinventing Construction</p>
+      </div>
+      <div style="flex:1; min-width:200px;">
+        <div style="font-size:1rem; color:var(--blue); text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px;">Contexto global</div>
+        <p style="font-size:1.1rem; line-height:1.7;">Construção é o <strong>2° setor menos digitalizado</strong> do mundo, atrás apenas de agricultura. Produtividade cresce só <strong>1%/ano</strong> vs. <strong>2,8% da economia geral</strong>.</p>
+        <p class="source-tag">McKinsey 2017 / MDPI 2025</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SEÇÃO 4: GOIÂNIA -->
+<section id="goiania">
+  <div class="container">
+    <div class="section-tag">Mercado Local</div>
+    <h2 class="section-title">Goiânia: o 3° maior mercado imobiliário do Brasil</h2>
+    <p class="section-sub">Enquanto o Brasil desacelerou em 2025, Goiânia manteve crescimento acima da média nacional em todos os indicadores.</p>
+
+    <div class="grid-4" style="margin-bottom:32px;">
+      <div class="card goi-card card-green">
+        <div class="arrow-up">↑</div>
+        <div class="goi-num" style="color:var(--green);">+35%</div>
+        <div class="goi-label">Vendas imobiliárias 2024<br>vs 2023</div>
+        <p class="source-tag">ADEMI-GO 2024</p>
+      </div>
+      <div class="card goi-card">
+        <div style="font-size:1.5rem;">🏆</div>
+        <div class="goi-num">3°</div>
+        <div class="goi-label">Maior mercado imobiliário<br>do Brasil</div>
+        <p class="source-tag">ADEMI-GO / CBIC</p>
+      </div>
+      <div class="card goi-card card-orange">
+        <div class="arrow-up" style="color:var(--orange);">↑</div>
+        <div class="goi-num" style="color:var(--orange);">+47%</div>
+        <div class="goi-label">VGV no 1° tri/2025<br>vs mesmo período 2024</div>
+        <p class="source-tag">CBIC / ADEMI-GO</p>
+      </div>
+      <div class="card goi-card card-blue">
+        <div class="arrow-up" style="color:var(--blue);">↑</div>
+        <div class="goi-num" style="color:var(--blue);">+84,8%</div>
+        <div class="goi-label">Novos empregos construção<br>em Goiás (2024)</div>
+        <p class="source-tag">CAGED / Tribuna do Planalto</p>
+      </div>
+    </div>
+
+    <div class="grid-2" style="gap:32px;">
+      <div class="card">
+        <h3 style="margin-bottom:20px; font-size:1rem; color:var(--muted); text-transform:uppercase; letter-spacing:.5px;">Goiânia — Crescimento de Mercado (2022–2025)</h3>
+        <div class="chart-wrap">
+          <canvas id="chartGoiania"></canvas>
+        </div>
+        <p class="source-tag">Fontes: ADEMI-GO, CBIC, Oportunidades GO</p>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <div class="card">
+          <div style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:16px;">Lançamentos MCMV em Goiânia</div>
+          <div class="prog-item">
+            <div class="prog-label"><span>2023</span><span>1.936 unidades</span></div>
+            <div class="prog-track"><div class="prog-fill" style="width:40%; background:var(--muted);"></div></div>
+          </div>
+          <div class="prog-item">
+            <div class="prog-label"><span style="color:var(--green);">2024</span><span style="color:var(--green);">3.704 unidades</span></div>
+            <div class="prog-track"><div class="prog-fill" style="width:76%; background:var(--green);"></div></div>
+          </div>
+          <div style="font-size:1.4rem; font-weight:700; color:var(--green); margin-top:8px;">+91% de crescimento</div>
+          <p class="source-tag">ADEMI-GO 2024</p>
+        </div>
+        <div class="card card-orange">
+          <div style="font-size:0.8rem; color:var(--orange); text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px;">Canteiros ativos — dez/2024</div>
+          <div style="font-size:2.2rem; font-weight:800;">162</div>
+          <div style="color:var(--muted); font-size:0.85rem;">canteiros verticais ativos em Goiânia<br>+ 93 lançamentos ainda a iniciar obras</div>
+          <p class="source-tag">ADEMI-GO</p>
+        </div>
+        <div class="card">
+          <div style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:12px;">Valorização imobiliária</div>
+          <div style="display:flex; gap:20px;">
+            <div style="text-align:center; flex:1;">
+              <div style="font-size:1.8rem; font-weight:800; color:var(--green);">12,3%</div>
+              <div style="font-size:0.78rem; color:var(--muted);">valorização 1°sem/2024</div>
+            </div>
+            <div style="text-align:center; flex:1;">
+              <div style="font-size:1.8rem; font-weight:800; color:var(--blue);">13%</div>
+              <div style="font-size:0.78rem; color:var(--muted);">valorização acum. set/2025</div>
+            </div>
+          </div>
+          <p class="source-tag">CBIC / Oportunidades GO</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:24px; text-align:center; padding:32px; background:linear-gradient(135deg,rgba(249,115,22,0.08),rgba(59,130,246,0.05)); border-color:rgba(249,115,22,0.2);">
+      <p style="font-size:1.15rem; font-weight:600;">Goiânia nunca teve tantas obras simultâneas. Nunca precisou tanto de gestão eficiente.</p>
+      <p style="color:var(--muted); margin-top:8px; font-size:0.9rem;">162 canteiros verticais ativos + MCMV crescendo 91% = dezenas de equipes de engenharia precisando de ferramentas de controle.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SEÇÃO 5: ROI -->
+<section id="roi">
+  <div class="container">
+    <div class="section-tag">Retorno sobre Investimento</div>
+    <h2 class="section-title">Software de gestão de obras: o ROI é comprovado</h2>
+    <p class="section-sub">Pesquisas com milhares de empresas ao redor do mundo — e no Brasil — mostram resultados consistentes.</p>
+
+    <div class="grid-2" style="gap:32px; margin-bottom:32px;">
+      <div class="card">
+        <h3 style="margin-bottom:20px; font-size:1rem; color:var(--muted); text-transform:uppercase; letter-spacing:.5px;">Impacto do Software nas Obras (Autodesk, n=211)</h3>
+        <div class="chart-wrap">
+          <canvas id="chartROI"></canvas>
+        </div>
+        <p class="source-tag">Fonte: Autodesk Construction Cloud — Business Value Report, out/2025</p>
+      </div>
+      <div class="card">
+        <h3 style="margin-bottom:20px; font-size:1rem; color:var(--muted); text-transform:uppercase; letter-spacing:.5px;">Tempo Economizado por Função — Horas/Dia (Procore)</h3>
+        <div class="chart-wrap">
+          <canvas id="chartTempo"></canvas>
+        </div>
+        <p class="source-tag">Fonte: Procore Annual ROI Report — pesquisa com base de clientes</p>
+      </div>
+    </div>
+
+    <div class="grid-4">
+      <div class="card metric-card card-green">
+        <div class="icon">📅</div>
+        <div class="value" style="color:var(--green);">15 dias</div>
+        <div class="label">economizados por projeto com software</div>
+        <div class="source">Procore ROI Report</div>
+      </div>
+      <div class="card metric-card card-orange">
+        <div class="icon">🔄</div>
+        <div class="value" style="color:var(--orange);">36%</div>
+        <div class="label">menos retrabalho nas obras</div>
+        <div class="source">Autodesk Business Value</div>
+      </div>
+      <div class="card metric-card card-blue">
+        <div class="icon">✅</div>
+        <div class="value" style="color:var(--blue);">41%</div>
+        <div class="label">menos defeitos relatados em campo</div>
+        <div class="source">Autodesk Business Value</div>
+      </div>
+      <div class="card metric-card card-green">
+        <div class="icon">🎯</div>
+        <div class="value" style="color:var(--green);">34%</div>
+        <div class="label">mais precisão nos orçamentos</div>
+        <div class="source">Autodesk Business Value</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="grid-2" style="gap:32px;">
+      <div class="highlight" style="margin:0;">
+        <div style="font-size:0.8rem; color:var(--orange); text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px;">RDO Papel → Digital</div>
+        <div class="big">-3 dias</div>
+        <p>Checklists e relatórios que levavam 3 dias para consolidar passaram a ser gerados em minutos com digitalização</p>
+        <p class="source-tag" style="margin-top:12px;">Stant / Sienge — casos documentados de clientes</p>
+      </div>
+      <div class="card" style="display:flex; flex-direction:column; justify-content:center;">
+        <div style="font-size:0.85rem; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:16px;">75% dos usuários confirmam</div>
+        <div style="font-size:1.5rem; font-weight:700;">Software <span style="color:var(--green);">reduz retrabalho</span> nos projetos</div>
+        <p style="color:var(--muted); margin-top:12px; font-size:0.9rem;">Engenheiros que gerenciam obras com dados em tempo real economizam em média <strong style="color:var(--text);">4,5 horas por semana</strong> — o equivalente a mais de um dia de trabalho por mês.</p>
+        <p class="source-tag">Procore / Procore Canadian Survey</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SEÇÃO 6: COMPARATIVO -->
+<section id="comparativo">
+  <div class="container">
+    <div class="section-tag">Sua Decisão</div>
+    <h2 class="section-title">Diário de Obras vs Sienge vs Concretiza</h2>
+    <p class="section-sub">Você já decidiu sair do Diário de Obras. A questão é: o Sienge faz sentido para o porte da sua empresa?</p>
+
+    <div class="card" style="padding:0; overflow:hidden;">
+      <table class="compare-table">
+        <thead>
+          <tr style="background:rgba(255,255,255,0.02);">
+            <th style="text-align:left;">Critério</th>
+            <th>Diário de Obras</th>
+            <th>Sienge</th>
+            <th class="winner">Concretiza <span class="badge-winner">Recomendado</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Preço mensal</td>
+            <td>R$ 70–160</td>
+            <td>R$ 399–2.000+</td>
+            <td class="winner-col"><strong style="color:var(--orange);">R$ 199–349</strong></td>
+          </tr>
+          <tr>
+            <td>Tempo para começar a usar</td>
+            <td>Imediato</td>
+            <td class="partial">2–4 meses de implantação</td>
+            <td class="winner-col"><strong style="color:var(--green);">Imediato</strong></td>
+          </tr>
+          <tr>
+            <td>Feito para quantas obras?</td>
+            <td>1–4 obras</td>
+            <td>50+ obras (enterprise)</td>
+            <td class="winner-col"><strong style="color:var(--orange);">1–20 obras ✓ Goiânia</strong></td>
+          </tr>
+          <tr>
+            <td>RDO completo</td>
+            <td class="check">✓</td>
+            <td class="check">✓</td>
+            <td class="check winner-col">✓</td>
+          </tr>
+          <tr>
+            <td>FVS (Ficha de Verificação de Serviço)</td>
+            <td class="cross">✗</td>
+            <td class="check">✓</td>
+            <td class="check winner-col">✓</td>
+          </tr>
+          <tr>
+            <td>FVM (Ficha de Verificação de Material)</td>
+            <td class="cross">✗</td>
+            <td class="check">✓</td>
+            <td class="check winner-col">✓</td>
+          </tr>
+          <tr>
+            <td>Gestão financeira por obra</td>
+            <td class="cross">✗</td>
+            <td class="check">✓</td>
+            <td class="check winner-col">✓</td>
+          </tr>
+          <tr>
+            <td>Suprimentos (pedidos, fornecedores)</td>
+            <td class="cross">✗</td>
+            <td class="check">✓</td>
+            <td class="check winner-col">✓</td>
+          </tr>
+          <tr>
+            <td>Chat interno por obra</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="check winner-col">✓</td>
+          </tr>
+          <tr>
+            <td>Mapa visual com ocorrências</td>
+            <td class="cross">✗</td>
+            <td class="partial">Parcial</td>
+            <td class="check winner-col">✓</td>
+          </tr>
+          <tr>
+            <td>Mobile-first (funciona no canteiro)</td>
+            <td class="partial">Parcial</td>
+            <td class="cross">✗</td>
+            <td class="check winner-col">✓ PWA instalável</td>
+          </tr>
+          <tr>
+            <td>Geração de PDF de relatórios</td>
+            <td class="partial">Básico</td>
+            <td class="check">✓</td>
+            <td class="check winner-col">✓ RDO, FVS, Semanal</td>
+          </tr>
+          <tr>
+            <td>Integração com Sienge</td>
+            <td class="cross">✗</td>
+            <td>—</td>
+            <td class="check winner-col">✓ Nativo</td>
+          </tr>
+          <tr>
+            <td>IA (análise de obra, alertas)</td>
+            <td class="cross">✗</td>
+            <td class="cross">✗</td>
+            <td class="winner-col" style="color:var(--orange);">Em breve (fase 2)</td>
+          </tr>
+          <tr>
+            <td>Suporte</td>
+            <td>Ticket</td>
+            <td class="partial">Ticket (fila)</td>
+            <td class="winner-col"><strong style="color:var(--green);">WhatsApp direto</strong></td>
+          </tr>
+          <tr>
+            <td>Treinamento necessário</td>
+            <td>Mínimo</td>
+            <td class="partial">Extenso (+ custo)</td>
+            <td class="winner-col"><strong style="color:var(--green);">Mínimo</strong></td>
+          </tr>
+          <tr>
+            <td>Clientes atuais</td>
+            <td>PMEs / autônomos</td>
+            <td>74 das 100 maiores</td>
+            <td class="winner-col"><strong style="color:var(--orange);">Construtoras 1–20 obras</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid-3" style="margin-top:32px; gap:20px;">
+      <div class="card" style="border-color:rgba(239,68,68,0.3); background:rgba(239,68,68,0.04);">
+        <div style="font-size:0.85rem; color:var(--red); text-transform:uppercase; letter-spacing:.5px; margin-bottom:12px;">Diário de Obras — O passado</div>
+        <div style="font-size:1.1rem; font-weight:600; margin-bottom:8px;">Cobre apenas RDO</div>
+        <p style="color:var(--muted); font-size:0.88rem;">Você já decidiu que não é suficiente. Sem financeiro, sem FVS, sem controle integrado. R$ 160/mês por uma ferramenta incompleta.</p>
+      </div>
+      <div class="card" style="border-color:rgba(234,179,8,0.3); background:rgba(234,179,8,0.04);">
+        <div style="font-size:0.85rem; color:var(--yellow); text-transform:uppercase; letter-spacing:.5px; margin-bottom:12px;">Sienge — Caro demais para seu porte</div>
+        <div style="font-size:1.1rem; font-weight:600; margin-bottom:8px;">Feito para grandes</div>
+        <p style="color:var(--muted); font-size:0.88rem;">74 das 100 maiores construtoras do Brasil usam Sienge — com departamento de TI e meses de implantação. Para 5–15 obras em Goiânia, é como comprar caminhão de 18 rodas para fazer entrega no bairro.</p>
+      </div>
+      <div class="card" style="border-color:rgba(249,115,22,0.4); background:rgba(249,115,22,0.07);">
+        <div style="font-size:0.85rem; color:var(--orange); text-transform:uppercase; letter-spacing:.5px; margin-bottom:12px;">Concretiza — Feito para Goiânia</div>
+        <div style="font-size:1.1rem; font-weight:600; margin-bottom:8px;">Tudo do Sienge, metade do preço</div>
+        <p style="color:var(--muted); font-size:0.88rem;">Produto completo construído especificamente para construtoras de 1–20 obras. Você usa amanhã. Engenheiro acessa do celular no canteiro. RDO, financeiro, suprimentos, chat — tudo integrado.</p>
+      </div>
+    </div>
+
+    <!-- PREÇO COMPARATIVO VISUAL -->
+    <div class="card" style="margin-top:32px;">
+      <h3 style="margin-bottom:24px; font-size:1rem; color:var(--muted); text-transform:uppercase; letter-spacing:.5px;">O que você paga vs. o que você recebe</h3>
+      <div class="chart-wrap">
+        <canvas id="chartPreco"></canvas>
+      </div>
+      <p style="text-align:center; color:var(--muted); font-size:0.82rem; margin-top:12px;">Funcionalidades disponíveis × custo mensal. Quanto mais à direita e abaixo, melhor o custo-benefício.</p>
+      <p class="source-tag" style="display:block; text-align:center; margin-top:4px;">Dados públicos: diariodeobras.net, sienge.com.br, mar/2026</p>
+    </div>
+  </div>
+</section>
+
+<!-- SEÇÃO 7: CTA -->
+<section style="padding:80px 0;">
+  <div class="container">
+    <div class="cta-section">
+      <div style="font-size:0.8rem; color:var(--orange); text-transform:uppercase; letter-spacing:1px; margin-bottom:16px;">Plano Fundador — Apenas 10 vagas</div>
+      <h2>Entre agora por R$ 150/mês.<br>Para sempre.</h2>
+      <p>Preço travado enquanto o mercado escala. Os primeiros 10 clientes têm suporte direto,<br>acesso antecipado à IA e influência real no roadmap do produto.</p>
+      <div style="display:flex; justify-content:center; gap:40px; flex-wrap:wrap; margin:32px 0;">
+        <div style="text-align:center;">
+          <div style="font-size:2.5rem; font-weight:800; color:var(--orange);">R$ 150</div>
+          <div style="color:var(--muted); font-size:0.85rem;">por mês · fixo para sempre</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:2.5rem; font-weight:800; color:var(--green);">14 dias</div>
+          <div style="color:var(--muted); font-size:0.85rem;">de teste gratuito · sem cartão</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:2.5rem; font-weight:800; color:var(--blue);">∞</div>
+          <div style="color:var(--muted); font-size:0.85rem;">usuários · 5 obras simultâneas</div>
+        </div>
+      </div>
+      <a class="cta-btn" href="#">Começar 14 dias grátis →</a>
+    </div>
+
+    <!-- FONTES -->
+    <div style="margin-top:48px;">
+      <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:16px;">Fontes e referências</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:0.75rem; color:var(--muted);">
+        <div>• IBGE / CBIC — PIB Construção Civil 2024 (+4,3%)</div>
+        <div>• ADEMI-GO — Crescimento de vendas Goiânia 2024 (+35%)</div>
+        <div>• FIESP + Deloitte — R$ 59,1 bilhões em perdas 2023–25</div>
+        <div>• Autodesk Construction Cloud Business Value Report, out/2025</div>
+        <div>• Procore Annual ROI Report — horas economizadas por função</div>
+        <div>• ABDI / BIM Fórum Brasil — Digitalização nas Engenharias, dez/2024</div>
+        <div>• IDC / Autodesk — Maturidade digital, 12 países, n=835</div>
+        <div>• TCU / Freitas — 1.369 obras auditadas, atrasos e aditivos</div>
+        <div>• McKinsey Global Institute — Reinventing Construction, 2017</div>
+        <div>• Liga Ventures — Startup Landscape Construtechs 2025</div>
+        <div>• Terracotta Ventures — Mapa Construtechs & Proptechs 2025</div>
+        <div>• CBIC — Emprego, mercado imobiliário Goiânia 2024–2025</div>
+        <div>• IBEDEC — Taxa de atraso em obras residenciais no Brasil</div>
+        <div>• UnB — Retrabalho pode aumentar custos em até 42%</div>
+        <div>• Sienge.com.br — Preços e posicionamento de mercado, mar/2026</div>
+        <div>• diariodeobras.net — Planos e preços, mar/2026</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+// CONFIGURAÇÃO GLOBAL DOS GRÁFICOS
+Chart.defaults.color = '#94a3b8';
+Chart.defaults.borderColor = '#1f2d4a';
+Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+
+// 1. GRÁFICO PIB CONSTRUÇÃO
+new Chart(document.getElementById('chartPIB'), {
+  type: 'bar',
+  data: {
+    labels: ['2020', '2021', '2022', '2023', '2024', '2025*'],
+    datasets: [
+      {
+        label: 'Construção Civil (%)',
+        data: [2.1, 9.7, 6.9, 3.5, 4.3, 0.5],
+        backgroundColor: (ctx) => {
+          const v = ctx.parsed.y;
+          return v === 4.3 ? '#f97316' : 'rgba(249,115,22,0.35)';
+        },
+        borderRadius: 6, borderSkipped: false,
+      },
+      {
+        label: 'PIB Brasil (%)',
+        data: [-4.1, 5.0, 2.9, 2.9, 3.4, 2.0],
+        backgroundColor: 'rgba(59,130,246,0.35)',
+        borderRadius: 6, borderSkipped: false,
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } } },
+    scales: {
+      y: { grid: { color: '#1f2d4a' }, ticks: { callback: v => v + '%' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// 2. GRÁFICO CAUSAS ATRASO
+new Chart(document.getElementById('chartCausas'), {
+  type: 'bar',
+  data: {
+    labels: [
+      'Planejamento deficiente',
+      'Falta mão de obra qualificada',
+      'Erros de projeto/incompatibilidade',
+      'Problemas financeiros',
+      'Erros em planilhas quantitativas',
+      'Questões organizacionais',
+      'Burocracia/aprovações'
+    ],
+    datasets: [{
+      data: [82, 70, 66, 58, 66, 52, 74],
+      backgroundColor: [
+        '#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899'
+      ],
+      borderRadius: 6, borderSkipped: false,
+    }]
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: '#1f2d4a' }, ticks: { callback: v => v + '%' }, max: 100 },
+      y: { grid: { display: false }, ticks: { font: { size: 11 } } }
+    }
+  }
+});
+
+// 3. GRÁFICO DIGITALIZAÇÃO (DONUT)
+new Chart(document.getElementById('chartDigital'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Usam BIM na prática', 'Em fase de descoberta', 'Desconhecem/rejeitam'],
+    datasets: [{
+      data: [33.8, 56.7, 9.5],
+      backgroundColor: ['#f97316', '#3b82f6', '#ef4444'],
+      borderColor: '#1a2035', borderWidth: 3,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    cutout: '65%',
+    plugins: {
+      legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 }, padding: 16 } },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed}%` } }
+    }
+  }
+});
+
+// 4. GRÁFICO GOIÂNIA
+new Chart(document.getElementById('chartGoiania'), {
+  type: 'line',
+  data: {
+    labels: ['2022', '2023', '1°sem 2024', '2024', '1°tri 2025'],
+    datasets: [
+      {
+        label: 'Crescimento vendas Goiânia (%)',
+        data: [12, 18, 14, 35, 47],
+        borderColor: '#f97316', backgroundColor: 'rgba(249,115,22,0.1)',
+        tension: 0.4, fill: true, pointRadius: 5, pointBackgroundColor: '#f97316',
+      },
+      {
+        label: 'Crescimento vendas Brasil (%)',
+        data: [8, 12, 8, 20, 15],
+        borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.05)',
+        tension: 0.4, fill: false, pointRadius: 5, pointBackgroundColor: '#3b82f6',
+        borderDash: [5,5],
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } } },
+    scales: {
+      y: { grid: { color: '#1f2d4a' }, ticks: { callback: v => v + '%' } },
+      x: { grid: { display: false } }
+    }
+  }
+});
+
+// 5. GRÁFICO ROI
+new Chart(document.getElementById('chartROI'), {
+  type: 'bar',
+  data: {
+    labels: ['Velocidade\nde entrega', 'Fechamento\nde obra', 'Redução\nde retrabalho', 'Redução\nde defeitos', 'Precisão\nno orçamento'],
+    datasets: [{
+      label: 'Melhoria com software de gestão (%)',
+      data: [50, 43, 36, 41, 34],
+      backgroundColor: ['#22c55e','#3b82f6','#f97316','#8b5cf6','#eab308'],
+      borderRadius: 8, borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { grid: { color: '#1f2d4a' }, ticks: { callback: v => '+' + v + '%' }, max: 65 },
+      x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+    }
+  }
+});
+
+// 6. GRÁFICO TEMPO ECONOMIZADO
+new Chart(document.getElementById('chartTempo'), {
+  type: 'bar',
+  data: {
+    labels: ['Engenheiro\nde projetos', 'Ger. de\nqualidade', 'Mestre de\nobras', 'Gerente de\nprojetos'],
+    datasets: [{
+      label: 'Horas economizadas por dia',
+      data: [2.9, 2.8, 2.6, 2.5],
+      backgroundColor: '#f97316',
+      borderRadius: 8, borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      y: { grid: { color: '#1f2d4a' }, ticks: { callback: v => v + 'h' }, max: 4 },
+      x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+    }
+  }
+});
+
+// 7. GRÁFICO PREÇO vs FUNCIONALIDADES (SCATTER)
+new Chart(document.getElementById('chartPreco'), {
+  type: 'bubble',
+  data: {
+    datasets: [
+      {
+        label: 'Diário de Obras',
+        data: [{ x: 160, y: 20, r: 18 }],
+        backgroundColor: 'rgba(239,68,68,0.6)', borderColor: '#ef4444',
+      },
+      {
+        label: 'Sienge (entrada)',
+        data: [{ x: 800, y: 95, r: 22 }],
+        backgroundColor: 'rgba(234,179,8,0.6)', borderColor: '#eab308',
+      },
+      {
+        label: 'Concretiza Pro',
+        data: [{ x: 349, y: 90, r: 28 }],
+        backgroundColor: 'rgba(249,115,22,0.7)', borderColor: '#f97316',
+      },
+      {
+        label: 'Concretiza Fundador',
+        data: [{ x: 150, y: 85, r: 20 }],
+        backgroundColor: 'rgba(34,197,94,0.6)', borderColor: '#22c55e',
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
+      tooltip: {
+        callbacks: {
+          label: ctx => {
+            const d = ctx.parsed;
+            return ` ${ctx.dataset.label}: R$${d.x}/mês · ${d.y}% funcionalidades`;
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: { color: '#1f2d4a' },
+        title: { display: true, text: 'Preço mensal (R$)', color: '#94a3b8' },
+        min: 0, max: 1000,
+        ticks: { callback: v => 'R$' + v }
+      },
+      y: {
+        grid: { color: '#1f2d4a' },
+        title: { display: true, text: 'Funcionalidades disponíveis (%)', color: '#94a3b8' },
+        min: 0, max: 110,
+        ticks: { callback: v => v + '%' }
+      }
+    }
+  }
+});
+</script>
+</body>
+</html>
