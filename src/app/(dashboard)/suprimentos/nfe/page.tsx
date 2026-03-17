@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { FileText, ExternalLink, Calendar, Building2 } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { cn } from "@/lib/utils"
@@ -106,9 +107,12 @@ export default function NFePage() {
               {nfes.map((nfe) => (
                 <div key={nfe.id} className="grid grid-cols-[1fr_1fr_80px_100px_32px] gap-4 px-4 py-3 items-center hover:bg-slate-50 transition-colors">
                   <div>
-                    <p className="text-sm font-medium text-[var(--text-primary)]">
+                    <Link
+                      href={`/suprimentos/nfe/${nfe.id}`}
+                      className="text-sm font-medium text-[var(--text-primary)] hover:text-orange-500 transition-colors"
+                    >
                       NF-e {nfe.numero}{nfe.serie ? ` · Série ${nfe.serie}` : ""}
-                    </p>
+                    </Link>
                     <p className="text-xs text-[var(--text-muted)] flex items-center gap-1 mt-0.5">
                       <Building2 size={11} />
                       {nfe.fornecedorNome}

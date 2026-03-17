@@ -46,6 +46,7 @@ const globalNavItems = [
     label: "Comercial", href: "/comercial", icon: Building2,
     children: [
       { label: "Mapa Imobiliário",  href: "/comercial/mapa" },
+      { label: "Unidades",          href: "/comercial/unidades" },
       { label: "Contratos",         href: "/comercial/contratos" },
       { label: "Locações",          href: "/comercial/locacoes" },
       { label: "Comissões",         href: "/comercial/comissoes" },
