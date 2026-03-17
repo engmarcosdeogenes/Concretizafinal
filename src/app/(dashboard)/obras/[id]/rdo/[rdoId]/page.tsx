@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
-import { ArrowLeft, Sun, Cloud, CloudRain, Wind, CheckCircle2, Clock, AlertCircle, Users, ClipboardList, Send, ThumbsUp, Download, Camera, Link2, Pen, Package, Plus, Trash2, Save, Eye, ShieldCheck, XCircle, RotateCcw } from "lucide-react"
+import { ArrowLeft, Sun, Cloud, CloudRain, Wind, CheckCircle2, Clock, AlertCircle, Users, ClipboardList, Send, ThumbsUp, Download, Camera, Link2, Pen, Package, Plus, Trash2, Save, Eye, ShieldCheck, XCircle, RotateCcw, Paperclip } from "lucide-react"
 import { toast } from "sonner"
 import { trpc } from "@/lib/trpc/client"
 import { formatDataLonga, diaSemanaNome } from "@/lib/format"
@@ -93,6 +93,13 @@ export default function RdoDetalhePage() {
   const { data: rdo, isLoading, error } = trpc.rdo.buscarPorId.useQuery({ id: rdoId })
   const { data: camposPersonalizados = [] } = trpc.configuracoes.buscarCamposPersonalizados.useQuery()
 
+  // Melhoria B: Anexos Sienge
+  const { data: anexosSienge = [], isLoading: carregandoAnexos } = trpc.rdo.listarAnexosSienge.useQuery(
+    { rdoId },
+    { enabled: !!rdo?.siengeReportId },
+  )
+  const [baixandoAnexo, setBaixandoAnexo] = useState<number | null>(null)
+
   // Registrar visualização ao montar
   const registrarView = trpc.rdo.registrarVisualizacao.useMutation()
   useEffect(() => {
@@ -171,6 +178,28 @@ export default function RdoDetalhePage() {
         unidade: m.unidade || undefined, localAplicado: m.extra || undefined,
       })),
     })
+  }
+
+  async function handleDownloadAnexoSienge(attachmentId: number, fileName: string) {
+    setBaixandoAnexo(attachmentId)
+    try {
+      const resultado = await utils.rdo.downloadAnexoSienge.fetch({ rdoId, attachmentId })
+      if (!resultado) { toast.error("Anexo não encontrado no Sienge"); return }
+      const byteChars = atob(resultado.fileBase64)
+      const byteArray = new Uint8Array(byteChars.length)
+      for (let i = 0; i < byteChars.length; i++) byteArray[i] = byteChars.charCodeAt(i)
+      const blob = new Blob([byteArray], { type: resultado.contentType })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = resultado.fileName || fileName
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      toast.error("Erro ao baixar anexo do Sienge")
+    } finally {
+      setBaixandoAnexo(null)
+    }
   }
 
   if (isLoading) {
@@ -508,6 +537,54 @@ export default function RdoDetalhePage() {
         <div className="bg-white rounded-2xl border border-border shadow-sm p-5">
           <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-3">Observações</h3>
           <p className="text-sm text-[var(--text-primary)] whitespace-pre-wrap leading-relaxed">{rdo.observacoes}</p>
+        </div>
+      )}
+
+      {/* Melhoria B: Anexos Sienge */}
+      {rdo.siengeReportId && (
+        <div className="bg-white rounded-2xl border border-border shadow-sm p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <Paperclip size={16} className="text-blue-500" />
+            <h3 className="text-sm font-semibold text-[var(--text-primary)]">Anexos Sienge</h3>
+            <span className="ml-auto text-[11px] text-[var(--text-muted)]">RDO #{rdo.siengeReportId}</span>
+          </div>
+
+          {carregandoAnexos ? (
+            <p className="text-sm text-[var(--text-muted)] italic">Carregando anexos...</p>
+          ) : anexosSienge.length === 0 ? (
+            <p className="text-sm text-[var(--text-muted)] italic">Nenhum anexo no Sienge para este RDO.</p>
+          ) : (
+            <div className="space-y-2">
+              {anexosSienge.map((anexo) => (
+                <div
+                  key={anexo.id}
+                  className="flex items-center gap-3 px-4 py-2.5 rounded-xl border border-border bg-muted/30 hover:bg-muted/50 transition-colors"
+                >
+                  <Paperclip size={14} className="text-[var(--text-muted)] flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-[var(--text-primary)] truncate">
+                      {(anexo.fileName as string | undefined) ?? `Anexo #${anexo.id}`}
+                    </p>
+                    {(anexo.description as string | undefined) && (
+                      <p className="text-xs text-[var(--text-muted)] truncate">{anexo.description as string}</p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    disabled={baixandoAnexo === anexo.id}
+                    onClick={() => handleDownloadAnexoSienge(
+                      anexo.id,
+                      (anexo.fileName as string | undefined) ?? `anexo-${anexo.id}`,
+                    )}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 text-blue-700 text-xs font-semibold rounded-lg transition-colors border border-blue-200 cursor-pointer disabled:cursor-not-allowed flex-shrink-0"
+                  >
+                    <Download size={12} />
+                    {baixandoAnexo === anexo.id ? "Baixando..." : "Baixar"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

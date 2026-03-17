@@ -4,7 +4,7 @@ import { createTRPCRouter, protectedProcedure } from "../trpc"
 import { logAudit } from "@/lib/audit"
 import { notificarEmpresa } from "@/lib/push"
 import { StatusPresencaMO } from "@prisma/client"
-import { criarRdoSienge, criarProgressLogSienge, uploadAnexoRdoSienge, downloadAnexoRdoSienge } from "@/lib/sienge/client"
+import { criarRdoSienge, criarProgressLogSienge, uploadAnexoRdoSienge, downloadAnexoRdoSienge, listarAnexosRdoSienge } from "@/lib/sienge/client"
 import { decrypt, isEncrypted } from "@/lib/encrypt"
 
 const PODE_VERIFICAR_ENG  = ["ENGENHEIRO", "ADMIN", "DONO"] as const
@@ -547,6 +547,31 @@ export const rdoRouter = createTRPCRouter({
     }),
 
   // ─── Anexos (Sienge) ──────────────────────────────────────────────────────────
+
+  listarAnexosSienge: protectedProcedure
+    .input(z.object({ rdoId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const rdo = await ctx.db.rDO.findFirst({
+        where: { id: input.rdoId, obra: { empresaId: ctx.session.empresaId } },
+        include: { obra: { select: { siengeId: true } } },
+      })
+      if (!rdo) throw new TRPCError({ code: "NOT_FOUND", message: "RDO não encontrado" })
+      if (!rdo.siengeReportId || !rdo.obra?.siengeId) return []
+
+      const config = await ctx.db.integracaoConfig.findUnique({
+        where: { empresaId: ctx.session.empresaId },
+      })
+      if (!config?.ativo) return []
+
+      const pass = isEncrypted(config.senha) ? decrypt(config.senha) : config.senha
+      return listarAnexosRdoSienge(
+        config.subdominio,
+        config.usuario,
+        pass,
+        parseInt(rdo.obra.siengeId),
+        parseInt(rdo.siengeReportId),
+      )
+    }),
 
   incluirAnexoSienge: protectedProcedure
     .input(z.object({

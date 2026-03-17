@@ -452,28 +452,151 @@ export default function SolicitacaoDetalhePage() {
               </table>
             </div>
 
-            {/* Botão confirmar decisões */}
-            {sol.status === "PENDENTE" && decisoes.size > 0 && (
-              <div className="mt-4 flex justify-end">
-                <button
-                  type="button"
-                  disabled={aprovarItensMut.isPending}
-                  onClick={() => {
-                    const itens = Array.from(decisoes.entries()).map(([itemId, aprovado]) => ({
-                      itemId,
-                      aprovado: aprovado === true,
-                      obs: obsDecisoes.get(itemId) || undefined,
-                    }))
-                    aprovarItensMut.mutate({ solicitacaoId: id, itens })
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white text-sm font-semibold rounded-xl transition-colors"
-                >
-                  {aprovarItensMut.isPending ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-                  Confirmar decisões ({decisoes.size} {decisoes.size === 1 ? "item" : "itens"})
-                </button>
+            </div>
+
+          {/* Seção: Aprovação de Itens */}
+          {(sol.status === "PENDENTE" || sol.status === "APROVADA") && (
+            <div className="mt-5 border border-border rounded-2xl overflow-hidden">
+              <div className="bg-muted px-5 py-3 border-b border-border flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-[var(--text-primary)]">Aprovação de Itens</h3>
+                <span className="text-[11px] text-[var(--text-muted)]">
+                  Aprove ou rejeite cada item individualmente
+                </span>
               </div>
-            )}
-          </div>
+              <div className="divide-y divide-border">
+                {sol.itens.map((item) => {
+                  const dbStatus = (item as { statusAprovacao?: string | null }).statusAprovacao
+                  const decisao = decisoes.get(item.id)
+                  // Local pending decision takes priority; fall back to DB value
+                  const estadoAtual: boolean | null =
+                    decisao !== undefined
+                      ? decisao
+                      : dbStatus === "APROVADO"
+                      ? true
+                      : dbStatus === "REJEITADO"
+                      ? false
+                      : null
+                  return (
+                    <div key={item.id} className="px-5 py-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:gap-4">
+                      {/* Material info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-[var(--text-primary)]">{item.material.nome}</p>
+                        <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                          {item.quantidade} {item.unidade ?? item.material.unidade}
+                        </p>
+                        {/* Obs field — visible when item is (or will be) rejected */}
+                        {estadoAtual === false && (
+                          <input
+                            type="text"
+                            placeholder="Motivo da rejeição (opcional)..."
+                            value={obsDecisoes.get(item.id) ?? (item as { obsAprovacao?: string | null }).obsAprovacao ?? ""}
+                            onChange={(e) =>
+                              setObsDecisoes((prev) => {
+                                const m = new Map(prev)
+                                m.set(item.id, e.target.value)
+                                return m
+                              })
+                            }
+                            className="mt-2 w-full max-w-xs px-2.5 py-1.5 border border-red-200 rounded-lg text-xs focus:outline-none focus:border-red-400 bg-red-50/50 placeholder-red-300"
+                          />
+                        )}
+                      </div>
+
+                      {/* Status badge OR action buttons */}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {/* Show current status badge when it comes from DB and no local override */}
+                        {decisao === undefined && estadoAtual !== null && (
+                          <span
+                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold border ${
+                              estadoAtual === true
+                                ? "bg-green-50 text-green-700 border-green-200"
+                                : "bg-red-50 text-red-700 border-red-200"
+                            }`}
+                          >
+                            {estadoAtual === true ? "Aprovado" : "Rejeitado"}
+                          </span>
+                        )}
+
+                        {/* Action buttons — always show when PENDENTE or APROVADA so user can change */}
+                        <button
+                          type="button"
+                          title="Aprovar item"
+                          onClick={() =>
+                            setDecisoes((prev) => {
+                              const m = new Map(prev)
+                              m.set(item.id, true)
+                              return m
+                            })
+                          }
+                          className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                            estadoAtual === true && decisao !== undefined
+                              ? "bg-green-500 border-green-500 text-white"
+                              : "border-green-200 text-green-700 hover:bg-green-50"
+                          }`}
+                        >
+                          <Check size={12} />
+                          Aprovar
+                        </button>
+                        <button
+                          type="button"
+                          title="Rejeitar item"
+                          onClick={() =>
+                            setDecisoes((prev) => {
+                              const m = new Map(prev)
+                              m.set(item.id, false)
+                              return m
+                            })
+                          }
+                          className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                            estadoAtual === false && decisao !== undefined
+                              ? "bg-red-500 border-red-500 text-white"
+                              : "border-red-200 text-red-700 hover:bg-red-50"
+                          }`}
+                        >
+                          <X size={12} />
+                          Rejeitar
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Footer: Save button — only when there are pending local changes */}
+              {decisoes.size > 0 && (
+                <div className="px-5 py-4 bg-muted/50 border-t border-border flex items-center justify-between gap-3">
+                  <p className="text-xs text-[var(--text-muted)]">
+                    {decisoes.size} {decisoes.size === 1 ? "item alterado" : "itens alterados"} — salve para confirmar
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => { setDecisoes(new Map()); setObsDecisoes(new Map()) }}
+                      className="px-3 py-1.5 border border-border rounded-lg text-xs text-[var(--text-muted)] hover:bg-muted transition-colors"
+                    >
+                      Descartar
+                    </button>
+                    <button
+                      type="button"
+                      disabled={aprovarItensMut.isPending}
+                      onClick={() => {
+                        const itens = Array.from(decisoes.entries()).map(([itemId, aprovado]) => ({
+                          itemId,
+                          aprovado: aprovado === true,
+                          obs: obsDecisoes.get(itemId) || undefined,
+                        }))
+                        aprovarItensMut.mutate({ solicitacaoId: id, itens })
+                      }}
+                      className="flex items-center gap-1.5 px-4 py-1.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg transition-colors"
+                    >
+                      {aprovarItensMut.isPending ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                      Salvar Aprovações
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {sol.observacoes && (
             <div className="bg-white rounded-2xl border border-border shadow-sm p-5">

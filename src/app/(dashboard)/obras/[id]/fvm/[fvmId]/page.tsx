@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useRef, useState } from "react"
 import { useParams } from "next/navigation"
-import { ArrowLeft, Package, CheckCircle2, XCircle, Clock, RotateCcw, Truck, FileText, Send, ThumbsDown, Camera, Upload, DollarSign, Loader2 } from "lucide-react"
+import { ArrowLeft, Package, CheckCircle2, XCircle, Clock, RotateCcw, Truck, FileText, Send, ThumbsDown, Camera, Upload, DollarSign, Loader2, X } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { formatDataLonga } from "@/lib/format"
 import { UploadFotos } from "@/components/obras/UploadFotos"
@@ -58,12 +58,60 @@ export default function FvmDetalhePage() {
     },
   })
 
+  const lancarDespesaManual = trpc.fvm.lancarDespesaNf.useMutation({
+    onSuccess: () => {
+      setLancadoManual(true)
+      setDialogAberto(false)
+      utils.fvm.buscarPorId.invalidate({ id: fvmId })
+      utils.fvm.listar.invalidate({ obraId })
+    },
+    onError: (err) => {
+      setDialogErro(err.message || "Erro ao lançar despesa.")
+    },
+  })
+
+  function abrirDialogDespesa() {
+    const descricaoPadrao = `FVM ${fvm?.codigo || fvmId}${fvm?.fornecedorNome ? ` — ${fvm.fornecedorNome}` : ""}`
+    setDialogDescricao(descricaoPadrao)
+    setDialogValor("")
+    setDialogData(new Date().toISOString().slice(0, 10))
+    setDialogErro("")
+    setDialogAberto(true)
+  }
+
+  function confirmarDespesaManual() {
+    setDialogErro("")
+    const valorNum = parseFloat(dialogValor.replace(",", "."))
+    if (!dialogDescricao.trim()) {
+      setDialogErro("Informe a descrição.")
+      return
+    }
+    if (isNaN(valorNum) || valorNum <= 0) {
+      setDialogErro("Informe um valor válido maior que zero.")
+      return
+    }
+    lancarDespesaManual.mutate({
+      fvmId,
+      descricao: dialogDescricao.trim(),
+      valor: valorNum,
+      data: dialogData || undefined,
+    })
+  }
+
   // NF-e upload state
   const fileRef = useRef<HTMLInputElement>(null)
   const [nfe, setNfe]             = useState<NfeData | null>(null)
   const [parseando, setParseando] = useState(false)
   const [nfeErro, setNfeErro]     = useState("")
   const [lancado, setLancado]     = useState(false)
+
+  // Dialog "Lançar Despesa" state
+  const [dialogAberto, setDialogAberto]   = useState(false)
+  const [dialogDescricao, setDialogDescricao] = useState("")
+  const [dialogValor, setDialogValor]     = useState("")
+  const [dialogData, setDialogData]       = useState(() => new Date().toISOString().slice(0, 10))
+  const [dialogErro, setDialogErro]       = useState("")
+  const [lancadoManual, setLancadoManual] = useState(false)
 
   async function handleNfeFile(file: File) {
     if (!file.name.endsWith(".xml")) {
@@ -132,6 +180,24 @@ export default function FvmDetalhePage() {
             {formatDataLonga(fvm.data)}
           </p>
         </div>
+
+        {/* Botão Lançar Despesa — visível quando APROVADO ou RECEBIDO */}
+        {(fvm.status === "APROVADO" || fvm.status === "RECEBIDO") && !lancadoManual && (
+          <button
+            type="button"
+            onClick={abrirDialogDespesa}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-orange-300 text-orange-600 bg-white hover:bg-orange-50 transition-colors text-sm font-medium shrink-0 cursor-pointer"
+          >
+            <DollarSign size={15} />
+            <span className="hidden sm:inline">Lançar Despesa</span>
+          </button>
+        )}
+        {lancadoManual && (
+          <span className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-green-200 text-green-700 bg-green-50 text-sm font-medium shrink-0">
+            <CheckCircle2 size={15} />
+            <span className="hidden sm:inline">Despesa lançada</span>
+          </span>
+        )}
       </div>
 
       {/* Info + Status card */}
@@ -318,6 +384,117 @@ export default function FvmDetalhePage() {
         </div>
         <UploadFotos obraId={obraId} fvmId={fvmId} />
       </div>
+
+      {/* Dialog — Lançar Despesa Financeira */}
+      {dialogAberto && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.45)" }}
+          onClick={(e) => { if (e.target === e.currentTarget) setDialogAberto(false) }}
+        >
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-5">
+            {/* Dialog header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <DollarSign size={18} className="text-orange-500" />
+                <h2 className="text-base font-bold text-[var(--text-primary)]">Lançar Despesa Financeira</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDialogAberto(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors cursor-pointer"
+              >
+                <X size={16} className="text-[var(--text-muted)]" />
+              </button>
+            </div>
+
+            {/* Fields */}
+            <div className="space-y-4">
+              {/* Descrição */}
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">
+                  Descrição
+                </label>
+                <input
+                  type="text"
+                  value={dialogDescricao}
+                  onChange={(e) => setDialogDescricao(e.target.value)}
+                  placeholder="Ex: Recebimento de material — FVM 001"
+                  className="w-full px-3 py-2.5 rounded-xl border border-border bg-white text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+                />
+              </div>
+
+              {/* Valor */}
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">
+                  Valor (R$)
+                </label>
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={dialogValor}
+                  onChange={(e) => setDialogValor(e.target.value)}
+                  placeholder="0,00"
+                  className="w-full px-3 py-2.5 rounded-xl border border-border bg-white text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+                />
+              </div>
+
+              {/* Categoria — informativa (fixada como Materiais no router) */}
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">
+                  Categoria
+                </label>
+                <div className="w-full px-3 py-2.5 rounded-xl border border-border bg-muted text-sm text-[var(--text-muted)] select-none">
+                  Materiais
+                </div>
+                <p className="text-[10px] text-[var(--text-muted)] mt-1">Categoria definida automaticamente para FVMs.</p>
+              </div>
+
+              {/* Data */}
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-1.5">
+                  Data
+                </label>
+                <input
+                  type="date"
+                  value={dialogData}
+                  onChange={(e) => setDialogData(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-border bg-white text-sm text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            {/* Error */}
+            {dialogErro && (
+              <p className="text-xs text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">{dialogErro}</p>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setDialogAberto(false)}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium text-[var(--text-secondary)] hover:bg-muted transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={lancarDespesaManual.isPending}
+                onClick={confirmarDespesaManual}
+                className="flex-1 btn-orange min-h-[40px] justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {lancarDespesaManual.isPending ? (
+                  <><Loader2 size={15} className="animate-spin" /> Lançando...</>
+                ) : (
+                  <><DollarSign size={15} /> Confirmar</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )

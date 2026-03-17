@@ -2,13 +2,13 @@
 
 import { use, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, Package, AlertTriangle, TrendingDown, ClipboardList, ArrowRightLeft, X, CheckCircle2, Zap, PackagePlus, Loader2, FileText, Receipt, ChevronDown, ChevronUp } from "lucide-react"
+import { ArrowLeft, Package, AlertTriangle, TrendingDown, ClipboardList, ArrowRightLeft, X, CheckCircle2, Zap, PackagePlus, Loader2, FileText, Receipt, ChevronDown, ChevronUp, Send } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { cn } from "@/lib/utils"
 import { formatNumero, formatMoeda } from "@/lib/format"
 import { toast } from "sonner"
 
-type Tab = "estoque" | "reservas" | "fiscal"
+type Tab = "estoque" | "reservas" | "fiscal" | "transferencias"
 
 export default function AlmoxarifadoPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: obraId } = use(params)
@@ -47,8 +47,27 @@ export default function AlmoxarifadoPage({ params }: { params: Promise<{ id: str
   )
 
   // Sugestões de transferência
-  const { data: pendentesTx = [] } = trpc.solicitacao.listarPendentesParaTransferencia.useQuery({ obraId })
+  const { data: pendentesTx = [], refetch: refetchPendentesTx } = trpc.solicitacao.listarPendentesParaTransferencia.useQuery({ obraId })
   const [showSugestoes, setShowSugestoes] = useState(false)
+
+  // Modal de receber transferência de outra obra
+  const [txItem, setTxItem] = useState<{ descricao: string; quantidade: number; unidade: string; obraId: string; obraNome: string } | null>(null)
+  const [txQtd, setTxQtd] = useState("")
+  const [txObs, setTxObs] = useState("")
+
+  // Catálogo de materiais (para matching por nome ao transferir)
+  const { data: catalogoMateriais = [] } = trpc.material.listar.useQuery()
+  const criarMaterialMutation = trpc.material.criar.useMutation()
+  const criarMovimentacaoMutation = trpc.movimentacao.criar.useMutation({
+    onSuccess: () => {
+      toast.success("Transferência registrada com sucesso!")
+      setTxItem(null)
+      setTxQtd("")
+      setTxObs("")
+      refetchPendentesTx()
+    },
+    onError: (e) => toast.error(e.message ?? "Erro ao registrar transferência"),
+  })
 
   // Transferência
   const { data: obras = [] } = trpc.obra.listar.useQuery()
@@ -76,6 +95,43 @@ export default function AlmoxarifadoPage({ params }: { params: Promise<{ id: str
   const zerado      = estoque.filter((e) => e.saldoAtual === 0)
 
   const obrasDestino = obras.filter(o => o.id !== obraId && o.siengeId)
+
+  // Confirmar recebimento de transferência de outra obra
+  async function handleConfirmarTransferencia() {
+    if (!txItem || !txQtd) return
+    const qtd = Number(txQtd)
+    if (isNaN(qtd) || qtd <= 0 || qtd > txItem.quantidade) return
+
+    // Tentar encontrar o material no catálogo pelo nome
+    const normalizar = (s: string) => s.toLowerCase().trim()
+    let material = catalogoMateriais.find(m =>
+      normalizar(m.nome) === normalizar(txItem.descricao) ||
+      normalizar(m.nome).includes(normalizar(txItem.descricao)) ||
+      normalizar(txItem.descricao).includes(normalizar(m.nome))
+    )
+
+    if (!material) {
+      // Criar no catálogo automaticamente
+      try {
+        material = await criarMaterialMutation.mutateAsync({
+          nome: txItem.descricao,
+          unidade: txItem.unidade || "un",
+          categoria: "Transferido",
+        })
+      } catch {
+        toast.error("Erro ao criar material no catálogo")
+        return
+      }
+    }
+
+    criarMovimentacaoMutation.mutate({
+      obraId,
+      materialId: material.id,
+      tipo: "TRANSFERENCIA",
+      quantidade: qtd,
+      observacao: txObs ? txObs : `Transferido de ${txItem.obraNome}`,
+    })
+  }
 
   return (
     <div className="p-6 md:p-8 max-w-5xl mx-auto space-y-6">
@@ -118,13 +174,24 @@ export default function AlmoxarifadoPage({ params }: { params: Promise<{ id: str
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-border">
-        {([["estoque", "Estoque", Package], ["reservas", "Reservas", ClipboardList], ["fiscal", "Notas Fiscais", Receipt]] as const).map(([id, label, Icon]) => (
+      <div className="flex border-b border-border overflow-x-auto">
+        {([
+          ["estoque", "Estoque", Package],
+          ["reservas", "Reservas", ClipboardList],
+          ["fiscal", "Notas Fiscais", Receipt],
+          ["transferencias", "Transferências", ArrowRightLeft],
+        ] as const).map(([id, label, Icon]) => (
           <button key={id} type="button" onClick={() => setTab(id)}
-            className={cn("flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium border-b-2 transition-all -mb-px",
+            className={cn("flex items-center gap-1.5 px-5 py-2.5 text-sm font-medium border-b-2 transition-all -mb-px whitespace-nowrap",
               tab === id ? "border-orange-500 text-orange-600" : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             )}>
-            <Icon size={14} /> {label}
+            <Icon size={14} />
+            {label}
+            {id === "transferencias" && pendentesTx.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 text-[10px] font-bold leading-none">
+                {pendentesTx.reduce((acc, g) => acc + g.itens.length, 0)}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -535,6 +602,173 @@ export default function AlmoxarifadoPage({ params }: { params: Promise<{ id: str
             )}
           </div>
         </>
+      )}
+
+      {/* ── Transferências Tab ── */}
+      {tab === "transferencias" && (
+        <>
+          <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+            <ArrowRightLeft size={18} className="text-blue-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-blue-800">Materiais disponíveis em outras obras</p>
+              <p className="text-xs text-blue-600 mt-0.5">
+                Lista de solicitações pendentes ou aprovadas em outras obras da mesma empresa. Clique em "Transferir para esta obra" para registrar o recebimento.
+              </p>
+            </div>
+          </div>
+
+          {pendentesTx.length === 0 ? (
+            <div className="bg-white border border-border rounded-xl flex flex-col items-center justify-center py-16 text-center">
+              <ArrowRightLeft size={32} className="text-slate-300 mb-3" />
+              <p className="text-sm font-semibold text-[var(--text-primary)]">Nenhuma transferência disponível</p>
+              <p className="text-xs text-[var(--text-muted)] mt-1">
+                Quando outras obras tiverem solicitações pendentes ou aprovadas, elas aparecerão aqui.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {pendentesTx.map((grupo) => (
+                <div key={grupo.obraId} className="bg-white border border-border rounded-xl overflow-hidden">
+                  {/* Cabeçalho do grupo */}
+                  <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-border">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-orange-400" />
+                      <p className="text-sm font-semibold text-[var(--text-primary)]">{grupo.obraNome}</p>
+                    </div>
+                    <span className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">
+                      {grupo.itens.length} {grupo.itens.length === 1 ? "item" : "itens"}
+                    </span>
+                  </div>
+
+                  {/* Itens do grupo */}
+                  <div className="divide-y divide-border">
+                    {/* Cabeçalho das colunas */}
+                    <div className="grid grid-cols-[1fr_80px_60px_130px] gap-3 px-4 py-2 bg-muted/30 text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">
+                      <span>Material</span>
+                      <span className="text-right">Quantidade</span>
+                      <span className="text-center">Unid.</span>
+                      <span className="text-center">Ação</span>
+                    </div>
+
+                    {grupo.itens.map((item, idx) => (
+                      <div key={idx} className="grid grid-cols-[1fr_80px_60px_130px] gap-3 px-4 py-3 items-center text-sm hover:bg-muted/20">
+                        <p className="font-medium text-[var(--text-primary)] truncate">{item.descricao}</p>
+                        <p className="text-right font-mono text-sm font-semibold text-[var(--text-primary)]">
+                          {item.quantidade}
+                        </p>
+                        <p className="text-center text-xs text-[var(--text-muted)]">{item.unidade}</p>
+                        <div className="flex justify-center">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTxItem({
+                                descricao: item.descricao,
+                                quantidade: item.quantidade,
+                                unidade: item.unidade,
+                                obraId: grupo.obraId,
+                                obraNome: grupo.obraNome,
+                              })
+                              setTxQtd(String(item.quantidade))
+                              setTxObs("")
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-orange-300 text-orange-600 text-xs font-semibold hover:bg-orange-50 transition-all"
+                          >
+                            <Send size={11} /> Transferir para cá
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Modal Confirmar Transferência de Outra Obra */}
+      {txItem && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={(e) => e.target === e.currentTarget && setTxItem(null)}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-sm text-[var(--text-primary)] flex items-center gap-2">
+                <Send size={16} className="text-orange-500" /> Confirmar Transferência
+              </h3>
+              <button type="button" onClick={() => setTxItem(null)} className="p-1 rounded hover:bg-muted">
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Info do item (readonly) */}
+            <div className="p-3 bg-slate-50 rounded-xl border border-border space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-[var(--text-muted)]">Material:</span>
+                <span className="font-semibold text-[var(--text-primary)]">{txItem.descricao}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[var(--text-muted)]">Obra de origem:</span>
+                <span className="font-semibold text-[var(--text-primary)]">{txItem.obraNome}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[var(--text-muted)]">Qtd. disponível:</span>
+                <span className="font-semibold text-orange-700">{txItem.quantidade} {txItem.unidade}</span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">
+                  Quantidade a transferir <span className="text-[var(--text-muted)] font-normal">(máx: {txItem.quantidade})</span>
+                </label>
+                <input
+                  type="number"
+                  value={txQtd}
+                  onChange={e => setTxQtd(e.target.value)}
+                  min="0.01"
+                  max={txItem.quantidade}
+                  step="0.01"
+                  className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:border-orange-400"
+                  placeholder="Quantidade"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-muted)] mb-1">Observação (opcional)</label>
+                <input
+                  value={txObs}
+                  onChange={e => setTxObs(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-border text-sm focus:outline-none focus:border-orange-400"
+                  placeholder={`Transferido de ${txItem.obraNome}`}
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end pt-2">
+              <button type="button" onClick={() => setTxItem(null)}
+                className="px-4 py-2 rounded-lg border border-border text-xs font-medium text-[var(--text-muted)]">
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={
+                  !txQtd ||
+                  Number(txQtd) <= 0 ||
+                  Number(txQtd) > txItem.quantidade ||
+                  criarMovimentacaoMutation.isPending ||
+                  criarMaterialMutation.isPending
+                }
+                onClick={handleConfirmarTransferencia}
+                className="px-4 py-2 rounded-lg bg-orange-500 text-white text-xs font-semibold hover:bg-orange-600 disabled:opacity-50 flex items-center gap-2 transition-colors"
+              >
+                {(criarMovimentacaoMutation.isPending || criarMaterialMutation.isPending)
+                  ? <Loader2 size={13} className="animate-spin" />
+                  : <Send size={13} />
+                }
+                Confirmar Transferência
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <p className="text-xs text-[var(--text-muted)] text-center">Dados fornecidos em tempo real pelo Sienge</p>

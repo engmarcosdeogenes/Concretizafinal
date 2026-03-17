@@ -37,6 +37,7 @@ export default function PedidoDetalhePage() {
   const utils = trpc.useUtils()
   const { data: pedido, isLoading, error } = trpc.pedido.buscarPorId.useQuery({ id })
   const { data: materiais } = trpc.material.listar.useQuery()
+  const { data: obras = [] } = trpc.obra.listar.useQuery()
 
   const [editando,     setEditando]     = useState(false)
   const [itensEdit,    setItensEdit]    = useState<ItemEdit[]>([])
@@ -46,6 +47,13 @@ export default function PedidoDetalhePage() {
   const [notasAvaliacao, setNotasAvaliacao] = useState<Record<number, number>>({})
   const [obsAvaliacao,   setObsAvaliacao]   = useState("")
   const [avaliacaoSalva, setAvaliacaoSalva] = useState(false)
+
+  // Dialog "Lançar Despesa"
+  const [dialogDespesa,   setDialogDespesa]   = useState(false)
+  const [despesaObraId,   setDespesaObraId]   = useState("")
+  const [despesaDescricao, setDespesaDescricao] = useState("")
+  const [despesaValor,    setDespesaValor]    = useState("")
+  const [despesaToast,    setDespesaToast]    = useState(false)
 
   const atualizarStatus = trpc.pedido.atualizarStatus.useMutation({
     onSuccess: () => {
@@ -134,8 +142,33 @@ export default function PedidoDetalhePage() {
   })
 
   const lancarDespesa = trpc.pedido.lancarDespesa.useMutation({
-    onSuccess: () => setDespesaLancada(true),
+    onSuccess: () => {
+      setDespesaLancada(true)
+      setDialogDespesa(false)
+      setDespesaToast(true)
+      setTimeout(() => setDespesaToast(false), 3500)
+    },
   })
+
+  function abrirDialogDespesa() {
+    if (!pedido) return
+    setDespesaObraId(pedido.solicitacao?.obra?.id ?? "")
+    setDespesaDescricao(`Pedido ${pedido.id.slice(0, 8)} — ${pedido.fornecedor.nome}`)
+    setDespesaValor(pedido.total != null ? String(pedido.total) : "")
+    setDialogDespesa(true)
+  }
+
+  function handleConfirmarDespesa() {
+    if (!pedido || !despesaObraId || !despesaDescricao || !despesaValor) return
+    const valorNum = parseFloat(despesaValor)
+    if (!valorNum || valorNum <= 0) return
+    lancarDespesa.mutate({
+      pedidoId:  id,
+      obraId:    despesaObraId,
+      descricao: despesaDescricao,
+      valor:     valorNum,
+    })
+  }
 
   // NF-e upload state
   const fileRef  = useRef<HTMLInputElement>(null)
@@ -435,7 +468,7 @@ export default function PedidoDetalhePage() {
         )}
 
         {/* Ações de status */}
-        {nextActions.length > 0 && (
+        {(nextActions.length > 0 || pedido.status === "CONFIRMADO" || pedido.status === "ENTREGUE") && (
           <div className="pt-4 border-t border-border flex gap-2 flex-wrap">
             {nextActions.map(action => (
               <button
@@ -449,6 +482,15 @@ export default function PedidoDetalhePage() {
                 {mutating ? "..." : action.label}
               </button>
             ))}
+            {(pedido.status === "CONFIRMADO" || pedido.status === "ENTREGUE") && (
+              <button
+                type="button"
+                onClick={abrirDialogDespesa}
+                className="flex items-center gap-1.5 px-3 py-2 border border-orange-300 bg-orange-50 hover:bg-orange-100 text-orange-600 text-sm font-medium rounded-xl transition-colors min-h-[40px]"
+              >
+                <DollarSign size={14} /> Lançar Despesa
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -641,6 +683,106 @@ export default function PedidoDetalhePage() {
             >
               <ExternalLink size={14} /> Abrir PDF
             </a>
+          </div>
+        </div>
+      )}
+
+      {/* Toast: despesa lançada */}
+      {despesaToast && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-green-600 text-white text-sm font-semibold rounded-2xl shadow-lg animate-in fade-in slide-in-from-bottom-2">
+          <CheckCircle2 size={16} /> Despesa lançada com sucesso
+        </div>
+      )}
+
+      {/* Dialog: Lançar Despesa */}
+      {dialogDespesa && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <DollarSign size={18} className="text-orange-500" />
+                <h2 className="text-base font-bold text-[var(--text-primary)]">Lançar Despesa Financeira</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDialogDespesa(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted text-[var(--text-muted)] transition-colors text-lg leading-none"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Obra */}
+            <div>
+              <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5 block">
+                Obra <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={despesaObraId}
+                onChange={e => setDespesaObraId(e.target.value)}
+                className="w-full px-3 py-2.5 border border-border rounded-xl text-sm bg-white outline-none focus:border-orange-400 transition-colors"
+              >
+                <option value="">Selecione a obra...</option>
+                {obras.map(o => (
+                  <option key={o.id} value={o.id}>{o.nome}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Descrição */}
+            <div>
+              <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5 block">
+                Descrição <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={despesaDescricao}
+                onChange={e => setDespesaDescricao(e.target.value)}
+                className="w-full px-3 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-orange-400 transition-colors"
+                placeholder="Descrição da despesa"
+              />
+            </div>
+
+            {/* Valor */}
+            <div>
+              <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5 block">
+                Valor (R$) <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                min={0.01}
+                step={0.01}
+                value={despesaValor}
+                onChange={e => setDespesaValor(e.target.value)}
+                className="w-full px-3 py-2.5 border border-border rounded-xl text-sm outline-none focus:border-orange-400 transition-colors"
+                placeholder="0,00"
+              />
+            </div>
+
+            <div className="flex gap-2 justify-end pt-1">
+              <button
+                type="button"
+                onClick={() => setDialogDespesa(false)}
+                className="px-4 py-2.5 border border-border rounded-xl text-sm hover:bg-muted transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={
+                  lancarDespesa.isPending ||
+                  !despesaObraId ||
+                  !despesaDescricao.trim() ||
+                  !despesaValor ||
+                  parseFloat(despesaValor) <= 0
+                }
+                onClick={handleConfirmarDespesa}
+                className="flex items-center gap-1.5 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-colors"
+              >
+                {lancarDespesa.isPending ? <Loader2 size={14} className="animate-spin" /> : <DollarSign size={14} />}
+                {lancarDespesa.isPending ? "Lançando..." : "Confirmar"}
+              </button>
+            </div>
           </div>
         </div>
       )}

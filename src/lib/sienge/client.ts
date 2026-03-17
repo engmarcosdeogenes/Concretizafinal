@@ -4351,6 +4351,32 @@ export async function uploadAnexoRdoSienge(
   }
 }
 
+export interface SiengeRDOAnexo {
+  id: number
+  fileName?: string
+  description?: string
+  contentType?: string
+  [key: string]: unknown
+}
+
+export async function listarAnexosRdoSienge(
+  subdominio: string,
+  usuario: string,
+  senha: string,
+  buildingId: number,
+  dailyReportId: number,
+): Promise<SiengeRDOAnexo[]> {
+  try {
+    const data = await siengeGet(
+      subdominio,
+      usuario,
+      senha,
+      `/construction-daily-report/${buildingId}/${dailyReportId}/attachments`,
+    )
+    return normalizeList(data) as SiengeRDOAnexo[]
+  } catch { return [] }
+}
+
 export async function listarRdosSienge(
   subdominio: string,
   usuario: string,
