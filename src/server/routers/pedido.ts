@@ -1,7 +1,7 @@
 import { z } from "zod"
 import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
-import { criarLoteContabilSienge } from "@/lib/sienge/client"
+import { criarLoteContabilSienge, autorizarSolicitacaoSienge } from "@/lib/sienge/client"
 import { decrypt, isEncrypted } from "@/lib/encrypt"
 
 const StatusPedido = z.enum(["RASCUNHO", "ENVIADO", "CONFIRMADO", "ENTREGUE_PARCIAL", "ENTREGUE", "CANCELADO"])
@@ -124,6 +124,29 @@ export const pedidoRouter = createTRPCRouter({
               documentNumber: pedido.notaFiscalNumero ?? undefined,
               debitOrCredit: "D",
             }])
+          } catch (err: unknown) { console.warn("[Sienge sync]", err instanceof Error ? err.message : String(err)) }
+        })()
+      }
+
+      // Fire-and-forget: quando pedido enviado, autorizar purchase request no Sienge se vinculado
+      if (input.status === "ENVIADO") {
+        void (async () => {
+          try {
+            if (!pedido.solicitacaoId) return
+            const solicitacao = await ctx.db.solicitacaoCompra.findUnique({
+              where: { id: pedido.solicitacaoId },
+              select: { siengePurchaseRequestId: true },
+            })
+            if (!solicitacao?.siengePurchaseRequestId) return
+            const config = await ctx.db.integracaoConfig.findUnique({
+              where: { empresaId: ctx.session.empresaId },
+            })
+            if (!config?.ativo) return
+            const senhaDecrypt = isEncrypted(config.senha) ? decrypt(config.senha) : config.senha
+            await autorizarSolicitacaoSienge(
+              config.subdominio, config.usuario, senhaDecrypt,
+              solicitacao.siengePurchaseRequestId
+            )
           } catch (err: unknown) { console.warn("[Sienge sync]", err instanceof Error ? err.message : String(err)) }
         })()
       }

@@ -325,6 +325,47 @@ export const rdoRouter = createTRPCRouter({
           body:  `${ctx.session.nome} aprovou um Relatório Diário de Obra`,
           url:   `/obras/${rdo.obraId}/rdo/${input.id}`,
         }).catch((err: unknown) => { console.warn("[Sienge sync]", err instanceof Error ? err.message : String(err)) })
+
+        // Fire-and-forget: criar diário de obra no Sienge quando RDO aprovado
+        if (!rdo.siengeReportId) {
+          void (async () => {
+            try {
+              const rdoCompleto = await ctx.db.rDO.findUnique({
+                where: { id: input.id },
+                include: {
+                  obra:        { select: { siengeId: true } },
+                  atividades:  { select: { descricao: true } },
+                  equipe:      { select: { quantidade: true } },
+                },
+              })
+              if (!rdoCompleto?.obra?.siengeId || rdoCompleto.siengeReportId) return
+
+              const config = await ctx.db.integracaoConfig.findUnique({
+                where: { empresaId: ctx.session.empresaId },
+              })
+              if (!config?.ativo) return
+
+              const pass = isEncrypted(config.senha) ? decrypt(config.senha) : config.senha
+
+              const resultado = await criarRdoSienge(config.subdominio, config.usuario, pass, {
+                buildingId:     parseInt(rdoCompleto.obra.siengeId),
+                date:           rdoCompleto.data.toISOString().split("T")[0]!,
+                weather:        rdoCompleto.clima ?? undefined,
+                minTemperature: rdoCompleto.temperaturaMin ?? undefined,
+                maxTemperature: rdoCompleto.temperaturaMax ?? undefined,
+                rain:           rdoCompleto.ocorreuChuva,
+                observations:   rdoCompleto.observacoes ?? undefined,
+                activities:     rdoCompleto.atividades.map((a) => a.descricao),
+                workers:        rdoCompleto.equipe.reduce((s, e) => s + e.quantidade, 0),
+              })
+
+              await ctx.db.rDO.update({
+                where: { id: input.id },
+                data:  { siengeReportId: String(resultado.id) },
+              }).catch((err: unknown) => { console.warn("[Sienge sync] save siengeReportId:", err instanceof Error ? err.message : String(err)) })
+            } catch (err: unknown) { console.warn("[Sienge sync] criarRdoSienge APROVADO:", err instanceof Error ? err.message : String(err)) }
+          })()
+        }
       }
 
       // Fire-and-forget: sincronizar RDO ao Sienge quando ENVIADO

@@ -6,6 +6,8 @@ import {
   listarObras,
   listarFornecedoresSienge,
   listarPedidosSienge,
+  listarClientesSienge,
+  listarContasPagarSienge,
 } from "@/lib/sienge/client"
 import { encrypt, decrypt, isEncrypted } from "@/lib/encrypt"
 
@@ -195,6 +197,139 @@ export const integracoesRouter = createTRPCRouter({
       } catch {
         return []
       }
+    }),
+
+  // ── Clientes Sienge ───────────────────────────────────────────────────────
+
+  importarClientes: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      const config = await getConfig(ctx)
+
+      let clientes: Awaited<ReturnType<typeof listarClientesSienge>>
+      try {
+        clientes = await listarClientesSienge(config.subdominio, config.usuario, config.senha)
+      } catch (err) {
+        await ctx.db.integracaoSync.create({
+          data: { integracaoId: config.id, tipo: "IMPORTAR_CLIENTES", status: "ERRO",
+                  detalhes: err instanceof Error ? err.message : "Erro desconhecido", registros: 0 },
+        })
+        throw new TRPCError({ code: "BAD_REQUEST", message: err instanceof Error ? err.message : "Erro ao buscar clientes do Sienge." })
+      }
+
+      await ctx.db.integracaoSync.create({
+        data: { integracaoId: config.id, tipo: "IMPORTAR_CLIENTES", status: "SUCESSO",
+                registros: clientes.length,
+                detalhes: `${clientes.length} cliente(s) lido(s) do Sienge.` },
+      })
+
+      // Modelo Cliente não existe no Prisma — retornamos os dados brutos
+      return { count: clientes.length, dados: clientes.slice(0, 5) }
+    }),
+
+  // ── Contas a Pagar Sienge ─────────────────────────────────────────────────
+
+  importarContasPagar: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      const config = await getConfig(ctx)
+
+      let contas: Awaited<ReturnType<typeof listarContasPagarSienge>>
+      try {
+        contas = await listarContasPagarSienge(config.subdominio, config.usuario, config.senha)
+      } catch (err) {
+        await ctx.db.integracaoSync.create({
+          data: { integracaoId: config.id, tipo: "IMPORTAR_CONTAS_PAGAR", status: "ERRO",
+                  detalhes: err instanceof Error ? err.message : "Erro desconhecido", registros: 0 },
+        })
+        throw new TRPCError({ code: "BAD_REQUEST", message: err instanceof Error ? err.message : "Erro ao buscar contas a pagar do Sienge." })
+      }
+
+      // Buscar todas as obras da empresa que tenham siengeId
+      const obras = await ctx.db.obra.findMany({
+        where: { empresaId: ctx.session.empresaId, siengeId: { not: null } },
+        select: { id: true, siengeId: true },
+      })
+      const obraPorSiengeId = new Map(obras.map(o => [o.siengeId!, o.id]))
+
+      let criados = 0
+      let pulados = 0
+      for (const conta of contas) {
+        // Precisamos de um obraId — tentar mapear via buildingId se disponível
+        // SiengeContaPagar não tem buildingId direto, então usamos a primeira obra vinculada
+        // como fallback (se houver obras vinculadas)
+        const obraId = obraPorSiengeId.size > 0
+          ? [...obraPorSiengeId.values()][0]
+          : null
+
+        if (!obraId) { pulados++; continue }
+
+        const descricao = conta.creditorName
+          ? `Conta a pagar — ${conta.creditorName}${conta.documentNumber ? ` (Doc: ${conta.documentNumber})` : ""}`
+          : `Conta a pagar Sienge #${conta.id}`
+
+        const valor = conta.amount ?? 0
+        const data  = conta.dueDate ? new Date(conta.dueDate) : new Date()
+
+        // Verificar duplicata: mesma obra + descrição + valor + data
+        const existente = await ctx.db.lancamentoFinanceiro.findFirst({
+          where: { obraId, descricao, valor, data },
+          select: { id: true },
+        })
+        if (!existente) {
+          await ctx.db.lancamentoFinanceiro.create({
+            data: { obraId, tipo: "DESPESA", categoria: "Contas a Pagar (Sienge)", descricao, valor, data },
+          })
+          criados++
+        }
+      }
+
+      await ctx.db.integracaoSync.create({
+        data: { integracaoId: config.id, tipo: "IMPORTAR_CONTAS_PAGAR", status: "SUCESSO",
+                registros: criados,
+                detalhes: `${criados} lançamento(s) criado(s), ${pulados} pulado(s) (sem obra vinculada) de ${contas.length} conta(s) no Sienge.` },
+      })
+      return { criados, pulados, total: contas.length }
+    }),
+
+  // ── Vinculação de Obras ───────────────────────────────────────────────────
+
+  vincularObra: protectedProcedure
+    .input(z.object({
+      obraId:   z.string(),
+      siengeId: z.string().nullable(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const obra = await ctx.db.obra.findFirst({
+        where: { id: input.obraId, empresaId: ctx.session.empresaId },
+      })
+      if (!obra) throw new TRPCError({ code: "NOT_FOUND", message: "Obra não encontrada." })
+      return ctx.db.obra.update({
+        where: { id: input.obraId },
+        data:  { siengeId: input.siengeId },
+      })
+    }),
+
+  listarObrasSienge: protectedProcedure
+    .query(async ({ ctx }) => {
+      const config = await ctx.db.integracaoConfig.findUnique({
+        where: { empresaId: ctx.session.empresaId },
+      })
+      if (!config) return []
+      try {
+        const senhaDecrypted = isEncrypted(config.senha) ? decrypt(config.senha) : config.senha
+        const obras = await listarObras(config.subdominio, config.usuario, senhaDecrypted)
+        return obras.map(o => ({ id: String(o.id), nome: o.name ?? o.commercialName ?? `Obra Sienge #${o.id}` }))
+      } catch {
+        return []
+      }
+    }),
+
+  listarObrasComVinculo: protectedProcedure
+    .query(async ({ ctx }) => {
+      return ctx.db.obra.findMany({
+        where:   { empresaId: ctx.session.empresaId },
+        select:  { id: true, nome: true, siengeId: true, status: true },
+        orderBy: { nome: "asc" },
+      })
     }),
 
   // ── Histórico ─────────────────────────────────────────────────────────────

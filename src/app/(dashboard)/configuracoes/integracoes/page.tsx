@@ -5,7 +5,7 @@ import { useState } from "react"
 import {
   ArrowLeft, Puzzle, CheckCircle2, Clock, RefreshCw, Plug,
   Eye, EyeOff, Building2, Users, ShoppingCart, ChevronDown, ChevronUp,
-  Webhook, Zap, ZapOff,
+  Webhook, Zap, ZapOff, UserCheck, CreditCard, Link2, Link2Off,
 } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { toast } from "sonner"
@@ -114,6 +114,39 @@ export default function IntegracoesPage() {
     onError:   (e) => { toast.error(e.message); utils.integracoes.listarSyncs.invalidate() },
   })
 
+  const importarClientes = trpc.integracoes.importarClientes.useMutation({
+    onSuccess: (r) => { toast.success(`${r.count} cliente(s) lido(s) do Sienge.`); utils.integracoes.listarSyncs.invalidate() },
+    onError:   (e) => { toast.error(e.message); utils.integracoes.listarSyncs.invalidate() },
+  })
+
+  const importarContasPagar = trpc.integracoes.importarContasPagar.useMutation({
+    onSuccess: (r) => {
+      const msg = r.pulados > 0
+        ? `${r.criados} lançamento(s) criado(s). ${r.pulados} pulado(s) (sem obra vinculada) de ${r.total} conta(s).`
+        : `${r.criados} lançamento(s) de despesa criado(s) de ${r.total} conta(s).`
+      toast.success(msg)
+      utils.integracoes.listarSyncs.invalidate()
+    },
+    onError: (e) => { toast.error(e.message); utils.integracoes.listarSyncs.invalidate() },
+  })
+
+  const vincularObra = trpc.integracoes.vincularObra.useMutation({
+    onSuccess: () => { toast.success("Vinculação atualizada."); utils.integracoes.listarObrasComVinculo.invalidate() },
+    onError:   (e) => toast.error(e.message),
+  })
+
+  const { data: obrasSienge = [] } = trpc.integracoes.listarObrasSienge.useQuery(
+    undefined,
+    { enabled: !!config }
+  )
+
+  const { data: obrasComVinculo = [] } = trpc.integracoes.listarObrasComVinculo.useQuery(
+    undefined,
+    { enabled: !!config }
+  )
+
+  const [vinculacaoAberta, setVinculacaoAberta] = useState(false)
+
   const { data: webhookStatus } = trpc.sienge.buscarStatusWebhook.useQuery(
     undefined,
     { enabled: !!config }
@@ -137,7 +170,7 @@ export default function IntegracoesPage() {
     salvar.mutate({ subdominio, usuario, senha })
   }
 
-  const loading = importarObras.isPending || importarFornecedores.isPending || testar.isPending
+  const loading = importarObras.isPending || importarFornecedores.isPending || testar.isPending || importarClientes.isPending || importarContasPagar.isPending
 
   return (
     <div className="flex-1 space-y-8 p-8 pt-6 max-w-4xl mx-auto">
@@ -285,6 +318,26 @@ export default function IntegracoesPage() {
                   </div>
                 </button>
 
+                {/* Importar Clientes */}
+                <button onClick={() => importarClientes.mutate()} disabled={loading}
+                  className="flex items-center gap-3 h-14 px-4 rounded-xl border border-[#0055A5]/30 bg-[#0055A5]/5 hover:bg-[#0055A5]/10 transition-colors disabled:opacity-50 text-left">
+                  <UserCheck size={18} className={cn("text-[#0055A5]", importarClientes.isPending && "animate-spin")} />
+                  <div>
+                    <p className="text-sm font-medium text-[#0055A5]">{importarClientes.isPending ? "Importando…" : "Importar Clientes"}</p>
+                    <p className="text-xs text-muted-foreground">Lê clientes do Sienge (sem salvar localmente)</p>
+                  </div>
+                </button>
+
+                {/* Importar Contas a Pagar */}
+                <button onClick={() => importarContasPagar.mutate()} disabled={loading}
+                  className="flex items-center gap-3 h-14 px-4 rounded-xl border border-[#0055A5]/30 bg-[#0055A5]/5 hover:bg-[#0055A5]/10 transition-colors disabled:opacity-50 text-left">
+                  <CreditCard size={18} className={cn("text-[#0055A5]", importarContasPagar.isPending && "animate-spin")} />
+                  <div>
+                    <p className="text-sm font-medium text-[#0055A5]">{importarContasPagar.isPending ? "Importando…" : "Importar Contas a Pagar"}</p>
+                    <p className="text-xs text-muted-foreground">Cria lançamentos de despesa nas obras vinculadas</p>
+                  </div>
+                </button>
+
                 {/* Ver Pedidos */}
                 <button onClick={() => setPedidosAberto(v => !v)} disabled={fetchingPedidos}
                   className="flex items-center gap-3 h-14 px-4 rounded-xl border border-border bg-white hover:bg-slate-50 transition-colors disabled:opacity-50 text-left">
@@ -339,6 +392,69 @@ export default function IntegracoesPage() {
                 )}
               </div>
             )}
+
+            {/* Vinculação de Obras */}
+            <div>
+              <button
+                onClick={() => setVinculacaoAberta(v => !v)}
+                className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 hover:text-foreground transition-colors"
+              >
+                {vinculacaoAberta ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                Vinculação de Obras ({obrasComVinculo.length})
+              </button>
+              {vinculacaoAberta && (
+                <div className="rounded-xl border border-border overflow-hidden">
+                  {obrasComVinculo.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic p-4">Nenhuma obra cadastrada.</p>
+                  ) : (
+                    <table className="w-full text-xs">
+                      <thead className="bg-slate-50 text-muted-foreground">
+                        <tr>
+                          <th className="text-left px-3 py-2 font-medium">Obra local</th>
+                          <th className="text-left px-3 py-2 font-medium">Status</th>
+                          <th className="text-left px-3 py-2 font-medium">ID Sienge</th>
+                          <th className="text-right px-3 py-2 font-medium">Ação</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border bg-white">
+                        {obrasComVinculo.map(obra => (
+                          <tr key={obra.id}>
+                            <td className="px-3 py-2 font-medium">{obra.nome}</td>
+                            <td className="px-3 py-2 text-muted-foreground capitalize">
+                              {obra.status.replace(/_/g, " ").toLowerCase()}
+                            </td>
+                            <td className="px-3 py-2">
+                              {obra.siengeId ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 bg-green-100 text-green-700 rounded-full font-semibold">
+                                  <Link2 size={9} /> #{obra.siengeId}
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded-full font-semibold">
+                                  <Link2Off size={9} /> Não vinculado
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              <select
+                                value={obra.siengeId ?? ""}
+                                disabled={vincularObra.isPending}
+                                onChange={e => vincularObra.mutate({ obraId: obra.id, siengeId: e.target.value || null })}
+                                className="text-xs border rounded px-2 py-1 bg-white focus:ring-1 focus:ring-orange-400 outline-none disabled:opacity-50 max-w-[160px]"
+                              >
+                                <option value="">— Nenhum —</option>
+                                {obrasSienge.map(os => (
+                                  <option key={os.id} value={os.id}>{os.nome}</option>
+                                ))}
+                              </select>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Webhooks */}
             <div className={cn("rounded-xl border p-4", webhookStatus?.registrado ? "border-green-200 bg-green-50" : "border-border bg-white")}>
