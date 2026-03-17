@@ -27,8 +27,8 @@ export default function PredefinicoesPage() {
 
   const loadFromObra = useCallback(() => {
     if (!obraAtual) return
-    const eq = (obraAtual.equipePredef ?? []) as EquipeRow[]
-    const ep = (obraAtual.equipamentosPredef ?? []) as EquipamentoRow[]
+    const eq = (obraAtual.equipePredef ?? []) as unknown as EquipeRow[]
+    const ep = (obraAtual.equipamentosPredef ?? []) as unknown as EquipamentoRow[]
     setEquipe(eq.length > 0 ? eq.map((r) => ({ ...r })) : [{ funcao: "", quantidade: 1 }])
     setEquipamentos(ep.length > 0 ? ep.map((r) => ({ ...r })) : [{ nome: "", quantidade: 1 }])
   }, [obraAtual])
@@ -163,7 +163,7 @@ export default function PredefinicoesPage() {
                   disabled={salvarEquipe.isPending}
                   onClick={() =>
                     salvarEquipe.mutate({
-                      obraId,
+                      id: obraId,
                       equipePredef: equipe.filter((r) => r.funcao.trim() !== ""),
                     })
                   }
@@ -229,7 +229,7 @@ export default function PredefinicoesPage() {
                   disabled={salvarEquipamentos.isPending}
                   onClick={() =>
                     salvarEquipamentos.mutate({
-                      obraId,
+                      id: obraId,
                       equipamentosPredef: equipamentos.filter((r) => r.nome.trim() !== ""),
                     })
                   }

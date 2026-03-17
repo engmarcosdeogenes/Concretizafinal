@@ -1,4 +1,6 @@
 import { z } from "zod"
+import { TRPCError } from "@trpc/server"
+import { rateLimit } from "@/lib/rate-limit"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
 
 export const chatRouter = createTRPCRouter({
@@ -40,6 +42,15 @@ export const chatRouter = createTRPCRouter({
     }))
     .mutation(async ({ ctx, input }) => {
       const { userId, empresaId } = ctx.session
+
+      const rl = rateLimit(`chat:${userId}`, 100, 60 * 60 * 1000) // 100 msgs/hora
+      if (!rl.ok) {
+        throw new TRPCError({
+          code: "TOO_MANY_REQUESTS",
+          message: "Limite de mensagens atingido. Tente novamente em breve.",
+        })
+      }
+
       const obra = await ctx.db.obra.findFirst({
         where: { id: input.obraId, empresaId },
         select: { id: true },

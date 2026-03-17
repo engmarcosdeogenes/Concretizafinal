@@ -18,7 +18,7 @@ async function vincularCreditorSienge(
     await ctx.db.membroEquipe.update({
       where: { id: membroId },
       data: { siengeCreditorId: creditor.id },
-    }).catch(() => {})
+    }).catch((err: unknown) => { console.warn("[Sienge sync]", err instanceof Error ? err.message : String(err)) })
   }
 }
 
@@ -67,7 +67,7 @@ export const equipeRouter = createTRPCRouter({
       })
       // Fire-and-forget: vincular ao creditor Sienge pelo CPF
       if (input.cpf) {
-        vincularCreditorSienge(ctx, membro.id, input.cpf).catch(() => {})
+        vincularCreditorSienge(ctx, membro.id, input.cpf).catch((err: unknown) => { console.warn("[Sienge sync]", err instanceof Error ? err.message : String(err)) })
       }
       return membro
     }),
@@ -111,7 +111,7 @@ export const equipeRouter = createTRPCRouter({
       })
       // Fire-and-forget: vincular ao creditor Sienge pelo CPF se informado
       if (input.cpf) {
-        vincularCreditorSienge(ctx, id, input.cpf).catch(() => {})
+        vincularCreditorSienge(ctx, id, input.cpf).catch((err: unknown) => { console.warn("[Sienge sync]", err instanceof Error ? err.message : String(err)) })
       }
       return membro
     }),

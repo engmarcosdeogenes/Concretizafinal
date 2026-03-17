@@ -64,7 +64,7 @@ function ResumoTab() {
   const totalTitulos = debtors.reduce((sum, d) => sum + d.quantidadeTitulos, 0)
   const maiorAtrasoGeral = debtors.length > 0 ? Math.max(...debtors.map(d => d.maiorAtraso)) : 0
 
-  const loading = saldos.isLoading || inadimplentes.isLoading
+  const loading = saldos.isPending || inadimplentes.isPending
 
   if (loading) {
     return (
@@ -153,7 +153,7 @@ function InadimplentesTab() {
     d.clienteDocumento.includes(search),
   )
 
-  if (inadimplentes.isLoading) {
+  if (inadimplentes.isPending) {
     return (
       <div className="flex items-center justify-center py-16 text-[var(--text-muted)]">
         <Loader2 className="h-5 w-5 animate-spin mr-2" /> Carregando inadimplentes...
@@ -297,7 +297,7 @@ function BulkTab() {
       {/* Results */}
       {!searched ? (
         <p className="text-sm text-[var(--text-muted)] py-8 text-center">Use os filtros acima para buscar dados bulk de inadimplentes.</p>
-      ) : bulk.isLoading ? (
+      ) : bulk.isPending ? (
         <div className="flex items-center justify-center py-16 text-[var(--text-muted)]">
           <Loader2 className="h-5 w-5 animate-spin mr-2" /> Carregando...
         </div>

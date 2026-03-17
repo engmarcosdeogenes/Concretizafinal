@@ -67,7 +67,7 @@ export const ocorrenciaRouter = createTRPCRouter({
           title: "⚠️ Ocorrência de Alta Prioridade",
           body:  `${ctx.session.nome} registrou: ${input.titulo} (${obra.nome})`,
           url:   `/obras/${obraId}/ocorrencias/${oc.id}`,
-        }).catch(() => {})
+        }).catch((err: unknown) => { console.warn("[push notification]", err instanceof Error ? err.message : String(err)) })
       }
       return oc
     }),
@@ -103,9 +103,6 @@ export const ocorrenciaRouter = createTRPCRouter({
       descricao:  z.string().optional().nullable(),
     }))
     .mutation(async ({ ctx, input }) => {
-      await ctx.db.ocorrencia.findFirstOrThrow({
-        where: { id: input.id, obra: { empresaId: ctx.session.empresaId } },
-      })
       const oc = await ctx.db.ocorrencia.findFirstOrThrow({
         where: { id: input.id, obra: { empresaId: ctx.session.empresaId } },
       })

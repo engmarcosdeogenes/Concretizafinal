@@ -95,7 +95,7 @@ export const fvmRouter = createTRPCRouter({
               documentNumber: fvm.notaFiscal ?? undefined,
               debitOrCredit: "D",
             }])
-          } catch { /* silent fire-and-forget */ }
+          } catch (err: unknown) { console.warn("[Sienge sync]", err instanceof Error ? err.message : String(err)) }
         })()
       }
 

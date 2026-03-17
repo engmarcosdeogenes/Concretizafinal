@@ -121,8 +121,8 @@ export const solicitacaoRouter = createTRPCRouter({
           await ctx.db.solicitacaoCompra.update({
             where: { id: input.id },
             data:  { siengePurchaseRequestId: sienge.id },
-          }).catch(() => {})
-        }).catch(() => {})
+          }).catch((err: unknown) => { console.warn("[Sienge sync]", err instanceof Error ? err.message : String(err)) })
+        }).catch((err: unknown) => { console.warn("[Sienge sync]", err instanceof Error ? err.message : String(err)) })
       }
       return result
     }),

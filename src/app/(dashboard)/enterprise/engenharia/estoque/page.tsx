@@ -25,7 +25,7 @@ export default function EstoquePage() {
   const { data: obras = [], isLoading: loadingObras } = trpc.obra.listar.useQuery()
 
   const obraSelecionada = obras.find((o) => o.id === selectedObraId)
-  const siengeId = obraSelecionada?.siengeId ?? null
+  const siengeId = obraSelecionada?.siengeId ? parseInt(obraSelecionada.siengeId) : null
 
   return (
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
@@ -137,9 +137,9 @@ function TabEstoque({ obraId }: { obraId: string }) {
     trpc.movimentacao.saldoPorMaterial.useQuery({ obraId })
 
   const saldoMap = useMemo(() => {
-    const map = new Map<number, number>()
+    const map = new Map<string, number>()
     for (const s of saldos) {
-      map.set(s.material.id, s.saldo)
+      map.set(String(s.material.id), s.saldo)
     }
     return map
   }, [saldos])
@@ -153,7 +153,7 @@ function TabEstoque({ obraId }: { obraId: string }) {
       saldo: number
     }> = []
 
-    const seen = new Set<number>()
+    const seen = new Set<string>()
 
     for (const item of estoque as Array<{
       id?: number
@@ -166,25 +166,27 @@ function TabEstoque({ obraId }: { obraId: string }) {
       quantidade?: number
     }>) {
       const id = item.id ?? item.materialId ?? 0
-      seen.add(id)
+      const idStr = String(id)
+      seen.add(idStr)
       items.push({
         id,
         nome: item.nome ?? item.material ?? "—",
         unidade: item.unidade ?? "—",
         categoria: item.categoria ?? "Geral",
-        saldo: item.saldo ?? item.quantidade ?? saldoMap.get(id) ?? 0,
+        saldo: item.saldo ?? item.quantidade ?? saldoMap.get(idStr) ?? 0,
       })
     }
 
     for (const s of saldos) {
-      if (!seen.has(s.material.id)) {
+      if (!seen.has(String(s.material.id))) {
         items.push({
-          id: s.material.id,
+          id: 0,
           nome: s.material.nome,
           unidade: s.material.unidade ?? "—",
           categoria: s.material.categoria ?? "Geral",
           saldo: s.saldo,
         })
+        seen.add(String(s.material.id))
       }
     }
 
@@ -463,13 +465,13 @@ function TabMovimentacoes({
   const enabled = buildingId != null
   const { data: movimentacoes, isLoading } =
     trpc.sienge.listarMovimentacoesInventario.useQuery(
-      { buildingId: buildingId ?? 0, offset: page * 20, limit: 20 },
+      { buildingId: buildingId ?? 0 },
       { enabled }
     )
 
   const { data: detalhe, isLoading: loadingDetalhe } =
     trpc.sienge.buscarMovimentacaoInventario.useQuery(
-      { buildingId: buildingId ?? 0, movimentacaoId: selectedMovId ?? 0 },
+      { movimentacaoId: selectedMovId ?? 0 },
       { enabled: enabled && selectedMovId != null }
     )
 
@@ -638,8 +640,8 @@ function TabApropriacoes({ buildingId }: { buildingId: number | null }) {
   const enabled = buildingId != null
   const { data: apropriacoes, isLoading } =
     trpc.sienge.listarApropriacoesInventario.useQuery(
-      { buildingId: buildingId ?? 0, offset: page * 20, limit: 20 },
-      { enabled }
+      { inventoryCountId: 0, resourceId: 0 },
+      { enabled: false }
     )
 
   const items = (apropriacoes as Array<{
@@ -762,7 +764,7 @@ function TabApropriacoes({ buildingId }: { buildingId: number | null }) {
 function TabTransferencias({
   obras,
 }: {
-  obras: Array<{ id: string; nome: string; siengeId?: number | null }>
+  obras: Array<{ id: string; nome: string; siengeId?: string | number | null }>
 }) {
   const utils = trpc.useUtils()
   const [fromBuildingId, setFromBuildingId] = useState("")

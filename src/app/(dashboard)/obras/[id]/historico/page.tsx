@@ -90,12 +90,12 @@ export default function HistoricoObraPage() {
                         : ""}
                     </span>
                   </div>
-                  {entry.descricao && (
+                  {entry.descricao != null && (
                     <p className="text-xs text-[var(--text-muted)] mt-0.5 truncate">
                       {String(entry.descricao)}
                     </p>
                   )}
-                  {entry.usuario && (
+                  {entry.usuario != null && (
                     <p className="text-[11px] text-[var(--text-muted)] mt-1">
                       por{" "}
                       <span className="font-medium">

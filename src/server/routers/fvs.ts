@@ -100,7 +100,7 @@ export const fvsRouter = createTRPCRouter({
           title: "FVS Rejeitada",
           body:  `${ctx.session.nome} rejeitou uma Ficha de Verificação de Serviço`,
           url:   `/obras/${fvs.obraId}/fvs/${input.id}`,
-        }).catch(() => {})
+        }).catch((err: unknown) => { console.warn("[Sienge sync]", err instanceof Error ? err.message : String(err)) })
       }
       return updated
     }),

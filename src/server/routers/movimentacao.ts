@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
 
 const TipoMovimentacao = z.enum(["ENTRADA", "SAIDA", "TRANSFERENCIA", "AJUSTE"])
@@ -52,7 +53,14 @@ export const movimentacaoRouter = createTRPCRouter({
         where: { id: input.obraId, empresaId: ctx.session.empresaId },
         select: { id: true },
       })
-      if (!obra) throw new Error("Obra não encontrada")
+      if (!obra) throw new TRPCError({ code: "NOT_FOUND", message: "Obra não encontrada" })
+
+      const material = await ctx.db.materialCatalogo.findFirst({
+        where: { id: input.materialId, empresaId: ctx.session.empresaId },
+        select: { id: true },
+      })
+      if (!material) throw new TRPCError({ code: "NOT_FOUND", message: "Material não encontrado" })
+
       return ctx.db.movimentacaoMaterial.create({
         data: {
           obraId:     input.obraId,

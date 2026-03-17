@@ -180,7 +180,7 @@ model ModeloRelatorio {
 model Usuario {
   id         String      @id @default(cuid())
   authId     String?     @unique
-  email      String      @unique
+  email      String
   nome       String
   telefone   String?
   avatarUrl  String?
@@ -202,6 +202,10 @@ model Usuario {
   verificacoesRDO   VerificacaoRDO[]
   mensagensAssistente MensagemAssistente[]
   dashboardConfig     DashboardConfig?
+
+  @@unique([email, empresaId])
+  @@index([authId])
+  @@index([empresaId])
 }
 
 // ─── Obras ────────────────────────────────────────────────────────────────────
@@ -247,6 +251,8 @@ model Obra {
   medicoes             MedicaoObra[]
   respostasChecklist   RespostaChecklist[]
   tarefas              TarefaObra[]
+
+  @@index([empresaId])
 }
 
 model ObraUsuario {
@@ -291,6 +297,9 @@ model RDO {
   materiaisRecebidos  RDOMaterialRecebido[]
   materiaisUtilizados RDOMaterialUtilizado[]
   verificacoes        VerificacaoRDO[]
+
+  @@index([obraId])
+  @@index([obraId, data])
 }
 
 model RDOAtividade {
@@ -324,6 +333,7 @@ model AssinaturaRDO {
   imagemUrl String?
   ordem     Int      @default(0)
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   rdo RDO @relation(fields: [rdoId], references: [id], onDelete: Cascade)
 }
@@ -368,6 +378,8 @@ model FVS {
   responsavel Usuario   @relation("FVSResponsavel", fields: [responsavelId], references: [id])
   itens       FVSItem[]
   midias      Midia[]
+
+  @@index([obraId])
 }
 
 model FVSItem {
@@ -399,6 +411,8 @@ model FVM {
 
   obra   Obra    @relation(fields: [obraId], references: [id], onDelete: Cascade)
   midias Midia[]
+
+  @@index([obraId])
 }
 
 // ─── Ocorrências + Mapa Visual ───────────────────────────────────────────────
@@ -423,6 +437,9 @@ model Ocorrencia {
   planta      Planta?  @relation(fields: [plantaId], references: [id])
   responsavel Usuario? @relation(fields: [responsavelId], references: [id])
   midias      Midia[]
+
+  @@index([obraId])
+  @@index([obraId, status])
 }
 
 model Planta {
@@ -451,8 +468,11 @@ model MembroEquipe {
   dataSaida   DateTime?
   ativo       Boolean   @default(true)
   createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   obra Obra @relation(fields: [obraId], references: [id], onDelete: Cascade)
+
+  @@index([obraId])
 }
 
 // ─── Suprimentos ─────────────────────────────────────────────────────────────
@@ -477,6 +497,8 @@ model Fornecedor {
 
   empresa Empresa        @relation(fields: [empresaId], references: [id])
   pedidos PedidoCompra[]
+
+  @@index([empresaId])
 }
 
 model MaterialCatalogo {
@@ -494,6 +516,8 @@ model MaterialCatalogo {
   movimentacoes    MovimentacaoMaterial[]
   itensSolicitacao ItemSolicitacao[]
   itensPedido      ItemPedido[]
+
+  @@index([empresaId])
 }
 
 model MovimentacaoMaterial {
@@ -505,8 +529,8 @@ model MovimentacaoMaterial {
   data       DateTime @default(now())
   observacao String?
 
-  obra     Obra             @relation(fields: [obraId], references: [id])
-  material MaterialCatalogo @relation(fields: [materialId], references: [id])
+  obra     Obra             @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  material MaterialCatalogo @relation(fields: [materialId], references: [id], onDelete: Cascade)
 }
 
 model Equipamento {
@@ -521,6 +545,8 @@ model Equipamento {
   updatedAt DateTime          @updatedAt
 
   empresa Empresa @relation(fields: [empresaId], references: [id])
+
+  @@index([empresaId])
 }
 
 model SolicitacaoCompra {
@@ -538,6 +564,9 @@ model SolicitacaoCompra {
   solicitante Usuario           @relation(fields: [solicitanteId], references: [id])
   itens       ItemSolicitacao[]
   pedidos     PedidoCompra[]
+
+  @@index([obraId])
+  @@index([obraId, status])
 }
 
 model ItemSolicitacao {
@@ -569,9 +598,11 @@ model PedidoCompra {
   createdAt             DateTime     @default(now())
   updatedAt             DateTime     @updatedAt
 
-  solicitacao SolicitacaoCompra? @relation(fields: [solicitacaoId], references: [id])
+  solicitacao SolicitacaoCompra? @relation(fields: [solicitacaoId], references: [id], onDelete: SetNull)
   fornecedor  Fornecedor         @relation(fields: [fornecedorId], references: [id])
   itens       ItemPedido[]
+
+  @@index([fornecedorId])
 }
 
 model ItemPedido {
@@ -600,6 +631,8 @@ model Documento {
   createdAt DateTime @default(now())
 
   obra Obra @relation(fields: [obraId], references: [id], onDelete: Cascade)
+
+  @@index([obraId])
 }
 
 // ─── Financeiro ───────────────────────────────────────────────────────────────
@@ -619,7 +652,10 @@ model LancamentoFinanceiro {
 
   obra          Obra                   @relation(fields: [obraId], references: [id], onDelete: Cascade)
   recorrencias  LancamentoFinanceiro[] @relation("RecorrenciaOrigem")
-  origem        LancamentoFinanceiro?  @relation("RecorrenciaOrigem", fields: [recorrenciaOrigemId], references: [id])
+  origem        LancamentoFinanceiro?  @relation("RecorrenciaOrigem", fields: [recorrenciaOrigemId], references: [id], onDelete: SetNull)
+
+  @@index([obraId])
+  @@index([obraId, data])
 }
 
 // ─── Mídia ────────────────────────────────────────────────────────────────────
@@ -636,12 +672,19 @@ model Midia {
   fvmId        String?
   ocorrenciaId String?
   createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  obra       Obra        @relation(fields: [obraId], references: [id])
-  rdo        RDO?        @relation(fields: [rdoId], references: [id])
-  fvs        FVS?        @relation(fields: [fvsId], references: [id])
-  fvm        FVM?        @relation(fields: [fvmId], references: [id])
-  ocorrencia Ocorrencia? @relation(fields: [ocorrenciaId], references: [id])
+  obra       Obra        @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  rdo        RDO?        @relation(fields: [rdoId], references: [id], onDelete: Cascade)
+  fvs        FVS?        @relation(fields: [fvsId], references: [id], onDelete: Cascade)
+  fvm        FVM?        @relation(fields: [fvmId], references: [id], onDelete: Cascade)
+  ocorrencia Ocorrencia? @relation(fields: [ocorrenciaId], references: [id], onDelete: Cascade)
+
+  @@index([obraId])
+  @@index([rdoId])
+  @@index([fvsId])
+  @@index([fvmId])
+  @@index([ocorrenciaId])
 }
 
 // ─── Templates FVS ────────────────────────────────────────────────────────────
@@ -655,6 +698,8 @@ model TemplateFVS {
 
   empresa Empresa          @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   itens   TemplateFVSItem[]
+
+  @@index([empresaId])
 }
 
 model TemplateFVSItem {
@@ -759,6 +804,8 @@ model MensagemChat {
 
   obra    Obra    @relation(fields: [obraId], references: [id], onDelete: Cascade)
   usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([obraId])
 }
 
 // ─── Medição de Obra ──────────────────────────────────────────────────────────
@@ -801,6 +848,8 @@ model TemplateChecklist {
   empresa   Empresa                 @relation(fields: [empresaId], references: [id], onDelete: Cascade)
   itens     ItemTemplateChecklist[]
   respostas RespostaChecklist[]
+
+  @@index([empresaId])
 }
 
 model ItemTemplateChecklist {

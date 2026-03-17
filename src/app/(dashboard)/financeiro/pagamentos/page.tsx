@@ -208,7 +208,7 @@ export default function PagamentosPage() {
               <button
                 type="button"
                 onClick={handleSave}
-                disabled={!hasEdits || mutation.isLoading}
+                disabled={!hasEdits || mutation.isPending}
                 className={cn(
                   "h-9 px-5 rounded-lg text-sm font-semibold inline-flex items-center gap-2 transition-colors",
                   hasEdits
@@ -216,7 +216,7 @@ export default function PagamentosPage() {
                     : "bg-gray-200 text-gray-400 cursor-not-allowed"
                 )}
               >
-                {mutation.isLoading ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                {mutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                 Salvar Alteracoes
               </button>
             </div>

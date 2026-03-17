@@ -163,7 +163,7 @@ export default function PlanejamentoPage() {
                   <p className="text-sm font-medium text-[var(--text-primary)] truncate">
                     {String(t.nome)}
                   </p>
-                  {t.setor && (
+                  {t.setor != null && (
                     <p className="text-[10px] text-[var(--text-muted)] truncate">{String(t.setor)}</p>
                   )}
                 </div>
@@ -213,7 +213,7 @@ export default function PlanejamentoPage() {
             </div>
           )}
 
-          {(projetos as Array<{ projeto: Record<string, unknown>; tarefas: Array<Record<string, unknown>> }>).map((item) => {
+          {(projetos as unknown as Array<{ projeto: Record<string, unknown>; tarefas: Array<Record<string, unknown>> }>).map((item) => {
             const proj = item.projeto
             const id = Number(proj.id)
             const aberto = projetoAberto[id] ?? false

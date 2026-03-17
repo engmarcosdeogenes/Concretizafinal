@@ -109,10 +109,10 @@ function ExtratoTab() {
       )}
 
       {/* Resultado */}
-      {extrato.isLoading && (
+      {extrato.isPending && (
         <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
       )}
-      {searched && !extrato.isLoading && items.length === 0 && (
+      {searched && !extrato.isPending && items.length === 0 && (
         <div className="bg-white border border-border rounded-2xl p-10 text-center">
           <AlertCircle size={28} className="mx-auto mb-2 text-muted-foreground opacity-40" />
           <p className="text-sm text-[var(--text-muted)]">Nenhum registro de extrato encontrado.</p>
@@ -241,7 +241,7 @@ function InformeIRTab() {
             </div>
           </div>
 
-          {pdfUrl.isLoading ? (
+          {pdfUrl.isPending ? (
             <div className="flex justify-center py-6"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
           ) : (
             <div className="flex gap-2">
@@ -347,11 +347,11 @@ function SaldoDevedorTab() {
         </div>
       </div>
 
-      {saldo.isLoading && (
+      {saldo.isPending && (
         <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
       )}
 
-      {searched && !saldo.isLoading && !data && (
+      {searched && !saldo.isPending && !data && (
         <div className="bg-white border border-border rounded-2xl p-10 text-center">
           <AlertCircle size={28} className="mx-auto mb-2 text-muted-foreground opacity-40" />
           <p className="text-sm text-[var(--text-muted)]">Nenhum saldo devedor encontrado para este cliente.</p>

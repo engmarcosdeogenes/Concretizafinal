@@ -83,9 +83,9 @@ export const fornecedorRouter = createTRPCRouter({
           await ctx.db.fornecedor.update({
             where: { id: fornecedor.id },
             data: { siengeCreditorId: creditorId },
-          }).catch(() => {})
+          }).catch((err: unknown) => { console.warn("[Sienge sync]", err instanceof Error ? err.message : String(err)) })
         }
-      }).catch(() => {})
+      }).catch((err: unknown) => { console.warn("[Sienge sync]", err instanceof Error ? err.message : String(err)) })
 
       return fornecedor
     }),
@@ -156,7 +156,7 @@ export const fornecedorRouter = createTRPCRouter({
               await desativarCreditorSienge(cfg.sub, cfg.user, cfg.pass, creditorId)
             }
           }
-        }).catch(() => {})
+        }).catch((err: unknown) => { console.warn("[Sienge sync]", err instanceof Error ? err.message : String(err)) })
       }
 
       return updated

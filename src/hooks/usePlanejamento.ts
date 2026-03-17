@@ -38,7 +38,7 @@ export function useSalvarMateriaisRdo() {
   const utils = trpc.useUtils()
   return trpc.rdo.salvarMateriais.useMutation({
     onSuccess: () => {
-      utils.rdo.buscarDiarioObra.invalidate()
+      utils.rdo.listar.invalidate()
     },
   })
 }

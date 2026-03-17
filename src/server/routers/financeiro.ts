@@ -9,7 +9,7 @@ export const financeiroRouter = createTRPCRouter({
     .input(z.object({ obraId: z.string() }))
     .query(async ({ ctx, input }) => {
       return ctx.db.lancamentoFinanceiro.findMany({
-        where: { obraId: input.obraId },
+        where: { obraId: input.obraId, obra: { empresaId: ctx.session.empresaId } },
         orderBy: { data: "desc" },
       })
     }),

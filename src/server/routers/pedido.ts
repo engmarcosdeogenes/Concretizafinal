@@ -124,7 +124,7 @@ export const pedidoRouter = createTRPCRouter({
               documentNumber: pedido.notaFiscalNumero ?? undefined,
               debitOrCredit: "D",
             }])
-          } catch { /* silent fire-and-forget */ }
+          } catch (err: unknown) { console.warn("[Sienge sync]", err instanceof Error ? err.message : String(err)) }
         })()
       }
 
@@ -134,8 +134,8 @@ export const pedidoRouter = createTRPCRouter({
   salvarNotaFiscal: protectedProcedure
     .input(z.object({
       id:              z.string(),
-      notaFiscalNumero: z.string().optional(),
-      notaFiscalUrl:   z.string().optional(),
+      notaFiscalNumero: z.string().min(1).max(20).optional(),
+      notaFiscalUrl:   z.string().url().optional(),
       notaFiscalValor: z.number().optional(),
     }))
     .mutation(async ({ ctx, input }) => {

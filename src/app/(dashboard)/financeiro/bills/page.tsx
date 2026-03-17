@@ -46,7 +46,7 @@ export default function BillsPage() {
 
   const { data, isLoading } = trpc.sienge.listarBillsByChangeDate.useQuery(
     { startDate, endDate, offset: page * PAGE_SIZE, limit: PAGE_SIZE },
-    { keepPreviousData: true }
+    {}
   )
 
   const bills: any[] = Array.isArray(data) ? data : (data as any)?.results ?? (data as any)?.data ?? []

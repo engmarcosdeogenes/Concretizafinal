@@ -73,7 +73,7 @@ export const medicaoRouter = createTRPCRouter({
                 })
               })
           })
-          .catch(() => {})
+          .catch((err: unknown) => { console.warn("[Sienge sync]", err instanceof Error ? err.message : String(err)) })
       }
       return medicao
     }),

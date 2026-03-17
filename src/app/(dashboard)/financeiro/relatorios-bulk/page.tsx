@@ -106,13 +106,13 @@ function AccountBalancesReport() {
         </button>
       </div>
 
-      {query.isLoading && (
+      {query.isPending && (
         <div className="flex items-center justify-center py-12 text-[var(--text-muted)]">
           <Loader2 className="h-5 w-5 animate-spin mr-2" /> Carregando saldos contábeis...
         </div>
       )}
 
-      {enabled && !query.isLoading && rows.length === 0 && (
+      {enabled && !query.isPending && rows.length === 0 && (
         <p className="text-sm text-[var(--text-muted)] py-8 text-center">Nenhum resultado encontrado.</p>
       )}
 
@@ -194,13 +194,13 @@ function DateRangeReport({
         </button>
       </div>
 
-      {query.isLoading && (
+      {query.isPending && (
         <div className="flex items-center justify-center py-12 text-[var(--text-muted)]">
           <Loader2 className="h-5 w-5 animate-spin mr-2" /> Carregando dados...
         </div>
       )}
 
-      {enabled && !query.isLoading && rows.length === 0 && (
+      {enabled && !query.isPending && rows.length === 0 && (
         <p className="text-sm text-[var(--text-muted)] py-8 text-center">Nenhum resultado encontrado.</p>
       )}
 

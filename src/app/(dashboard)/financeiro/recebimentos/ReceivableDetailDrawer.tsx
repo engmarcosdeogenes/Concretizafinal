@@ -187,10 +187,10 @@ export default function ReceivableDetailDrawer({ billId, onClose }: ReceivableDe
                         <button
                           type="button"
                           onClick={() => handleSaveDueDate(installmentId)}
-                          disabled={alterarVencimento.isLoading}
+                          disabled={alterarVencimento.isPending}
                           className="px-2 py-1 rounded-lg bg-orange-500 text-white text-[11px] font-semibold hover:bg-orange-600 disabled:opacity-50"
                         >
-                          {alterarVencimento.isLoading ? <Loader2 size={11} className="animate-spin" /> : "Salvar"}
+                          {alterarVencimento.isPending ? <Loader2 size={11} className="animate-spin" /> : "Salvar"}
                         </button>
                         <button
                           type="button"

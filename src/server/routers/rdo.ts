@@ -324,7 +324,7 @@ export const rdoRouter = createTRPCRouter({
           title: "RDO Aprovado",
           body:  `${ctx.session.nome} aprovou um Relatório Diário de Obra`,
           url:   `/obras/${rdo.obraId}/rdo/${input.id}`,
-        }).catch(() => {})
+        }).catch((err: unknown) => { console.warn("[Sienge sync]", err instanceof Error ? err.message : String(err)) })
       }
 
       // Fire-and-forget: sincronizar RDO ao Sienge quando ENVIADO
@@ -355,7 +355,7 @@ export const rdoRouter = createTRPCRouter({
               workers:        rdoCompleto.equipe.reduce((s, e) => s + e.quantidade, 0),
             })
               .then((r) => ctx.db.rDO.update({ where: { id: input.id }, data: { siengeReportId: String(r.id) } }))
-              .catch(() => {})
+              .catch((err: unknown) => { console.warn("[Sienge sync]", err instanceof Error ? err.message : String(err)) })
           }
         }
       }
@@ -458,7 +458,7 @@ export const rdoRouter = createTRPCRouter({
             title: "RDO Aprovado",
             body:  `${ctx.session.nome} aprovou o Relatório Diário de Obra`,
             url:   `/obras/${rdo.obraId}/rdo/${input.rdoId}`,
-          }).catch(() => {})
+          }).catch((err: unknown) => { console.warn("[Sienge sync]", err instanceof Error ? err.message : String(err)) })
 
           // Feature F: fire-and-forget progress log para o Sienge
           if (rdo.obra?.siengeId) {
@@ -486,7 +486,7 @@ export const rdoRouter = createTRPCRouter({
                     percentageExecuted: avgPct,
                     description: `RDO aprovado — ${atvsLinked.length} atividade(s)`,
                   })
-                } catch { /* silent fire-and-forget */ }
+                } catch (err: unknown) { console.warn("[Sienge sync]", err instanceof Error ? err.message : String(err)) }
               })()
             }
           }
