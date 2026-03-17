@@ -502,15 +502,16 @@ model Fornecedor {
 }
 
 model MaterialCatalogo {
-  id            String   @id @default(cuid())
-  empresaId     String
-  nome          String
-  descricao     String?
-  unidade       String
-  categoria     String?
-  precoUnitario Float?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id               String   @id @default(cuid())
+  empresaId        String
+  nome             String
+  descricao        String?
+  unidade          String
+  categoria        String?
+  precoUnitario    Float?
+  siengeResourceId String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   empresa          Empresa                @relation(fields: [empresaId], references: [id])
   movimentacoes    MovimentacaoMaterial[]

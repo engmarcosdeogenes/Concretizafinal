@@ -6,6 +6,7 @@ import {
   ArrowLeft, Puzzle, CheckCircle2, Clock, RefreshCw, Plug,
   Eye, EyeOff, Building2, Users, ShoppingCart, ChevronDown, ChevronUp,
   Webhook, Zap, ZapOff, UserCheck, CreditCard, Link2, Link2Off,
+  Package, TrendingUp, TrendingDown, Truck,
 } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { toast } from "sonner"
@@ -130,6 +131,62 @@ export default function IntegracoesPage() {
     onError: (e) => { toast.error(e.message); utils.integracoes.listarSyncs.invalidate() },
   })
 
+  const importarPedidosCompra = trpc.integracoes.importarPedidosCompra.useMutation({
+    onSuccess: (r) => {
+      toast.success(`${r.criados} pedido(s) importado(s), ${r.pulados} já existiam de ${r.total} analisado(s).`)
+      utils.integracoes.listarSyncs.invalidate()
+    },
+    onError: (e) => { toast.error(e.message); utils.integracoes.listarSyncs.invalidate() },
+  })
+
+  const importarSolicitacoesCompra = trpc.integracoes.importarSolicitacoesCompra.useMutation({
+    onSuccess: (r) => {
+      toast.success(`${r.criados} solicitação(ões) importada(s), ${r.pulados} já existiam de ${r.total} analisada(s).`)
+      utils.integracoes.listarSyncs.invalidate()
+    },
+    onError: (e) => { toast.error(e.message); utils.integracoes.listarSyncs.invalidate() },
+  })
+
+  const importarContasReceber = trpc.integracoes.importarContasReceber.useMutation({
+    onSuccess: (r) => {
+      toast.success(`${r.criados} conta(s) a receber importada(s), ${r.pulados} já existiam de ${r.total} analisada(s).`)
+      utils.integracoes.listarSyncs.invalidate()
+    },
+    onError: (e) => { toast.error(e.message); utils.integracoes.listarSyncs.invalidate() },
+  })
+
+  const importarEstoque = trpc.integracoes.importarEstoque.useMutation({
+    onSuccess: (r) => {
+      toast.success(`${r.criados} item(ns) de estoque importado(s), ${r.pulados} pulado(s).`)
+      utils.integracoes.listarSyncs.invalidate()
+    },
+    onError: (e) => { toast.error(e.message); utils.integracoes.listarSyncs.invalidate() },
+  })
+
+  type SincronizarTudoResult = {
+    obras?: { criadas?: number; atualizadas?: number; total?: number }
+    fornecedores?: { criados?: number; total?: number }
+    pedidos?: { criados?: number; pulados?: number; total?: number }
+    estoque?: { criados?: number; pulados?: number; total?: number }
+    contasReceber?: { criados?: number; pulados?: number; total?: number }
+  }
+  const [sincResultado, setSincResultado] = useState<SincronizarTudoResult | null>(null)
+
+  const sincronizarTudo = trpc.integracoes.sincronizarTudo.useMutation({
+    onSuccess: (r) => {
+      setSincResultado(r as SincronizarTudoResult)
+      const partes: string[] = []
+      if ((r as SincronizarTudoResult).obras) partes.push(`${(r as SincronizarTudoResult).obras?.criadas ?? 0} obras`)
+      if ((r as SincronizarTudoResult).fornecedores) partes.push(`${(r as SincronizarTudoResult).fornecedores?.criados ?? 0} fornecedores`)
+      if ((r as SincronizarTudoResult).pedidos) partes.push(`${(r as SincronizarTudoResult).pedidos?.criados ?? 0} pedidos`)
+      if ((r as SincronizarTudoResult).estoque) partes.push(`${(r as SincronizarTudoResult).estoque?.criados ?? 0} itens de estoque`)
+      if ((r as SincronizarTudoResult).contasReceber) partes.push(`${(r as SincronizarTudoResult).contasReceber?.criados ?? 0} contas a receber`)
+      toast.success(`Sincronização concluída! ${partes.join(", ")} importados.`)
+      utils.integracoes.listarSyncs.invalidate()
+    },
+    onError: (e) => { toast.error(e.message); utils.integracoes.listarSyncs.invalidate() },
+  })
+
   const vincularObra = trpc.integracoes.vincularObra.useMutation({
     onSuccess: () => { toast.success("Vinculação atualizada."); utils.integracoes.listarObrasComVinculo.invalidate() },
     onError:   (e) => toast.error(e.message),
@@ -170,7 +227,7 @@ export default function IntegracoesPage() {
     salvar.mutate({ subdominio, usuario, senha })
   }
 
-  const loading = importarObras.isPending || importarFornecedores.isPending || testar.isPending || importarClientes.isPending || importarContasPagar.isPending
+  const loading = importarObras.isPending || importarFornecedores.isPending || testar.isPending || importarClientes.isPending || importarContasPagar.isPending || importarPedidosCompra.isPending || importarSolicitacoesCompra.isPending || importarContasReceber.isPending || importarEstoque.isPending || sincronizarTudo.isPending
 
   return (
     <div className="flex-1 space-y-8 p-8 pt-6 max-w-4xl mx-auto">
@@ -272,29 +329,91 @@ export default function IntegracoesPage() {
         {configurado && (
           <div className="p-6 space-y-6">
 
-            {/* Botões */}
-            <div className="space-y-3">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Sincronizar dados</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Banner de loading global — sincronizar tudo */}
+            {sincronizarTudo.isPending && (
+              <div className="rounded-xl border border-orange-200 bg-orange-50 px-4 py-3 flex items-center gap-3">
+                <RefreshCw size={16} className="text-orange-500 animate-spin flex-shrink-0" />
+                <p className="text-sm text-orange-800 font-medium">
+                  Sincronização em andamento... Isso pode levar alguns minutos.
+                </p>
+              </div>
+            )}
 
-                {/* Testar */}
-                <button onClick={() => testar.mutate()} disabled={loading}
-                  className="flex items-center gap-3 h-14 px-4 rounded-xl border border-border bg-white hover:bg-slate-50 transition-colors disabled:opacity-50 text-left">
-                  <Plug size={18} className={cn("text-slate-400", testar.isPending && "animate-pulse")} />
-                  <div>
-                    <p className="text-sm font-medium">{testar.isPending ? "Testando…" : "Testar Conexão"}</p>
-                    <p className="text-xs text-muted-foreground">Verifica se as credenciais estão corretas</p>
+            {/* Card Sincronização Inicial */}
+            <div className="rounded-xl border-2 border-orange-200 bg-gradient-to-br from-orange-50 to-white p-5 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-orange-500 flex items-center justify-center flex-shrink-0">
+                  <RefreshCw size={16} className="text-white" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-slate-800">Sincronização Inicial</h4>
+                  <p className="text-xs text-muted-foreground">Importe todos os dados do Sienge para o Concretiza de uma só vez</p>
+                </div>
+              </div>
+              <button
+                onClick={() => { setSincResultado(null); sincronizarTudo.mutate() }}
+                disabled={loading}
+                className="w-full h-11 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {sincronizarTudo.isPending ? (
+                  <>
+                    <RefreshCw size={15} className="animate-spin" />
+                    Sincronizando...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw size={15} />
+                    Sincronizar Tudo
+                  </>
+                )}
+              </button>
+              {sincResultado && !sincronizarTudo.isPending && (
+                <div className="rounded-lg bg-green-50 border border-green-200 px-4 py-3">
+                  <p className="text-xs font-semibold text-green-700 mb-1.5">Sincronizacao concluida:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {sincResultado.obras && (
+                      <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full font-medium">
+                        <CheckCircle2 size={11} /> {sincResultado.obras.criadas ?? 0} obras
+                      </span>
+                    )}
+                    {sincResultado.fornecedores && (
+                      <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full font-medium">
+                        <CheckCircle2 size={11} /> {sincResultado.fornecedores.criados ?? 0} fornecedores
+                      </span>
+                    )}
+                    {sincResultado.pedidos && (
+                      <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full font-medium">
+                        <CheckCircle2 size={11} /> {sincResultado.pedidos.criados ?? 0} pedidos
+                      </span>
+                    )}
+                    {sincResultado.estoque && (
+                      <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full font-medium">
+                        <CheckCircle2 size={11} /> {sincResultado.estoque.criados ?? 0} itens de estoque
+                      </span>
+                    )}
+                    {sincResultado.contasReceber && (
+                      <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full font-medium">
+                        <CheckCircle2 size={11} /> {sincResultado.contasReceber.criados ?? 0} contas a receber
+                      </span>
+                    )}
                   </div>
-                </button>
+                </div>
+              )}
+            </div>
 
-                {/* Importar Obras */}
+            {/* Importações Individuais */}
+            <div className="space-y-3">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Importações Individuais</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+
+                {/* Obras */}
                 <div className="flex flex-col gap-1.5">
                   <button onClick={() => importarObras.mutate({ atualizarExistentes: atualizarObrasExistentes })} disabled={loading}
                     className="flex items-center gap-3 h-14 px-4 rounded-xl border border-[#0055A5]/30 bg-[#0055A5]/5 hover:bg-[#0055A5]/10 transition-colors disabled:opacity-50 text-left">
                     <Building2 size={18} className={cn("text-[#0055A5]", importarObras.isPending && "animate-spin")} />
                     <div>
                       <p className="text-sm font-medium text-[#0055A5]">{importarObras.isPending ? "Importando…" : "Importar Obras"}</p>
-                      <p className="text-xs text-muted-foreground">Sincroniza empreendimentos do Sienge</p>
+                      <p className="text-xs text-muted-foreground">Empreendimentos do Sienge</p>
                     </div>
                   </button>
                   <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer pl-1">
@@ -304,17 +423,74 @@ export default function IntegracoesPage() {
                       onChange={e => setAtualizarObrasExistentes(e.target.checked)}
                       className="accent-[#0055A5]"
                     />
-                    Atualizar obras já importadas (nome e endereço)
+                    Atualizar obras já importadas
                   </label>
                 </div>
 
-                {/* Importar Fornecedores */}
+                {/* Fornecedores */}
                 <button onClick={() => importarFornecedores.mutate()} disabled={loading}
                   className="flex items-center gap-3 h-14 px-4 rounded-xl border border-[#0055A5]/30 bg-[#0055A5]/5 hover:bg-[#0055A5]/10 transition-colors disabled:opacity-50 text-left">
-                  <Users size={18} className={cn("text-[#0055A5]", importarFornecedores.isPending && "animate-spin")} />
+                  <Truck size={18} className={cn("text-[#0055A5]", importarFornecedores.isPending && "animate-spin")} />
                   <div>
                     <p className="text-sm font-medium text-[#0055A5]">{importarFornecedores.isPending ? "Importando…" : "Importar Fornecedores"}</p>
-                    <p className="text-xs text-muted-foreground">Sincroniza credores ativos do Sienge</p>
+                    <p className="text-xs text-muted-foreground">Credores ativos do Sienge</p>
+                  </div>
+                </button>
+
+                {/* Pedidos de Compra */}
+                <button onClick={() => importarPedidosCompra.mutate()} disabled={loading}
+                  className="flex items-center gap-3 h-14 px-4 rounded-xl border border-[#0055A5]/30 bg-[#0055A5]/5 hover:bg-[#0055A5]/10 transition-colors disabled:opacity-50 text-left">
+                  <ShoppingCart size={18} className={cn("text-[#0055A5]", importarPedidosCompra.isPending && "animate-spin")} />
+                  <div>
+                    <p className="text-sm font-medium text-[#0055A5]">{importarPedidosCompra.isPending ? "Importando…" : "Importar Pedidos"}</p>
+                    <p className="text-xs text-muted-foreground">Pedidos de compra do Sienge</p>
+                  </div>
+                </button>
+
+                {/* Estoque */}
+                <button onClick={() => importarEstoque.mutate()} disabled={loading}
+                  className="flex items-center gap-3 h-14 px-4 rounded-xl border border-[#0055A5]/30 bg-[#0055A5]/5 hover:bg-[#0055A5]/10 transition-colors disabled:opacity-50 text-left">
+                  <Package size={18} className={cn("text-[#0055A5]", importarEstoque.isPending && "animate-spin")} />
+                  <div>
+                    <p className="text-sm font-medium text-[#0055A5]">{importarEstoque.isPending ? "Importando…" : "Importar Estoque"}</p>
+                    <p className="text-xs text-muted-foreground">Itens de estoque do Sienge</p>
+                  </div>
+                </button>
+
+                {/* Contas a Receber */}
+                <button onClick={() => importarContasReceber.mutate()} disabled={loading}
+                  className="flex items-center gap-3 h-14 px-4 rounded-xl border border-[#0055A5]/30 bg-[#0055A5]/5 hover:bg-[#0055A5]/10 transition-colors disabled:opacity-50 text-left">
+                  <TrendingUp size={18} className={cn("text-[#0055A5]", importarContasReceber.isPending && "animate-spin")} />
+                  <div>
+                    <p className="text-sm font-medium text-[#0055A5]">{importarContasReceber.isPending ? "Importando…" : "Importar Contas a Receber"}</p>
+                    <p className="text-xs text-muted-foreground">Recebimentos nas obras vinculadas</p>
+                  </div>
+                </button>
+
+                {/* Contas a Pagar */}
+                <button onClick={() => importarContasPagar.mutate()} disabled={loading}
+                  className="flex items-center gap-3 h-14 px-4 rounded-xl border border-[#0055A5]/30 bg-[#0055A5]/5 hover:bg-[#0055A5]/10 transition-colors disabled:opacity-50 text-left">
+                  <TrendingDown size={18} className={cn("text-[#0055A5]", importarContasPagar.isPending && "animate-spin")} />
+                  <div>
+                    <p className="text-sm font-medium text-[#0055A5]">{importarContasPagar.isPending ? "Importando…" : "Importar Contas a Pagar"}</p>
+                    <p className="text-xs text-muted-foreground">Despesas nas obras vinculadas</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* Outros botões utilitários */}
+            <div className="space-y-3">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Utilitários</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+                {/* Testar */}
+                <button onClick={() => testar.mutate()} disabled={loading}
+                  className="flex items-center gap-3 h-14 px-4 rounded-xl border border-border bg-white hover:bg-slate-50 transition-colors disabled:opacity-50 text-left">
+                  <Plug size={18} className={cn("text-slate-400", testar.isPending && "animate-pulse")} />
+                  <div>
+                    <p className="text-sm font-medium">{testar.isPending ? "Testando…" : "Testar Conexão"}</p>
+                    <p className="text-xs text-muted-foreground">Verifica se as credenciais estão corretas</p>
                   </div>
                 </button>
 
@@ -328,23 +504,13 @@ export default function IntegracoesPage() {
                   </div>
                 </button>
 
-                {/* Importar Contas a Pagar */}
-                <button onClick={() => importarContasPagar.mutate()} disabled={loading}
-                  className="flex items-center gap-3 h-14 px-4 rounded-xl border border-[#0055A5]/30 bg-[#0055A5]/5 hover:bg-[#0055A5]/10 transition-colors disabled:opacity-50 text-left">
-                  <CreditCard size={18} className={cn("text-[#0055A5]", importarContasPagar.isPending && "animate-spin")} />
-                  <div>
-                    <p className="text-sm font-medium text-[#0055A5]">{importarContasPagar.isPending ? "Importando…" : "Importar Contas a Pagar"}</p>
-                    <p className="text-xs text-muted-foreground">Cria lançamentos de despesa nas obras vinculadas</p>
-                  </div>
-                </button>
-
-                {/* Ver Pedidos */}
+                {/* Ver Pedidos (visualização raw Sienge) */}
                 <button onClick={() => setPedidosAberto(v => !v)} disabled={fetchingPedidos}
                   className="flex items-center gap-3 h-14 px-4 rounded-xl border border-border bg-white hover:bg-slate-50 transition-colors disabled:opacity-50 text-left">
                   <ShoppingCart size={18} className={cn("text-slate-400", fetchingPedidos && "animate-pulse")} />
                   <div className="flex-1">
-                    <p className="text-sm font-medium">{fetchingPedidos ? "Carregando…" : "Pedidos de Compra"}</p>
-                    <p className="text-xs text-muted-foreground">Visualizar pedidos recentes no Sienge</p>
+                    <p className="text-sm font-medium">{fetchingPedidos ? "Carregando…" : "Ver Pedidos no Sienge"}</p>
+                    <p className="text-xs text-muted-foreground">Visualizar pedidos recentes (somente leitura)</p>
                   </div>
                   {pedidosAberto ? <ChevronUp size={14} className="text-muted-foreground" /> : <ChevronDown size={14} className="text-muted-foreground" />}
                 </button>
