@@ -10,6 +10,7 @@ export const analisesRouter = createTRPCRouter({
       ctx.db.obra.findMany({
         where: { empresaId },
         select: { id: true, nome: true, status: true, progresso: true, orcamento: true, custoAtual: true, dataInicio: true, dataFim: true },
+        take: 200,
       }),
       ctx.db.rDO.findMany({
         where: { obra: { empresaId } },

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { rateLimit, getClientIp } from "@/lib/rate-limit"
 
 // API de clima usando Open-Meteo (gratuita, sem chave)
 // Geocodificação via Nominatim (OpenStreetMap, gratuita)
@@ -28,6 +29,15 @@ function wmoToClima(code: number, precipitacao: number): ClimaResult["clima"] {
 }
 
 export async function GET(req: NextRequest) {
+  const ip = getClientIp(req)
+  const rl = rateLimit(`clima:${ip}`, 30, 60_000)
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "Muitas requisições. Tente novamente em breve." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfter) } }
+    )
+  }
+
   const { searchParams } = req.nextUrl
   const cidade  = searchParams.get("cidade")
   const estado  = searchParams.get("estado")

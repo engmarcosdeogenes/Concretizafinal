@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { TRPCError } from "@trpc/server"
 import { createTRPCRouter, protectedProcedure } from "../trpc"
 
 const TIPO = z.enum(["RECEITA", "DESPESA"])
@@ -19,13 +20,16 @@ export const financeiroRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const [lancamentos, obra] = await Promise.all([
         ctx.db.lancamentoFinanceiro.findMany({
-          where: { obraId: input.obraId },
+          where: { obraId: input.obraId, obra: { empresaId: ctx.session.empresaId } },
         }),
         ctx.db.obra.findUnique({
           where: { id: input.obraId },
-          select: { orcamento: true, custoAtual: true },
+          select: { orcamento: true, custoAtual: true, empresaId: true },
         }),
       ])
+      if (!obra || obra.empresaId !== ctx.session.empresaId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Obra não encontrada" })
+      }
 
       const totalReceitas = lancamentos
         .filter(l => l.tipo === "RECEITA")
@@ -92,6 +96,12 @@ export const financeiroRouter = createTRPCRouter({
       recorrenciaFim: z.string().optional(), // ISO date
     }))
     .mutation(async ({ ctx, input }) => {
+      const obra = await ctx.db.obra.findFirst({
+        where: { id: input.obraId, empresaId: ctx.session.empresaId },
+        select: { id: true },
+      })
+      if (!obra) throw new TRPCError({ code: "NOT_FOUND", message: "Obra não encontrada" })
+
       const dataBase = input.data ? new Date(input.data) : new Date()
       const recorrencia = input.recorrencia ?? "NENHUMA"
 

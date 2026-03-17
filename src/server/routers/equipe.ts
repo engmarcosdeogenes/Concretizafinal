@@ -43,7 +43,7 @@ export const equipeRouter = createTRPCRouter({
       obraId:      z.string(),
       nome:        z.string().min(1),
       funcao:      z.string().min(1),
-      cpf:         z.string().optional(),
+      cpf:         z.string().regex(/^\d{11}$|^\d{3}\.\d{3}\.\d{3}-\d{2}$/).optional(),
       telefone:    z.string().optional(),
       empresaNome: z.string().optional(),
       dataEntrada: z.string().optional(), // ISO date
@@ -86,7 +86,7 @@ export const equipeRouter = createTRPCRouter({
       id:          z.string(),
       nome:        z.string().min(1).optional(),
       funcao:      z.string().min(1).optional(),
-      cpf:         z.string().optional(),
+      cpf:         z.string().regex(/^\d{11}$|^\d{3}\.\d{3}\.\d{3}-\d{2}$/).optional(),
       telefone:    z.string().optional(),
       empresaNome: z.string().optional(),
       ativo:       z.boolean().optional(),

@@ -125,6 +125,7 @@ export const checklistRouter = createTRPCRouter({
           _count: { select: { itens: true } },
         },
         orderBy: { data: "desc" },
+        take: 100,
       })
     }),
 

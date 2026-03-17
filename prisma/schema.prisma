@@ -727,6 +727,7 @@ model Convite {
   empresa Empresa @relation(fields: [empresaId], references: [id], onDelete: Cascade)
 
   @@index([token])
+  @@index([empresaId, expiresAt])
 }
 
 // ─── Audit Log ────────────────────────────────────────────────────────────────
@@ -746,6 +747,7 @@ model AuditLog {
   @@index([entityType, entityId])
   @@index([obraId])
   @@index([empresaId])
+  @@index([empresaId, createdAt])
 }
 
 // ─── Push Notifications ───────────────────────────────────────────────────────
