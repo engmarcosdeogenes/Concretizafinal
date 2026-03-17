@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react"
 import Link from "next/link"
-import { Building2, Settings, Home, CheckCircle, Clock, ArrowLeftRight } from "lucide-react"
+import { Building2, Settings, Home, CheckCircle, Clock, ArrowLeftRight, BookmarkPlus, X, BookmarkX } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { cn } from "@/lib/utils"
 import { formatMoeda } from "@/lib/format"
@@ -23,10 +23,39 @@ function getStatusConfig(status?: string): { label: string; key: StatusKey; bg: 
 }
 
 export default function MapaImobiliarioPage() {
+  const utils = trpc.useUtils()
   const { data: unidades = [], isLoading } = trpc.sienge.listarMapaImobiliario.useQuery()
   const { data: obras = [] } = trpc.obra.listar.useQuery()
   const [filtroStatus, setFiltroStatus] = useState<string>("TODOS")
   const [filtroObra, setFiltroObra] = useState("")
+
+  // Reserva de unidade
+  const [reservaModal, setReservaModal] = useState<{ unitId: number; name: string } | null>(null)
+  const [reservaForm, setReservaForm] = useState({ customerId: "", brokerId: "", observation: "" })
+  const [reservaMsg, setReservaMsg] = useState("")
+  const criarReservaMut = trpc.sienge.criarReservaUnidade.useMutation({
+    onSuccess: () => { utils.sienge.listarMapaImobiliario.invalidate(); setReservaModal(null); setReservaForm({ customerId:"", brokerId:"", observation:"" }) }
+  })
+  const inativarReservaMut = trpc.sienge.inativarReservaUnidade.useMutation({
+    onSuccess: () => utils.sienge.listarMapaImobiliario.invalidate()
+  })
+  const [confirmInativar, setConfirmInativar] = useState<{ unitId: number; name: string } | null>(null)
+
+  async function handleReservar(e: React.FormEvent) {
+    e.preventDefault()
+    setReservaMsg("")
+    if (!reservaModal) return
+    try {
+      await criarReservaMut.mutateAsync({
+        unitId: reservaModal.unitId,
+        customerId: Number(reservaForm.customerId),
+        ...(reservaForm.brokerId && { brokerId: Number(reservaForm.brokerId) }),
+        ...(reservaForm.observation && { observation: reservaForm.observation }),
+      })
+    } catch (err: unknown) {
+      setReservaMsg(err instanceof Error ? err.message : "Erro ao reservar unidade.")
+    }
+  }
 
   const semSienge = !isLoading && unidades.length === 0
 
@@ -180,6 +209,18 @@ export default function MapaImobiliarioPage() {
                   <p className={cn("text-[10px] font-semibold mt-1.5", cfg.badge.includes("green") ? "text-green-700" : cfg.badge.includes("amber") ? "text-amber-700" : cfg.badge.includes("blue") ? "text-blue-700" : cfg.badge.includes("purple") ? "text-purple-700" : "text-gray-600")}>
                     {cfg.label}
                   </p>
+                  {cfg.key === "DISPONIVEL" && (
+                    <button onClick={() => setReservaModal({ unitId: u.id, name: u.number ?? u.name ?? `#${u.id}` })}
+                      className="mt-2 w-full flex items-center justify-center gap-1 px-2 py-1 rounded bg-amber-100 text-amber-700 text-[10px] font-medium hover:bg-amber-200 transition-colors">
+                      <BookmarkPlus size={10} /> Reservar
+                    </button>
+                  )}
+                  {cfg.key === "RESERVADA" && (
+                    <button onClick={() => setConfirmInativar({ unitId: u.id, name: u.number ?? u.name ?? `#${u.id}` })}
+                      className="mt-2 w-full flex items-center justify-center gap-1 px-2 py-1 rounded bg-red-100 text-red-700 text-[10px] font-medium hover:bg-red-200 transition-colors">
+                      <BookmarkX size={10} /> Cancelar Reserva
+                    </button>
+                  )}
                 </div>
               )
             })}
@@ -195,6 +236,61 @@ export default function MapaImobiliarioPage() {
             {filtradas.length} de {unidades.length} unidades · Dados via Sienge
           </p>
         </>
+      )}
+
+      {/* Modal Reservar */}
+      {reservaModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-bold text-[var(--text-primary)]">Reservar Unidade {reservaModal.name}</h3>
+              <button onClick={() => { setReservaModal(null); setReservaMsg("") }} className="p-1.5 rounded hover:bg-muted"><X size={16} /></button>
+            </div>
+            <form onSubmit={handleReservar} className="space-y-4">
+              <div>
+                <label className="text-xs font-medium text-[var(--text-muted)] mb-1 block">ID Cliente Sienge *</label>
+                <input type="number" required value={reservaForm.customerId} onChange={e => setReservaForm(f => ({ ...f, customerId: e.target.value }))}
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="Ex: 123" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-[var(--text-muted)] mb-1 block">ID Corretor (opcional)</label>
+                <input type="number" value={reservaForm.brokerId} onChange={e => setReservaForm(f => ({ ...f, brokerId: e.target.value }))}
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="Ex: 5" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-[var(--text-muted)] mb-1 block">Observação</label>
+                <textarea rows={2} value={reservaForm.observation} onChange={e => setReservaForm(f => ({ ...f, observation: e.target.value }))}
+                  className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none" />
+              </div>
+              {reservaMsg && <p className="text-xs text-red-500">{reservaMsg}</p>}
+              <div className="flex gap-3">
+                <button type="button" onClick={() => { setReservaModal(null); setReservaMsg("") }}
+                  className="flex-1 border border-border rounded-lg py-2 text-sm text-[var(--text-muted)] hover:bg-muted">Cancelar</button>
+                <button type="submit" disabled={criarReservaMut.isPending}
+                  className="flex-1 btn-orange">{criarReservaMut.isPending ? "Reservando..." : "Confirmar Reserva"}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Inativar Reserva */}
+      {confirmInativar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center space-y-4">
+            <BookmarkX size={32} className="mx-auto text-red-500" />
+            <p className="font-semibold text-[var(--text-primary)]">Cancelar reserva da unidade {confirmInativar.name}?</p>
+            <p className="text-xs text-[var(--text-muted)]">A unidade voltará ao status Disponível.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmInativar(null)} className="flex-1 border border-border rounded-lg py-2 text-sm hover:bg-muted">Voltar</button>
+              <button onClick={async () => { await inativarReservaMut.mutateAsync({ unitId: confirmInativar.unitId }); setConfirmInativar(null) }}
+                disabled={inativarReservaMut.isPending}
+                className="flex-1 bg-red-500 text-white rounded-lg py-2 text-sm font-medium hover:bg-red-600 disabled:opacity-50">
+                {inativarReservaMut.isPending ? "Cancelando..." : "Confirmar"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

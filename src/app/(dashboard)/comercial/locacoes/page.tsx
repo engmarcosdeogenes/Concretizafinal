@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react"
 import Link from "next/link"
-import { Home, Settings, TrendingUp, CheckCircle, AlertTriangle } from "lucide-react"
+import { Home, Settings, TrendingUp, CheckCircle, AlertTriangle, Plus, X } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { formatMoeda } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -30,8 +30,34 @@ function isVencendoEm30Dias(endDate?: string | null) {
 }
 
 export default function LocacoesPage() {
+  const utils = trpc.useUtils()
   const { data: locacoes = [], isLoading } = trpc.sienge.listarLocacoes.useQuery()
   const [filtroStatus, setFiltroStatus] = useState("TODOS")
+
+  // Nova Locação
+  const [showNovo, setShowNovo] = useState(false)
+  const [novoForm, setNovoForm] = useState({ propertyId:"", tenantId:"", monthlyRent:"", startDate:"", endDate:"", observation:"" })
+  const [novoMsg, setNovoMsg] = useState("")
+  const criarMut = trpc.sienge.criarLocacao.useMutation({
+    onSuccess: () => { utils.sienge.listarLocacoes.invalidate(); setShowNovo(false); setNovoForm({ propertyId:"",tenantId:"",monthlyRent:"",startDate:"",endDate:"",observation:"" }) }
+  })
+
+  async function handleCriar(e: React.FormEvent) {
+    e.preventDefault()
+    setNovoMsg("")
+    try {
+      await criarMut.mutateAsync({
+        propertyId: Number(novoForm.propertyId),
+        tenantId: Number(novoForm.tenantId),
+        monthlyRent: Number(novoForm.monthlyRent),
+        startDate: novoForm.startDate,
+        ...(novoForm.endDate && { endDate: novoForm.endDate }),
+        ...(novoForm.observation && { observation: novoForm.observation }),
+      })
+    } catch (err: unknown) {
+      setNovoMsg(err instanceof Error ? err.message : "Erro ao criar locação.")
+    }
+  }
 
   const semSienge = !isLoading && locacoes.length === 0
 
@@ -54,15 +80,22 @@ export default function LocacoesPage() {
 
   return (
     <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-[var(--text-primary)] flex items-center gap-2">
-          <Home size={22} className="text-blue-500" />
-          Locação de Imóveis
-        </h1>
-        <p className="text-sm text-[var(--text-muted)] mt-0.5 flex items-center gap-1.5">
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#0055A5]/10 text-[#0055A5]">Sienge</span>
-          Contratos de locação de imóveis ativos e histórico
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-[var(--text-primary)] flex items-center gap-2">
+            <Home size={22} className="text-blue-500" />
+            Locação de Imóveis
+          </h1>
+          <p className="text-sm text-[var(--text-muted)] mt-0.5 flex items-center gap-1.5">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#0055A5]/10 text-[#0055A5]">Sienge</span>
+            Contratos de locação de imóveis ativos e histórico
+          </p>
+        </div>
+        {!isLoading && locacoes.length > 0 && (
+          <button onClick={() => setShowNovo(true)} className="btn-orange flex items-center gap-1.5 text-sm">
+            <Plus size={15} /> Nova Locação
+          </button>
+        )}
       </div>
 
       {semSienge && (
@@ -152,6 +185,59 @@ export default function LocacoesPage() {
           {filtrados.length === 0 && <p className="text-center text-sm text-[var(--text-muted)] py-8">Nenhuma locação com esse filtro.</p>}
           <p className="text-xs text-center text-[var(--text-muted)]">{filtrados.length} de {locacoes.length} locações · Dados via Sienge</p>
         </>
+      )}
+
+      {/* Modal Nova Locação */}
+      {showNovo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-bold text-[var(--text-primary)]">Nova Locação</h3>
+              <button onClick={() => { setShowNovo(false); setNovoMsg("") }} className="p-1.5 rounded-lg hover:bg-muted"><X size={16} /></button>
+            </div>
+            <form onSubmit={handleCriar} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-medium text-[var(--text-muted)] mb-1 block">ID Imóvel Sienge *</label>
+                  <input type="number" required value={novoForm.propertyId} onChange={e => setNovoForm(f => ({ ...f, propertyId: e.target.value }))}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="Ex: 10" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-[var(--text-muted)] mb-1 block">ID Locatário Sienge *</label>
+                  <input type="number" required value={novoForm.tenantId} onChange={e => setNovoForm(f => ({ ...f, tenantId: e.target.value }))}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="Ex: 55" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-[var(--text-muted)] mb-1 block">Aluguel Mensal (R$) *</label>
+                  <input type="number" step="0.01" required value={novoForm.monthlyRent} onChange={e => setNovoForm(f => ({ ...f, monthlyRent: e.target.value }))}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm" placeholder="Ex: 3500" />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-[var(--text-muted)] mb-1 block">Data de Início *</label>
+                  <input type="date" required value={novoForm.startDate} onChange={e => setNovoForm(f => ({ ...f, startDate: e.target.value }))}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm" />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs font-medium text-[var(--text-muted)] mb-1 block">Data de Término</label>
+                  <input type="date" value={novoForm.endDate} onChange={e => setNovoForm(f => ({ ...f, endDate: e.target.value }))}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm" />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs font-medium text-[var(--text-muted)] mb-1 block">Observação</label>
+                  <textarea rows={2} value={novoForm.observation} onChange={e => setNovoForm(f => ({ ...f, observation: e.target.value }))}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm resize-none" />
+                </div>
+              </div>
+              {novoMsg && <p className="text-xs text-red-500">{novoMsg}</p>}
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => { setShowNovo(false); setNovoMsg("") }}
+                  className="flex-1 border border-border rounded-lg py-2 text-sm text-[var(--text-muted)] hover:bg-muted">Cancelar</button>
+                <button type="submit" disabled={criarMut.isPending}
+                  className="flex-1 btn-orange">{criarMut.isPending ? "Criando..." : "Criar Locação"}</button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   )

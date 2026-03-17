@@ -2,7 +2,7 @@
 
 import { use, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, FileSignature, ChevronDown, ChevronRight, Calendar } from "lucide-react"
+import { ArrowLeft, FileSignature, ChevronDown, ChevronRight, Calendar, Plus, AlertTriangle } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 import { cn } from "@/lib/utils"
 import { formatDataCurta, formatMoeda } from "@/lib/format"
@@ -11,12 +11,21 @@ export default function ContratosPage({ params }: { params: Promise<{ id: string
   const { id: obraId } = use(params)
   const [expandido, setExpandido] = useState<number | null>(null)
 
+  const utils = trpc.useUtils()
   const { data: contratos = [], isLoading } = trpc.sienge.listarContratos.useQuery({ obraId })
+  const [confirmNovaM, setConfirmNovaM] = useState<{ id: number; numero: string } | null>(null)
 
   const { data: medicoes = [] } = trpc.sienge.listarMedicoes.useQuery(
     { contratoId: expandido! },
     { enabled: expandido !== null },
   )
+
+  const criarMedicaoMut = trpc.sienge.criarMedicaoSupplyContract.useMutation({
+    onSuccess: () => {
+      if (expandido !== null) utils.sienge.listarMedicoes.invalidate({ contratoId: expandido })
+      setConfirmNovaM(null)
+    }
+  })
 
   const totalContratos = contratos.reduce((s, c) => s + c.valorTotal, 0)
   const totalMedido    = contratos.reduce((s, c) => s + c.valorMedido, 0)
@@ -125,8 +134,12 @@ export default function ContratosPage({ params }: { params: Promise<{ id: string
               {/* Medições */}
               {open && (
                 <div className="border-t border-border bg-slate-50/50">
-                  <div className="px-4 py-2 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
-                    Medições
+                  <div className="px-4 py-2 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">Medições</span>
+                    <button onClick={() => setConfirmNovaM({ id: c.id, numero: c.numero })}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-100 text-purple-700 text-[10px] font-medium hover:bg-purple-200 transition-colors">
+                      <Plus size={10} /> Nova Medição
+                    </button>
                   </div>
                   {medicoes.length === 0 ? (
                     <p className="px-4 pb-3 text-xs text-[var(--text-muted)]">Nenhuma medição registrada.</p>
@@ -153,6 +166,25 @@ export default function ContratosPage({ params }: { params: Promise<{ id: string
           )
         })}
       </div>
+
+      {/* Confirm Nova Medição */}
+      {confirmNovaM && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center space-y-4">
+            <AlertTriangle size={32} className="mx-auto text-purple-500" />
+            <p className="font-semibold text-[var(--text-primary)]">Criar nova medição para o contrato #{confirmNovaM.numero}?</p>
+            <p className="text-xs text-[var(--text-muted)]">Uma nova medição será registrada no Sienge para este contrato.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmNovaM(null)} className="flex-1 border border-border rounded-lg py-2 text-sm hover:bg-muted">Cancelar</button>
+              <button onClick={async () => { await criarMedicaoMut.mutateAsync({ supplyContractId: confirmNovaM.id }) }}
+                disabled={criarMedicaoMut.isPending}
+                className="flex-1 bg-purple-500 text-white rounded-lg py-2 text-sm font-medium hover:bg-purple-600 disabled:opacity-50">
+                {criarMedicaoMut.isPending ? "Criando..." : "Confirmar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
