@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react"
 import Link from "next/link"
-import { Users, Settings, FileDown, Search } from "lucide-react"
+import { Users, Settings, FileDown, Search, Plus, X } from "lucide-react"
 import { trpc } from "@/lib/trpc/client"
 
 function formatDoc(cpf?: string, cnpj?: string) {
@@ -12,9 +12,40 @@ function formatDoc(cpf?: string, cnpj?: string) {
 }
 
 export default function ClientesPage() {
+  const utils = trpc.useUtils()
   const { data: clientes = [], isLoading } = trpc.sienge.listarClientes.useQuery()
   const [busca, setBusca] = useState("")
   const [ano, setAno] = useState(new Date().getFullYear() - 1)
+
+  // Nova Cliente
+  const [showNovo, setShowNovo] = useState(false)
+  const [novoForm, setNovoForm] = useState({ name: "", cpf: "", cnpj: "", email: "", birthDate: "", rg: "" })
+  const [novoMsg, setNovoMsg] = useState("")
+
+  const criarMut = trpc.sienge.criarCliente.useMutation({
+    onSuccess: () => {
+      utils.sienge.listarClientes.invalidate()
+      setShowNovo(false)
+      setNovoForm({ name: "", cpf: "", cnpj: "", email: "", birthDate: "", rg: "" })
+    },
+  })
+
+  async function handleCriar(e: React.FormEvent) {
+    e.preventDefault()
+    setNovoMsg("")
+    try {
+      await criarMut.mutateAsync({
+        name: novoForm.name,
+        ...(novoForm.cpf && { cpf: novoForm.cpf }),
+        ...(novoForm.cnpj && { cnpj: novoForm.cnpj }),
+        ...(novoForm.email && { email: novoForm.email }),
+        ...(novoForm.birthDate && { birthDate: novoForm.birthDate }),
+        ...(novoForm.rg && { rg: novoForm.rg }),
+      })
+    } catch (err: unknown) {
+      setNovoMsg(err instanceof Error ? err.message : "Erro ao criar cliente.")
+    }
+  }
 
   const semSienge = !isLoading && clientes.length === 0
 
@@ -43,12 +74,19 @@ export default function ClientesPage() {
             Clientes cadastrados — gere informes de rendimentos IR
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <label className="text-xs font-semibold text-[var(--text-muted)]">Ano IR:</label>
-          <select value={ano} onChange={e => setAno(Number(e.target.value))}
-            className="px-3 py-1.5 rounded-lg border border-border text-sm bg-white focus:outline-none focus:border-orange-400">
-            {anosDisponiveis.map(a => <option key={a} value={a}>{a}</option>)}
-          </select>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-semibold text-[var(--text-muted)]">Ano IR:</label>
+            <select value={ano} onChange={e => setAno(Number(e.target.value))}
+              className="px-3 py-1.5 rounded-lg border border-border text-sm bg-white focus:outline-none focus:border-orange-400">
+              {anosDisponiveis.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
+          </div>
+          {!isLoading && clientes.length > 0 && (
+            <button onClick={() => setShowNovo(true)} className="btn-orange flex items-center gap-1.5 text-sm">
+              <Plus size={15} /> Novo Cliente
+            </button>
+          )}
         </div>
       </div>
 
@@ -111,6 +149,99 @@ export default function ClientesPage() {
           {filtrados.length === 0 && <p className="text-center text-sm text-[var(--text-muted)] py-8">Nenhum cliente encontrado.</p>}
           <p className="text-xs text-center text-[var(--text-muted)]">{filtrados.length} de {clientes.length} clientes · Dados via Sienge</p>
         </>
+      )}
+
+      {/* Modal Novo Cliente */}
+      {showNovo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-base font-bold text-[var(--text-primary)]">Novo Cliente</h3>
+              <button onClick={() => { setShowNovo(false); setNovoMsg("") }} className="p-1.5 rounded-lg hover:bg-muted"><X size={16} /></button>
+            </div>
+            <form onSubmit={handleCriar} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="text-xs font-medium text-[var(--text-muted)] mb-1 block">Nome completo *</label>
+                  <input
+                    type="text"
+                    required
+                    value={novoForm.name}
+                    onChange={e => setNovoForm(f => ({ ...f, name: e.target.value }))}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm"
+                    placeholder="Ex: João da Silva"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-[var(--text-muted)] mb-1 block">CPF</label>
+                  <input
+                    type="text"
+                    value={novoForm.cpf}
+                    onChange={e => setNovoForm(f => ({ ...f, cpf: e.target.value }))}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm"
+                    placeholder="000.000.000-00"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-[var(--text-muted)] mb-1 block">CNPJ</label>
+                  <input
+                    type="text"
+                    value={novoForm.cnpj}
+                    onChange={e => setNovoForm(f => ({ ...f, cnpj: e.target.value }))}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm"
+                    placeholder="00.000.000/0000-00"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs font-medium text-[var(--text-muted)] mb-1 block">E-mail</label>
+                  <input
+                    type="email"
+                    value={novoForm.email}
+                    onChange={e => setNovoForm(f => ({ ...f, email: e.target.value }))}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm"
+                    placeholder="cliente@email.com"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-[var(--text-muted)] mb-1 block">Data de Nascimento</label>
+                  <input
+                    type="date"
+                    value={novoForm.birthDate}
+                    onChange={e => setNovoForm(f => ({ ...f, birthDate: e.target.value }))}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-[var(--text-muted)] mb-1 block">RG</label>
+                  <input
+                    type="text"
+                    value={novoForm.rg}
+                    onChange={e => setNovoForm(f => ({ ...f, rg: e.target.value }))}
+                    className="w-full border border-border rounded-lg px-3 py-2 text-sm"
+                    placeholder="Ex: 1234567"
+                  />
+                </div>
+              </div>
+              {novoMsg && <p className="text-xs text-red-500">{novoMsg}</p>}
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowNovo(false); setNovoMsg("") }}
+                  className="flex-1 border border-border rounded-lg py-2 text-sm text-[var(--text-muted)] hover:bg-muted"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={criarMut.isPending}
+                  className="flex-1 btn-orange"
+                >
+                  {criarMut.isPending ? "Criando..." : "Criar Cliente"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   )
